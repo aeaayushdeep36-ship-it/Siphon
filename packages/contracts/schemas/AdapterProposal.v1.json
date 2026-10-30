@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "auditId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "revisionId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "inputDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "contextDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sourceArtifactId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "sourceDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "heat_diffusion",
+        "orbital_dynamics"
+      ]
+    },
+    "handler": {
+      "type": "string",
+      "const": "script_globals_v1"
+    },
+    "mappings": {
+      "minItems": 2,
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "times",
+              "temperature",
+              "positions",
+              "velocities",
+              "masses",
+              "central_mu",
+              "gravity_constant",
+              "thermal_weights",
+              "source_power",
+              "outward_power"
+            ]
+          },
+          "root": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,99}$"
+          },
+          "steps": {
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "key"
+                    },
+                    "key": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "key"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "const": "index"
+                    },
+                    "index": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 1000000
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "index"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "expectedShape": {
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 65536
+            }
+          },
+          "axisOrder": {
+            "maxItems": 4,
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3
+            }
+          },
+          "declaredUnit": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "key",
+          "root",
+          "steps",
+          "expectedShape",
+          "axisOrder",
+          "declaredUnit"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "auditId",
+    "revisionId",
+    "inputDigest",
+    "contextDigest",
+    "sourceArtifactId",
+    "sourceDigest",
+    "domain",
+    "handler",
+    "mappings"
+  ],
+  "additionalProperties": false
+}

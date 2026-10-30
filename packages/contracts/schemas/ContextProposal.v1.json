@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "auditId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "revisionId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "inputDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "heat_diffusion",
+        "orbital_dynamics"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "domainMismatchSuspected": {
+      "type": "boolean"
+    },
+    "candidates": {
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string",
+            "enum": [
+              "units",
+              "dimensions",
+              "thermal_model",
+              "thermal_boundary",
+              "heat_sources",
+              "time_control",
+              "gravity_profile",
+              "additional_forces",
+              "reference_frame",
+              "gravity_parameters"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "uncertainty": {
+            "type": "string",
+            "enum": [
+              "explicit_declaration",
+              "inferred",
+              "unclear"
+            ]
+          },
+          "citations": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "artifactId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "sourceDigest": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "startLine": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 131072
+                },
+                "endLine": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 131072
+                }
+              },
+              "required": [
+                "artifactId",
+                "sourceDigest",
+                "startLine",
+                "endLine"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "field",
+          "description",
+          "uncertainty",
+          "citations"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "auditId",
+    "revisionId",
+    "inputDigest",
+    "domain",
+    "summary",
+    "domainMismatchSuspected",
+    "candidates"
+  ],
+  "additionalProperties": false
+}

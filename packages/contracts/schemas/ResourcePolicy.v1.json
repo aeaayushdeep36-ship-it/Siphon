@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "uploadFiles": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "uploadBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "sourceBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "userActiveRevisions": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "globalActiveRevisions": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "userDailyAdmissions": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "globalDailyAdmissions": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "modelAttempts": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "modelRevisionMicroUsd": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "modelInputTokens": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "modelOutputTokens": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "metaAllocationMicroUsd": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "metaDispatchCeilingMicroUsd": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "metaHeadroomMicroUsd": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "sourceExecutions": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "sandboxSeconds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "sandboxLifetimeSeconds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "outputBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "heatCells": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "orbitalBodies": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "storageBytes": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "monthlyClassA": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "monthlyClassB": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "requestsPerMinute": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "mutationsPerMinute": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "e2bAllocationBasisPoints": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000
+    },
+    "progressIntervalSeconds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "progressEvents": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "version",
+    "uploadFiles",
+    "uploadBytes",
+    "sourceBytes",
+    "userActiveRevisions",
+    "globalActiveRevisions",
+    "userDailyAdmissions",
+    "globalDailyAdmissions",
+    "modelAttempts",
+    "modelRevisionMicroUsd",
+    "modelInputTokens",
+    "modelOutputTokens",
+    "metaAllocationMicroUsd",
+    "metaDispatchCeilingMicroUsd",
+    "metaHeadroomMicroUsd",
+    "sourceExecutions",
+    "sandboxSeconds",
+    "sandboxLifetimeSeconds",
+    "outputBytes",
+    "heatCells",
+    "orbitalBodies",
+    "storageBytes",
+    "monthlyClassA",
+    "monthlyClassB",
+    "requestsPerMinute",
+    "mutationsPerMinute",
+    "e2bAllocationBasisPoints",
+    "progressIntervalSeconds",
+    "progressEvents"
+  ],
+  "additionalProperties": false
+}

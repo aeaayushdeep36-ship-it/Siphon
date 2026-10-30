@@ -1,0 +1,1159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "auditId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "revisionId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "inputDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "stage": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "inspecting",
+        "clarifying",
+        "adapting",
+        "planning",
+        "executing",
+        "evaluating",
+        "investigating",
+        "reporting",
+        "finished"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "idle",
+        "queued",
+        "running",
+        "waiting_for_input",
+        "completed",
+        "partial",
+        "failed",
+        "cancelled",
+        "unsupported"
+      ]
+    },
+    "uploads": {
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "string",
+            "const": "1.0"
+          },
+          "artifactId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "artifactId",
+          "path",
+          "bytes",
+          "sha256"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "uploadStates": {
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "artifactId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "lifecycle": {
+            "type": "string",
+            "enum": [
+              "reserved",
+              "ready",
+              "expired",
+              "deleting",
+              "deleted",
+              "failed",
+              "missing"
+            ]
+          },
+          "expiresAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "artifactId",
+          "lifecycle",
+          "expiresAt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "readiness": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "type": "string",
+              "const": "1.0"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "ready",
+                "needs_input",
+                "unsupported"
+              ]
+            },
+            "sourceDigests": {
+              "maxItems": 10,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "artifactId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  }
+                },
+                "required": [
+                  "artifactId",
+                  "sha256"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "findings": {
+              "maxItems": 2000,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "artifactId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "code": {
+                    "type": "string",
+                    "enum": [
+                      "upload_policy",
+                      "missing_inspection",
+                      "inspection_incomplete",
+                      "parse_failure",
+                      "dynamic_code_review",
+                      "dependency_review",
+                      "numeric_input_review",
+                      "source_privacy_review"
+                    ]
+                  },
+                  "line": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "artifactId",
+                  "code",
+                  "line"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "next": {
+              "type": "string",
+              "enum": [
+                "resolve_inspection",
+                "review_requirements",
+                "unsupported"
+              ]
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "status",
+            "sourceDigests",
+            "findings",
+            "next"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "context": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "type": "string",
+              "const": "1.0"
+            },
+            "auditId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "revisionId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "inputDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "domain": {
+              "type": "string",
+              "enum": [
+                "heat_diffusion",
+                "orbital_dynamics"
+              ]
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000
+            },
+            "domainMismatchSuspected": {
+              "type": "boolean"
+            },
+            "candidates": {
+              "maxItems": 20,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "field": {
+                    "type": "string",
+                    "enum": [
+                      "units",
+                      "dimensions",
+                      "thermal_model",
+                      "thermal_boundary",
+                      "heat_sources",
+                      "time_control",
+                      "gravity_profile",
+                      "additional_forces",
+                      "reference_frame",
+                      "gravity_parameters"
+                    ]
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "uncertainty": {
+                    "type": "string",
+                    "enum": [
+                      "explicit_declaration",
+                      "inferred",
+                      "unclear"
+                    ]
+                  },
+                  "citations": {
+                    "maxItems": 5,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "artifactId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "sourceDigest": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "startLine": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 131072
+                        },
+                        "endLine": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 131072
+                        }
+                      },
+                      "required": [
+                        "artifactId",
+                        "sourceDigest",
+                        "startLine",
+                        "endLine"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "field",
+                  "description",
+                  "uncertainty",
+                  "citations"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "auditId",
+            "revisionId",
+            "inputDigest",
+            "domain",
+            "summary",
+            "domainMismatchSuspected",
+            "candidates"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "adapterProposal": {
+      "default": null,
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "type": "string",
+              "const": "1.0"
+            },
+            "auditId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "revisionId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "inputDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "contextDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "sourceArtifactId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "sourceDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "domain": {
+              "type": "string",
+              "enum": [
+                "heat_diffusion",
+                "orbital_dynamics"
+              ]
+            },
+            "handler": {
+              "type": "string",
+              "const": "script_globals_v1"
+            },
+            "mappings": {
+              "minItems": 2,
+              "maxItems": 10,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "enum": [
+                      "times",
+                      "temperature",
+                      "positions",
+                      "velocities",
+                      "masses",
+                      "central_mu",
+                      "gravity_constant",
+                      "thermal_weights",
+                      "source_power",
+                      "outward_power"
+                    ]
+                  },
+                  "root": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,99}$"
+                  },
+                  "steps": {
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "key"
+                            },
+                            "key": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 200
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "key"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "index"
+                            },
+                            "index": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 1000000
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "index"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  },
+                  "expectedShape": {
+                    "maxItems": 4,
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 65536
+                    }
+                  },
+                  "axisOrder": {
+                    "maxItems": 4,
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 3
+                    }
+                  },
+                  "declaredUnit": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "key",
+                  "root",
+                  "steps",
+                  "expectedShape",
+                  "axisOrder",
+                  "declaredUnit"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "auditId",
+            "revisionId",
+            "inputDigest",
+            "contextDigest",
+            "sourceArtifactId",
+            "sourceDigest",
+            "domain",
+            "handler",
+            "mappings"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "plan": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "schemaVersion": {
+              "type": "string",
+              "const": "1.0"
+            },
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "auditId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "revisionId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "inputDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "domain": {
+              "type": "string",
+              "enum": [
+                "heat_diffusion",
+                "orbital_dynamics"
+              ]
+            },
+            "contextDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "adapterDigest": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "registryVersion": {
+              "type": "string",
+              "const": "0.1.0"
+            },
+            "assessment": {
+              "type": "object",
+              "properties": {
+                "schemaVersion": {
+                  "type": "string",
+                  "const": "1.0"
+                },
+                "domain": {
+                  "type": "string",
+                  "enum": [
+                    "heat_diffusion",
+                    "orbital_dynamics"
+                  ]
+                },
+                "inputDigest": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "contextDigest": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "adapterDigest": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "decisions": {
+                  "minItems": 5,
+                  "maxItems": 5,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "checkId": {
+                        "type": "string",
+                        "enum": [
+                          "H_ENERGY",
+                          "H_BALANCE",
+                          "H_TIME_REF",
+                          "H_GRID_REF",
+                          "H_REFERENCE",
+                          "O_ENERGY",
+                          "O_ANGULAR",
+                          "O_MOMENTUM",
+                          "O_REFINE",
+                          "O_REFERENCE"
+                        ]
+                      },
+                      "registryVersion": {
+                        "type": "string",
+                        "const": "0.1.0"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "eligible",
+                          "unresolved",
+                          "ineligible"
+                        ]
+                      },
+                      "applicability": {
+                        "type": "string",
+                        "enum": [
+                          "eligible",
+                          "unresolved",
+                          "ineligible"
+                        ]
+                      },
+                      "released": {
+                        "type": "boolean"
+                      },
+                      "reasons": {
+                        "maxItems": 30,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "requirement": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "supported_model",
+                                    "confirmed_units",
+                                    "verified_adapter",
+                                    "finite_observations",
+                                    "thermal_weights",
+                                    "closed_thermal_boundary",
+                                    "no_heat_sources",
+                                    "boundary_flux_observed",
+                                    "heat_sources_observed",
+                                    "time_quadrature_supported",
+                                    "internal_time_control",
+                                    "three_temporal_levels",
+                                    "same_physical_horizon",
+                                    "nested_grid_control",
+                                    "three_spatial_levels",
+                                    "common_coordinates",
+                                    "temporal_error_separated",
+                                    "matching_validated_reference",
+                                    "reference_accuracy_verified",
+                                    "reference_independent",
+                                    "inertial_frame",
+                                    "gravity_profile_confirmed",
+                                    "positions_velocities",
+                                    "masses_or_central_parameter",
+                                    "complete_gravity_model",
+                                    "isolated_mutual_gravity",
+                                    "compatible_angular_origin",
+                                    "bounded_trajectory_horizon",
+                                    "resource_budget_available"
+                                  ]
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "code": {
+                              "type": "string",
+                              "enum": [
+                                "missing",
+                                "unknown",
+                                "conflicting",
+                                "violated",
+                                "check_not_released"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "requirement",
+                            "code"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "checkId",
+                      "registryVersion",
+                      "status",
+                      "applicability",
+                      "released",
+                      "reasons"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "schemaVersion",
+                "domain",
+                "inputDigest",
+                "contextDigest",
+                "adapterDigest",
+                "decisions"
+              ],
+              "additionalProperties": false
+            },
+            "checks": {
+              "minItems": 5,
+              "maxItems": 5,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "checkId": {
+                    "type": "string",
+                    "enum": [
+                      "H_ENERGY",
+                      "H_BALANCE",
+                      "H_TIME_REF",
+                      "H_GRID_REF",
+                      "H_REFERENCE",
+                      "O_ENERGY",
+                      "O_ANGULAR",
+                      "O_MOMENTUM",
+                      "O_REFINE",
+                      "O_REFERENCE"
+                    ]
+                  },
+                  "checkVersion": {
+                    "type": "string",
+                    "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                  },
+                  "selection": {
+                    "type": "string",
+                    "enum": [
+                      "selected",
+                      "excluded",
+                      "unresolved"
+                    ]
+                  },
+                  "reasons": {
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1000
+                    }
+                  },
+                  "procedure": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "requiredObservations": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    }
+                  },
+                  "accuracyPolicy": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "referenceIds": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                    }
+                  },
+                  "experimentIds": {
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  }
+                },
+                "required": [
+                  "checkId",
+                  "checkVersion",
+                  "selection",
+                  "reasons",
+                  "procedure",
+                  "requiredObservations",
+                  "accuracyPolicy",
+                  "referenceIds",
+                  "experimentIds"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "experiments": {
+              "maxItems": 8,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "completed",
+                      "failed",
+                      "not_run",
+                      "cancelled"
+                    ]
+                  },
+                  "controls": {
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 500
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "unit": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 80
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "value",
+                        "unit"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "sourceOperationId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "resultDigest": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "description",
+                  "status",
+                  "controls",
+                  "sourceOperationId",
+                  "resultDigest"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "accuracyPolicies": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "enum": [
+                  "H_ENERGY",
+                  "H_BALANCE",
+                  "H_TIME_REF",
+                  "H_GRID_REF",
+                  "H_REFERENCE",
+                  "O_ENERGY",
+                  "O_ANGULAR",
+                  "O_MOMENTUM",
+                  "O_REFINE",
+                  "O_REFERENCE"
+                ]
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "const": "reported_samples"
+                  },
+                  "target": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "unit": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 80
+                          },
+                          "justification": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2000
+                          },
+                          "evidenceIds": {
+                            "minItems": 1,
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            }
+                          }
+                        },
+                        "required": [
+                          "value",
+                          "unit",
+                          "justification",
+                          "evidenceIds"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "scope",
+                  "target"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "references": {
+              "maxItems": 40,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]{0,63}$"
+                  },
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "url": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "format": "uri"
+                  },
+                  "accessedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "url",
+                  "accessedAt"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "createdAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            }
+          },
+          "required": [
+            "schemaVersion",
+            "id",
+            "auditId",
+            "revisionId",
+            "inputDigest",
+            "domain",
+            "contextDigest",
+            "adapterDigest",
+            "registryVersion",
+            "assessment",
+            "checks",
+            "experiments",
+            "accuracyPolicies",
+            "references",
+            "createdAt"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "operationalIssues": {
+      "default": [],
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,99}$"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "auditId",
+    "revisionId",
+    "generation",
+    "inputDigest",
+    "stage",
+    "status",
+    "uploads",
+    "uploadStates",
+    "readiness",
+    "context",
+    "adapterProposal",
+    "plan",
+    "operationalIssues"
+  ],
+  "additionalProperties": false
+}

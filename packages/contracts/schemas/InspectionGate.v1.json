@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ready",
+        "needs_input",
+        "unsupported"
+      ]
+    },
+    "sourceDigests": {
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "artifactId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "required": [
+          "artifactId",
+          "sha256"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "findings": {
+      "maxItems": 2000,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "artifactId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "upload_policy",
+              "missing_inspection",
+              "inspection_incomplete",
+              "parse_failure",
+              "dynamic_code_review",
+              "dependency_review",
+              "numeric_input_review",
+              "source_privacy_review"
+            ]
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "artifactId",
+          "code",
+          "line"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "next": {
+      "type": "string",
+      "enum": [
+        "resolve_inspection",
+        "review_requirements",
+        "unsupported"
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "status",
+    "sourceDigests",
+    "findings",
+    "next"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,10 @@
+# Copy to .dev.vars locally; never commit the populated file.
+# The API remains disabled until project/bindings/rules/IAM/quotas are verified.
+SIPHON_API_ENABLED="false"
+SIPHON_INSPECTION_WORKFLOW_ENABLED="false"
+E2B_API_KEY=""
+FIREBASE_PROJECT_ID=""
+GOOGLE_SERVICE_ACCOUNT_EMAIL=""
+GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY=""
+# Use JSON containing exact allowed origins; no wildcard, path or trailing slash.
+SIPHON_ALLOWED_ORIGINS='["http://localhost:5173"]'

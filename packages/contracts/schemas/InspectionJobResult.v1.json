@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "operationId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "inputDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "sources": {
+      "minItems": 1,
+      "maxItems": 10,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "artifactId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "inspection": {
+            "type": "object",
+            "properties": {
+              "schemaVersion": {
+                "type": "string",
+                "const": "1.0"
+              },
+              "sourceDigest": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "parsed": {
+                "type": "boolean"
+              },
+              "truncated": {
+                "type": "boolean"
+              },
+              "dependencies": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "absolute_import",
+                        "relative_import"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "line": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "name",
+                    "line"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "definitions": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "FunctionDef",
+                        "AsyncFunctionDef",
+                        "ClassDef",
+                        "assignment"
+                      ]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "line": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "name",
+                    "line"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "findings": {
+                "maxItems": 200,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "source_byte_limit",
+                        "null_byte",
+                        "invalid_source_encoding",
+                        "syntax_error",
+                        "parser_resource_or_input_error",
+                        "dynamic_code_requires_review",
+                        "dynamic_import_requires_review"
+                      ]
+                    },
+                    "line": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "line"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "schemaVersion",
+              "sourceDigest",
+              "parsed",
+              "truncated",
+              "dependencies",
+              "definitions",
+              "findings"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "artifactId",
+          "inspection"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "operationId",
+    "inputDigest",
+    "sources"
+  ],
+  "additionalProperties": false
+}

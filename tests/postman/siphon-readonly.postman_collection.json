@@ -1,0 +1,104 @@
+{
+  "info": {
+    "name": "Siphon private API — read-only checks",
+    "description": "Uses an invited Firebase ID token and an existing private audit. No simulation execution or mutation is triggered. Set variables in a local Postman environment; never commit credentials.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{firebase_id_token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "base_url", "value": "" },
+    { "key": "audit_id", "value": "" },
+    { "key": "revision_id", "value": "" }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('Response is not cached', function () { pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store'); });",
+          "pm.test('No server error', function () { pm.expect(pm.response.code).to.be.below(500); });"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "List private audits",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/v1/audits?limit=20"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Returns audit history', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().audits).to.be.an('array'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read owned audit",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/v1/audits/{{audit_id}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Returns selected audit', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().audit.id).to.eql(pm.variables.get('audit_id')); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read workspace",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/v1/audits/{{audit_id}}/revisions/{{revision_id}}/workspace"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Returns selected revision', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().revisionId).to.eql(pm.variables.get('revision_id')); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Read revision history",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/v1/audits/{{audit_id}}/revisions?limit=20"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Returns revision history', function () { pm.response.to.have.status(200); pm.expect(pm.response.json().revisions).to.be.an('array'); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

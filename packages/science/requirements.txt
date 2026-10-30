@@ -1,0 +1,10 @@
+# Locally tested Python 3.11 runtime; not a deployed sandbox image lock.
+numpy==2.0.2
+pydantic==2.14.1
+pydantic-core==2.50.1
+annotated-types==0.8.0
+typing-extensions==4.16.0
+typing-inspection==0.4.4
+reportlab==5.1.0
+pillow==13.0.0
+charset-normalizer==3.5.2

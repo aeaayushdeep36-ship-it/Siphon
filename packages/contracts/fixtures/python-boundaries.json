@@ -1,0 +1,4306 @@
+[
+  {
+    "id": "empty-source",
+    "kind": "inspection_request",
+    "valid": true,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "integer-json-number",
+    "kind": "inspection_request",
+    "valid": true,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072.0,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "boolean-limit",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": true,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "string-limit",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": "131072",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "fractional-limit",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 1.5,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "over-limit",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131073,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "zero-limit",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 0,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "schema-number",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": 1,
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "internal-field-name",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ],
+      "maximum_source_bytes": 131072
+    }
+  },
+  {
+    "id": "unknown-field",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ],
+      "extra": "private"
+    }
+  },
+  {
+    "id": "digest-newline",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "uppercase-digest",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "invalid-uuid-version",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-9234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "uuid-newline",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012\n",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "nil-uuid",
+    "kind": "inspection_request",
+    "valid": true,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "00000000-0000-0000-0000-000000000000",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "no-sources",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": []
+    }
+  },
+  {
+    "id": "duplicate-source",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        },
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "noncanonical-padding",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": "Zh=="
+        }
+      ]
+    }
+  },
+  {
+    "id": "bad-base64",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": "Zg="
+        }
+      ]
+    }
+  },
+  {
+    "id": "whitespace-base64",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": "Zg==\n"
+        }
+      ]
+    }
+  },
+  {
+    "id": "nested-extra",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": "",
+          "path": "fixture.py"
+        }
+      ]
+    }
+  },
+  {
+    "id": "combined-limit",
+    "kind": "inspection_request",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 1,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": "eD0x"
+        }
+      ]
+    }
+  },
+  {
+    "id": "parsed-result",
+    "kind": "inspection_result",
+    "valid": true,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [],
+            "findings": []
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "parse-failure-result",
+    "kind": "inspection_result",
+    "valid": true,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": false,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [],
+            "findings": [
+              {
+                "code": "syntax_error",
+                "line": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "result-input-mismatch",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [],
+            "findings": []
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "result-operation-mismatch",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789014",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [],
+            "findings": []
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "result-artifact-mismatch",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789014",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [],
+            "findings": []
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "result-hash-mismatch",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [],
+            "findings": []
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "result-duplicate",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [],
+            "findings": []
+          }
+        },
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [],
+            "findings": []
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "parsed-with-failure",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [],
+            "findings": [
+              {
+                "code": "syntax_error",
+                "line": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "failed-without-finding",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": false,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [],
+            "findings": []
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "numeric-boolean",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": 1,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [],
+            "findings": []
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "unknown-finding",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [],
+            "findings": [
+              {
+                "code": "looks_fine",
+                "line": null
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "zero-line",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 0
+              }
+            ],
+            "findings": []
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "boolean-line",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": true
+              }
+            ],
+            "findings": []
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "line-as-json-number",
+    "kind": "inspection_result",
+    "valid": true,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1.0
+              }
+            ],
+            "findings": []
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "astral-name-boundary",
+    "kind": "inspection_result",
+    "valid": true,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [
+              {
+                "kind": "assignment",
+                "name": "\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00",
+                "line": 1
+              }
+            ],
+            "findings": []
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "astral-name-over-limit",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [
+              {
+                "kind": "assignment",
+                "name": "\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00",
+                "line": 1
+              }
+            ],
+            "findings": []
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "result-private-extra",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [],
+            "findings": [],
+            "sourceText": "private"
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "aggregate-record-limit",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": true,
+            "truncated": false,
+            "dependencies": [],
+            "definitions": [
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              },
+              {
+                "kind": "assignment",
+                "name": "x",
+                "line": 1
+              }
+            ],
+            "findings": [
+              {
+                "code": "dynamic_code_requires_review",
+                "line": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "truncated-failure",
+    "kind": "inspection_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "inspection": {
+            "schemaVersion": "1.0",
+            "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "parsed": false,
+            "truncated": true,
+            "dependencies": [],
+            "definitions": [],
+            "findings": [
+              {
+                "code": "syntax_error",
+                "line": 1
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "operationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "maximumSourceBytes": 131072,
+      "sources": [
+        {
+          "artifactId": "12345678-1234-4234-8234-123456789013",
+          "sourceDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "sourceBase64": ""
+        }
+      ]
+    }
+  },
+  {
+    "id": "literal-mapping",
+    "kind": "mapping",
+    "valid": true,
+    "value": {
+      "key": "times",
+      "root": "times",
+      "steps": [],
+      "expectedShape": [2],
+      "axisOrder": [0],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "scalar-mapping",
+    "kind": "mapping",
+    "valid": false,
+    "value": {
+      "key": "times",
+      "root": "times",
+      "steps": [],
+      "expectedShape": [],
+      "axisOrder": [0],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "shape-float-integer",
+    "kind": "mapping",
+    "valid": true,
+    "value": {
+      "key": "times",
+      "root": "times",
+      "steps": [],
+      "expectedShape": [2.0],
+      "axisOrder": [0],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "shape-boolean",
+    "kind": "mapping",
+    "valid": false,
+    "value": {
+      "key": "times",
+      "root": "times",
+      "steps": [],
+      "expectedShape": [true],
+      "axisOrder": [0],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "shape-string",
+    "kind": "mapping",
+    "valid": false,
+    "value": {
+      "key": "times",
+      "root": "times",
+      "steps": [],
+      "expectedShape": ["2"],
+      "axisOrder": [0],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "bad-axis",
+    "kind": "mapping",
+    "valid": false,
+    "value": {
+      "key": "times",
+      "root": "times",
+      "steps": [],
+      "expectedShape": [2],
+      "axisOrder": [1],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "bad-root",
+    "kind": "mapping",
+    "valid": false,
+    "value": {
+      "key": "times",
+      "root": "times.values",
+      "steps": [],
+      "expectedShape": [2],
+      "axisOrder": [0],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "private-root",
+    "kind": "mapping",
+    "valid": false,
+    "value": {
+      "key": "times",
+      "root": "__builtins__",
+      "steps": [],
+      "expectedShape": [2],
+      "axisOrder": [0],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "root-newline",
+    "kind": "mapping",
+    "valid": false,
+    "value": {
+      "key": "times",
+      "root": "times\n",
+      "steps": [],
+      "expectedShape": [2],
+      "axisOrder": [0],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "unit-astral-boundary",
+    "kind": "mapping",
+    "valid": true,
+    "value": {
+      "key": "times",
+      "root": "times",
+      "steps": [],
+      "expectedShape": [2],
+      "axisOrder": [0],
+      "declaredUnit": "\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00"
+    }
+  },
+  {
+    "id": "unit-astral-over-limit",
+    "kind": "mapping",
+    "valid": false,
+    "value": {
+      "key": "times",
+      "root": "times",
+      "steps": [],
+      "expectedShape": [2],
+      "axisOrder": [0],
+      "declaredUnit": "\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00\ud801\udc00"
+    }
+  },
+  {
+    "id": "unknown-observation",
+    "kind": "mapping",
+    "valid": false,
+    "value": {
+      "key": "speed",
+      "root": "times",
+      "steps": [],
+      "expectedShape": [2],
+      "axisOrder": [0],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "index-as-number",
+    "kind": "mapping",
+    "valid": true,
+    "value": {
+      "key": "times",
+      "root": "times",
+      "steps": [
+        {
+          "kind": "index",
+          "index": 0.0
+        }
+      ],
+      "expectedShape": [2],
+      "axisOrder": [0],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "negative-index",
+    "kind": "mapping",
+    "valid": false,
+    "value": {
+      "key": "times",
+      "root": "times",
+      "steps": [
+        {
+          "kind": "index",
+          "index": -1
+        }
+      ],
+      "expectedShape": [2],
+      "axisOrder": [0],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "attribute-selector",
+    "kind": "mapping",
+    "valid": false,
+    "value": {
+      "key": "times",
+      "root": "times",
+      "steps": [
+        {
+          "kind": "attribute",
+          "key": "values"
+        }
+      ],
+      "expectedShape": [2],
+      "axisOrder": [0],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "selector-extra",
+    "kind": "mapping",
+    "valid": false,
+    "value": {
+      "key": "times",
+      "root": "times",
+      "steps": [
+        {
+          "kind": "key",
+          "key": "values",
+          "call": true
+        }
+      ],
+      "expectedShape": [2],
+      "axisOrder": [0],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "scalar-valid-mapping",
+    "kind": "mapping",
+    "valid": true,
+    "value": {
+      "key": "times",
+      "root": "times",
+      "steps": [],
+      "expectedShape": [],
+      "axisOrder": [],
+      "declaredUnit": "s"
+    }
+  },
+  {
+    "id": "data-only-validation",
+    "kind": "observation_validation",
+    "valid": true,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "same-evaluation",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789012",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-source-text",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      },
+      "sourceText": "never executed"
+    }
+  },
+  {
+    "id": "validation-alias",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      },
+      "maximum_bytes": 1024
+    }
+  },
+  {
+    "id": "validation-boolean-limit",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": true,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-number-limit",
+    "kind": "observation_validation",
+    "valid": true,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10.0,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-source-mismatch",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789014",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-input-mismatch",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-adapter-mismatch",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-profile-mismatch",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "direct",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-map-duplicate",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        },
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-output-duplicate",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          },
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-shape-mismatch",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [3],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-unit-mismatch",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "day"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-unsafe-name",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "../obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-bytes-budget",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 143,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-element-budget",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 1,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "validation-dtype",
+    "kind": "observation_validation",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float32",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "numeric-validation-summary",
+    "kind": "observation_validation_result",
+    "valid": true,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-evaluation-mismatch",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789013",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-source-mismatch",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789013",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-input-mismatch",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-adapter-mismatch",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-bytes-mismatch",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 145,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-elements-mismatch",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 3,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-observation-size",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 1
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-hash-mismatch",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-unit-mismatch",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "day",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-duplicate",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        },
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-nonfloat-original",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f4",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-silent-conversion",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "rounded",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-fake-verdict",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "physics_passed",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-unsafe-shape",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [true],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-numeric-count",
+    "kind": "observation_validation_result",
+    "valid": true,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2.0,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ]
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "id": "summary-foreign-payload",
+    "kind": "observation_validation_result",
+    "valid": false,
+    "value": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "validation": "validated_numeric_structure",
+      "totalBytes": 144,
+      "totalElements": 2,
+      "observations": [
+        {
+          "key": "times",
+          "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "bytes": 144,
+          "shape": [2],
+          "dtype": "float64",
+          "originalDtype": "<f8",
+          "conversion": "none",
+          "declaredUnit": "s",
+          "elements": 2
+        }
+      ],
+      "sourceText": "private"
+    },
+    "request": {
+      "schemaVersion": "1.0",
+      "evaluationOperationId": "12345678-1234-4234-8234-123456789014",
+      "sourceOperationId": "12345678-1234-4234-8234-123456789012",
+      "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "mappings": [
+        {
+          "key": "times",
+          "root": "times",
+          "steps": [],
+          "expectedShape": [2],
+          "axisOrder": [0],
+          "declaredUnit": "s"
+        }
+      ],
+      "maximumBytes": 1024,
+      "maximumElements": 10,
+      "manifest": {
+        "schemaVersion": "1.0",
+        "operationId": "12345678-1234-4234-8234-123456789012",
+        "inputDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "adapterDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "executionProfile": "runpy_main_root_v1",
+        "observations": [
+          {
+            "key": "times",
+            "filename": "obs_times.npy",
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "bytes": 144,
+            "shape": [2],
+            "dtype": "float64",
+            "declaredUnit": "s"
+          }
+        ]
+      }
+    }
+  }
+]

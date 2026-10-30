@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "heat_diffusion",
+        "orbital_dynamics"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "domain",
+    "title"
+  ],
+  "additionalProperties": false
+}

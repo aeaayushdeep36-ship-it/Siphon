@@ -1,0 +1,59 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "audits",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownerUid", "order": "ASCENDING" },
+        { "fieldPath": "deletionRequestedAt", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "revisions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownerUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "auditId", "order": "ASCENDING" },
+        { "fieldPath": "revisionId", "order": "ASCENDING" },
+        { "fieldPath": "sequence", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    { "collectionGroup": "reports", "fieldPath": "reportJson", "indexes": [] },
+    { "collectionGroup": "context", "fieldPath": "proposal", "indexes": [] },
+    {
+      "collectionGroup": "context",
+      "fieldPath": "questionDraft",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "validationCandidates",
+      "fieldPath": "report",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "diagnosticCandidates",
+      "fieldPath": "report",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "validationExecutions",
+      "fieldPath": "request",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "diagnosticExecutions",
+      "fieldPath": "request",
+      "indexes": []
+    }
+  ]
+}

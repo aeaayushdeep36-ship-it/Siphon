@@ -1,0 +1,66 @@
+{
+  "name": "siphon",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/contracts"
+  ],
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "test:science": "node scripts/check-science.mjs test",
+    "lint:science": "node scripts/check-science.mjs lint",
+    "typecheck:science": "node scripts/check-science.mjs types",
+    "verify:science": "node scripts/check-science.mjs all",
+    "test:python-model-parity": "tsx scripts/check-python-model-parity.ts",
+    "test:diagnostics-parity": "tsx scripts/check-diagnostics-parity.ts",
+    "test:source-job-parity": "tsx scripts/check-source-job-parity.ts",
+    "test:adapter-parity": "tsx scripts/check-adapter-parity.ts",
+    "test:inspection-job-parity": "tsx scripts/check-inspection-job-parity.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "build": "npm run typecheck && npm run typecheck:worker && npm run schemas && npm run build:worker && npm run build --workspace @siphon/web",
+    "typecheck:worker": "tsc --noEmit -p tsconfig.worker.json",
+    "build:worker": "npm run build --workspace @siphon/api",
+    "test:rules": "node scripts/check-firestore-rules.mjs",
+    "test:worker-runtime": "npm run build:worker && node scripts/check-worker-runtime.mjs",
+    "schemas": "tsx scripts/export-schemas.ts",
+    "test:inspection-parity": "tsx scripts/check-inspection-parity.ts",
+    "test:fidelity-parity": "tsx scripts/check-fidelity-parity.ts",
+    "test:evidence-parity": "tsx scripts/check-evidence-parity.ts",
+    "test:report-pdf": "tsx scripts/check-report-pdf.ts"
+  },
+  "overrides": {
+    "@firebase/firestore": {
+      "@grpc/grpc-js": "1.14.6"
+    },
+    "@google-cloud/pubsub": {
+      "@opentelemetry/core": "2.8.0"
+    },
+    "gaxios@6": {
+      "uuid": "11.1.1"
+    }
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261029.1",
+    "@eslint/js": "10.0.1",
+    "@firebase/rules-unit-testing": "6.0.0",
+    "@types/node": "24.19.2",
+    "eslint": "10.13.0",
+    "firebase": "13.1.0",
+    "firebase-tools": "15.34.2",
+    "miniflare": "5.20261023.2-beta",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "5.0.5",
+    "wrangler": "4.155.0",
+    "zod": "4.6.7"
+  }
+}

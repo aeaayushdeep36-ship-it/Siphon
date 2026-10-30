@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function invitedGoogleUser() {
+      return request.auth != null
+        && request.auth.uid.matches('[a-zA-Z0-9_-]{1,128}')
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && get(/databases/$(database)/documents/testers/$(request.auth.uid)).data.active == true;
+    }
+    function ownsAudit(auditId) {
+      let audit = get(/databases/$(database)/documents/audits/$(auditId));
+      return invitedGoogleUser()
+        && audit.data.ownerUid == request.auth.uid
+        && audit.data.deletionRequestedAt == null;
+    }
+    function ownsRevision(auditId, revisionId) {
+      let revision = get(/databases/$(database)/documents/audits/$(auditId)/revisions/$(revisionId));
+      return ownsAudit(auditId)
+        && revision.data.ownerUid == request.auth.uid
+        && revision.data.auditId == auditId
+        && revision.data.revisionId == revisionId;
+    }
+    function boundedList(maximum) {
+      return request.query.limit != null && request.query.limit <= maximum;
+    }
+    match /audits/{auditId} {
+      allow get: if invitedGoogleUser()
+        && resource.data.ownerUid == request.auth.uid
+        && resource.data.deletionRequestedAt == null;
+      allow list: if invitedGoogleUser() && boundedList(20)
+        && resource.data.ownerUid == request.auth.uid
+        && resource.data.deletionRequestedAt == null;
+      match /revisions/{revisionId} {
+        allow get: if ownsRevision(auditId, revisionId);
+        allow list: if ownsAudit(auditId) && boundedList(20)
+          && resource.data.ownerUid == request.auth.uid
+          && resource.data.auditId == auditId;
+        match /questions/{questionId} {
+          allow get: if questionId == 'current' && ownsRevision(auditId, revisionId)
+            && resource.data.ownerUid == request.auth.uid
+            && resource.data.questionSet.auditId == auditId
+            && resource.data.questionSet.revisionId == revisionId;
+        }
+        match /events/{eventId} {
+          allow get: if ownsRevision(auditId, revisionId)
+            && resource.data.auditId == auditId && resource.data.revisionId == revisionId;
+          allow list: if ownsRevision(auditId, revisionId) && boundedList(50)
+            && resource.data.auditId == auditId && resource.data.revisionId == revisionId;
+        }
+        // Final owner-facing documents only; execution/candidate/context journals
+        // are deliberately excluded even when located under the same revision.
+        match /{collection}/{documentId} {
+          allow get: if collection in ['plans', 'evidence', 'reports']
+            && ownsRevision(auditId, revisionId)
+            && resource.data.ownerUid == request.auth.uid
+            && resource.data.auditId == auditId && resource.data.revisionId == revisionId
+            && resource.data.expiresAt is timestamp && resource.data.expiresAt > request.time;
+        }
+      }
+    }
+    // Backend service accounts use IAM and bypass these browser rules.
+    // No browser write, artifact read, private journal or unknown collection is permitted.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "domain": {
+      "type": "string",
+      "enum": [
+        "heat_diffusion",
+        "orbital_dynamics"
+      ]
+    },
+    "inputDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "contextDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "adapterDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "assertions": {
+      "maxItems": 29,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "requirement": {
+            "type": "string",
+            "enum": [
+              "supported_model",
+              "confirmed_units",
+              "verified_adapter",
+              "finite_observations",
+              "thermal_weights",
+              "closed_thermal_boundary",
+              "no_heat_sources",
+              "boundary_flux_observed",
+              "heat_sources_observed",
+              "time_quadrature_supported",
+              "internal_time_control",
+              "three_temporal_levels",
+              "same_physical_horizon",
+              "nested_grid_control",
+              "three_spatial_levels",
+              "common_coordinates",
+              "temporal_error_separated",
+              "matching_validated_reference",
+              "reference_accuracy_verified",
+              "reference_independent",
+              "inertial_frame",
+              "gravity_profile_confirmed",
+              "positions_velocities",
+              "masses_or_central_parameter",
+              "complete_gravity_model",
+              "isolated_mutual_gravity",
+              "compatible_angular_origin",
+              "bounded_trajectory_horizon",
+              "resource_budget_available"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "satisfied",
+              "violated",
+              "unknown",
+              "conflicting"
+            ]
+          },
+          "evidenceIds": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        },
+        "required": [
+          "requirement",
+          "state",
+          "evidenceIds"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "domain",
+    "inputDigest",
+    "contextDigest",
+    "adapterDigest",
+    "assertions"
+  ],
+  "additionalProperties": false
+}

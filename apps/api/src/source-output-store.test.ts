@@ -360,7 +360,11 @@ describe('private source output persistence', () => {
         },
         () => new Date('2026-10-29T00:00:00Z'),
       );
-      const loader = new StoredObservationLoader(f.docs, downloads);
+      const loader = new StoredObservationLoader(
+        f.docs,
+        downloads,
+        () => new Date('2026-10-29T00:00:00Z'),
+      );
       const fence = {
         auditId: f.audit.id,
         revisionId: f.audit.currentRevisionId,

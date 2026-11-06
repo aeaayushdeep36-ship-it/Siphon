@@ -23,6 +23,7 @@ export class StoredObservationLoader {
   constructor(
     private readonly store: DocumentStore,
     private readonly downloads: Pick<ArtifactDownloadService, 'get'>,
+    private readonly now: () => Date = () => new Date(),
   ) {}
   async load(
     uid: string,
@@ -47,6 +48,8 @@ export class StoredObservationLoader {
         sourceOperationId,
         evaluationOperationId,
         fence,
+        false,
+        this.now(),
       ),
     );
     if (snapshot.plan.totalBytes > snapshot.policy.outputBytes)

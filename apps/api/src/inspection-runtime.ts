@@ -414,7 +414,7 @@ export function createInspectionServices(
           ? 'adapter_fidelity_review_pending'
           : 'comparison_reconciliation_required',
         result.status === 'published'
-          ? 'Baseline comparison has been saved. Both runs used the same extraction, so a match shows repeatability, not that the selected variables are correct. Adapter fidelity review and scientific checks are still pending.'
+          ? 'Baseline comparison has been saved. The runs used different extraction profiles; a match does not prove that the selected variables are scientifically correct. Adapter fidelity review and scientific checks are still pending.'
           : 'Baseline comparison needs cleanup or execution reconciliation.',
       );
       return result;

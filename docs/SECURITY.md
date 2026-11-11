@@ -1,5 +1,9 @@
 # Siphon security specification
 
+## Terminal replay authorization — 2026-11-11
+
+A scientific finish receipt permits replay of the original finishing operation only after rechecking an active invitation, live owned audit, unchanged current revision/input, exact successor generation, matching report ID, partial terminal state and absence of attached capacity/operations. A different operation, deletion, ownership change or superseding revision denies replay. Server-held completion metadata never grants new execution or artifact access, and terminal status without the receipt is insufficient.
+
 ## Current AI provider boundary (2026-11-08)
 
 Groq free-tier inference supersedes the Meta selection, Standard-mode rule and USD 150 assumption below. Old Meta code is legacy compatibility/history, never a production fallback. Invalid or absent explicit Groq settings block dispatch; a key does not authorize a paid upgrade, provider change or uncertain-operation retry.

@@ -311,6 +311,88 @@ describe('private PDF publication authority', () => {
     expect(f.docs.documents.get(`slotLeases/${lease.id}`)?.status).toBe(
       'released',
     );
+    // A lost Workflow checkpoint must replay the committed result without
+    // another terminal transition, capacity release or progress event.
+    const snapshot = structuredClone(f.docs.documents);
+    const results = await Promise.all([
+      finish.finish('alice', fence, f.operationId),
+      finish.finish('alice', fence, f.operationId),
+    ]);
+    expect(results).toEqual([
+      { schemaVersion: '1.0', status: 'partial', reportId: f.report.reportId },
+      { schemaVersion: '1.0', status: 'partial', reportId: f.report.reportId },
+    ]);
+    expect(f.docs.documents).toEqual(snapshot);
+  });
+  it.each([
+    'invitation',
+    'owner',
+    'deleted',
+    'successor',
+    'generation',
+    'operation',
+    'report',
+    'capacity',
+    'missing_receipt',
+  ])('denies finish replay after %s changes', async (change) => {
+    const f = await setup();
+    const fence = {
+      auditId: f.audit.id,
+      revisionId: f.audit.currentRevisionId,
+      inputDigest: f.report.inputDigest,
+      generation: 0,
+    };
+    await f.candidate();
+    f.terminated();
+    await f.publications.publish(f.operationId);
+    const finish = new ScientificFinishStage(f.docs, () => f.now);
+    await finish.finish('alice', fence, f.operationId);
+    const revision = f.docs.documents.get(f.base)!;
+    if (change === 'invitation')
+      f.docs.documents.get('testers/alice')!.active = false;
+    if (change === 'owner')
+      f.docs.documents.get(`audits/${f.audit.id}`)!.ownerUid = 'bob';
+    if (change === 'deleted')
+      f.docs.documents.get(`audits/${f.audit.id}`)!.deletionRequestedAt =
+        f.now.toISOString();
+    if (change === 'successor')
+      f.docs.documents.get(`audits/${f.audit.id}`)!.currentRevisionId =
+        crypto.randomUUID();
+    if (change === 'generation') revision.generation = 2;
+    if (change === 'report') revision.reportId = crypto.randomUUID();
+    if (change === 'capacity') revision.slotLeaseId = crypto.randomUUID();
+    if (change === 'missing_receipt')
+      f.docs.documents.delete(`scientificFinishStages/${fence.revisionId}`);
+    const operationId =
+      change === 'operation' ? crypto.randomUUID() : f.operationId;
+    const snapshot = structuredClone(f.docs.documents);
+    await expect(finish.finish('alice', fence, operationId)).rejects.toThrow();
+    expect(f.docs.documents).toEqual(snapshot);
+  });
+  it('does not finish with an attached operation even when no lease is recorded', async () => {
+    const f = await setup();
+    const fence = {
+      auditId: f.audit.id,
+      revisionId: f.audit.currentRevisionId,
+      inputDigest: f.report.inputDigest,
+      generation: 0,
+    };
+    await f.candidate();
+    f.terminated();
+    await f.publications.publish(f.operationId);
+    f.docs.documents.get(f.base)!.activeOperationId = crypto.randomUUID();
+    const finish = new ScientificFinishStage(f.docs, () => f.now);
+    await expect(finish.finish('alice', fence, f.operationId)).rejects.toThrow(
+      'proof changed',
+    );
+    expect(f.docs.documents.get(f.base)).toMatchObject({
+      stage: 'reporting',
+      status: 'running',
+      generation: 0,
+    });
+    expect(
+      f.docs.documents.has(`scientificFinishStages/${fence.revisionId}`),
+    ).toBe(false);
   });
   it('reserves once, charges PUT before I/O, publishes only after termination and exposes matching download metadata', async () => {
     const f = await setup();

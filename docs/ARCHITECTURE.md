@@ -1,5 +1,9 @@
 # Siphon architecture
 
+## Scientific finalization recovery — 2026-11-11
+
+Scientific finalization now commits a durable receipt together with the terminal progress transition. If the Workflow loses its checkpoint after that commit, the same finishing operation can return the saved partial result after reauthorizing the exact terminal successor. Concurrent duplicate finishes cannot advance the generation twice. Attached capacity or an active operation blocks finalization; unknown execution and accounting still require reconciliation. The workflow still lacks integrated AI investigation and extended experiments, so this change does not promote partial audits to complete or establish a hosted audit.
+
 ## Current Groq integration (2026-11-08)
 
 This section supersedes conflicting Meta-specific architecture below. The production inspection continuation uses validated `AiConfiguration` and Groq Chat Completions; absent or invalid settings block AI work. `SIPHON_AI_MODEL` selects the model (`qwen/qwen3.8-27b` in the example), and `GROQ_API_KEY` stays server-side. Meta transport/counting/pricing modules remain legacy compatibility/history/tests, never a production fallback. No Meta credit or counting attestation is produced for Groq.

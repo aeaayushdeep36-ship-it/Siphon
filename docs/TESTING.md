@@ -1,5 +1,9 @@
 # Siphon testing and scientific validation
 
+## Scientific finish replay — 2026-11-11
+
+Local publication/finalization tests now cover a lost-checkpoint replay with concurrent duplicate deliveries and no new state/progress/capacity writes. Replays are rejected after invitation, owner, deletion, current-revision, generation, operation, report, capacity or receipt changes. Finalization also rejects an attached operation when no lease is present. These checks use authored report/PDF bytes and the transactional test store; they do not render a new PDF, call E2B or verify hosted completion. Scientific results remain partial while investigation and the remaining required method families are unavailable.
+
 ## Hosted Firebase history integration checkpoint (2026-11-11)
 
 The hosted frontend's Google sign-in succeeded, but authenticated history initially failed before Firestore. Cloudflare's Worker runtime rejects `redirect: "error"` while constructing a Request; OAuth was corrected to use manual redirect handling. A sanitized diagnostic exposed Cloudflare fetch's receiver-binding issue in stored transports; Firestore, Groq, legacy Meta and optional Redis transports now invoke injected fetch functions without a receiver. Firestore history then identified a missing composite index. The repository's indexes were deployed to the configured default database; `firebase firestore:indexes` reports the audits, revisions and events composites READY. A direct local Firestore REST query using the project's ignored service-account config succeeded with zero rows for a synthetic nonexistent UID. Focused API tests (106 cases), `npm run typecheck` and `npm run typecheck:worker` passed. Browser verification after the index reached READY remains outstanding because local browser use was disabled; no end-to-end hosted audit is claimed. Workflow stays disabled.

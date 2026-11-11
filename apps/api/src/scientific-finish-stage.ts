@@ -5,13 +5,30 @@ import {
   Id,
   Timestamp,
 } from '@siphon/contracts';
-import { type DocumentStore } from './firestore.js';
-import { DispatchFence, requireActiveRevision } from './audit-commands.js';
+import { z } from 'zod';
+import { type DocumentStore, type DocumentTransaction } from './firestore.js';
+import {
+  authorize,
+  DispatchFence,
+  requireActiveRevision,
+  stateFrom,
+} from './audit-commands.js';
 import { Operation } from './accounting.js';
 import { SandboxTermination } from './sandbox-termination.js';
 import { persistProgress } from './progress.js';
 import { canonicalJson, sha256 } from './hashing.js';
 import { AdmissionRepository } from './admission.js';
+
+const FinishReceipt = DispatchFence.extend({
+  schemaVersion: z.literal('1.0'),
+  ownerUid: z.string().min(1).max(128),
+  operationId: Id,
+  reportId: Id,
+  reportDigest: Digest,
+  pdfSha256: Digest,
+  status: z.literal('partial'),
+  finishedAt: Timestamp,
+});
 
 /** The report is intentionally partial while the requested AI investigation
  * remains unavailable, even if its PDF has been published. */
@@ -20,6 +37,53 @@ export class ScientificFinishStage {
     private readonly store: DocumentStore,
     private readonly clock: () => Date = () => new Date(),
   ) {}
+
+  /** A committed finish may outlive its Workflow checkpoint. Reauthorize the
+   * owner and exact terminal successor before returning the durable receipt;
+   * replay never releases capacity or republishes progress. */
+  private async replay(
+    tx: DocumentTransaction,
+    uid: string,
+    fence: z.infer<typeof DispatchFence>,
+    operationId: string,
+  ) {
+    const raw = await tx.get(`scientificFinishStages/${fence.revisionId}`);
+    if (!raw) return null;
+    const receipt = FinishReceipt.parse(raw);
+    const audit = await authorize(tx, uid, fence.auditId, false);
+    const revision = await tx.get(
+      `audits/${fence.auditId}/revisions/${fence.revisionId}`,
+    );
+    if (!revision) throw new Error('Finished revision is unavailable');
+    const state = stateFrom(revision);
+    if (
+      receipt.ownerUid !== uid ||
+      receipt.auditId !== fence.auditId ||
+      receipt.revisionId !== fence.revisionId ||
+      receipt.inputDigest !== fence.inputDigest ||
+      receipt.generation !== fence.generation ||
+      receipt.operationId !== operationId ||
+      audit.currentRevisionId !== fence.revisionId ||
+      revision.ownerUid !== uid ||
+      revision.reportId !== receipt.reportId ||
+      revision.slotLeaseId != null ||
+      revision.activeOperationId != null ||
+      state.auditId !== fence.auditId ||
+      state.revisionId !== fence.revisionId ||
+      state.inputDigest !== fence.inputDigest ||
+      state.generation !== fence.generation + 1 ||
+      state.stage !== 'finished' ||
+      state.status !== receipt.status ||
+      state.cancellationRequestedAt !== null
+    )
+      throw new Error('Scientific finish receipt changed');
+    return {
+      schemaVersion: '1.0' as const,
+      status: receipt.status,
+      reportId: receipt.reportId,
+    };
+  }
+
   async finish(uid: string, expected: unknown, pdfOperationIdValue: unknown) {
     const fence = DispatchFence.parse(expected),
       operationId = Id.parse(pdfOperationIdValue);
@@ -27,15 +91,21 @@ export class ScientificFinishStage {
     // A terminal revision cannot use the normal active-revision release path.
     // Release capacity first only when the durable admission ledger confirms
     // that every tracked provider operation has ended. A crash is replayable.
-    const leaseId = await this.store.transaction(async (tx) => {
+    const preparation = await this.store.transaction(async (tx) => {
+      const replay = await this.replay(tx, uid, fence, operationId);
+      if (replay) return { replay, leaseId: null };
       const state = await requireActiveRevision(tx, uid, fence);
       if (state.stage !== 'reporting')
         throw new Error('Report finalization requires reporting stage');
       const revision = await tx.get(base);
-      return revision?.slotLeaseId == null
-        ? null
-        : Id.parse(revision.slotLeaseId);
+      return {
+        replay: null,
+        leaseId:
+          revision?.slotLeaseId == null ? null : Id.parse(revision.slotLeaseId),
+      };
     });
+    if (preparation.replay) return preparation.replay;
+    const leaseId = preparation.leaseId;
     if (leaseId)
       await new AdmissionRepository(this.store, this.clock).releaseReconciled(
         uid,
@@ -43,6 +113,8 @@ export class ScientificFinishStage {
         leaseId,
       );
     return this.store.transaction(async (tx) => {
+      const replay = await this.replay(tx, uid, fence, operationId);
+      if (replay) return replay;
       const state = await requireActiveRevision(tx, uid, fence);
       if (state.stage !== 'reporting')
         throw new Error('Report finalization requires reporting stage');
@@ -69,6 +141,8 @@ export class ScientificFinishStage {
         `audits/${fence.auditId}/artifacts/${artifactId}`,
       );
       if (
+        revision?.slotLeaseId != null ||
+        revision?.activeOperationId != null ||
         rawReport?.ownerUid !== uid ||
         rawReport.auditId !== fence.auditId ||
         rawReport.revisionId !== fence.revisionId ||
@@ -143,6 +217,20 @@ export class ScientificFinishStage {
         this.clock(),
         event,
       );
+      tx.set(`scientificFinishStages/${fence.revisionId}`, {
+        ...FinishReceipt.parse({
+          schemaVersion: '1.0',
+          ownerUid: uid,
+          ...fence,
+          operationId,
+          reportId,
+          reportDigest: digest,
+          pdfSha256: pdfDigest,
+          status: 'partial',
+          finishedAt: this.clock().toISOString(),
+        }),
+        finishedAt: this.clock(),
+      });
       return {
         schemaVersion: '1.0' as const,
         status: 'partial' as const,

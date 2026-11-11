@@ -274,8 +274,8 @@ describe('authored frontend journey through real browser API contracts', () => {
         ? Response.json(
             {
               error: {
-                code: 'unavailable',
-                message: 'Saved state unavailable.',
+                code: 'storage_unavailable',
+                message: 'Storage is temporarily unavailable.',
               },
             },
             { status: 503 },
@@ -309,8 +309,8 @@ describe('authored frontend journey through real browser API contracts', () => {
         ? Response.json(
             {
               error: {
-                code: 'unavailable',
-                message: 'Saved state unavailable.',
+                code: 'storage_unavailable',
+                message: 'Storage is temporarily unavailable.',
               },
             },
             { status: 503 },
@@ -321,6 +321,7 @@ describe('authored frontend journey through real browser API contracts', () => {
       host.querySelector<HTMLButtonElement>('.history-item')!.click(),
     );
     expect(host.textContent).toContain('Saved state could not be refreshed');
+    expect(host.textContent).toContain('storage_unavailable');
     expect(host.textContent).toContain('Saved progress unavailable');
     expect(host.textContent).toContain(
       'Saved activity is temporarily unavailable.',

@@ -6,9 +6,11 @@ This section supersedes older deployment and provider status below. Keep later d
 
 ## Frontend consent integration checkpoint — 2026-11-11
 
-Frontend branch `frontend/integration-2026-11-11` is tracked in draft PR [#3](https://github.com/aeaayushdeep36-ship-it/Siphon/pull/3). It connects the digest-bound owner disclosure API from backend PR #2 to the audit workspace, requires consent before continuations that can dispatch AI, and leaves reviewed investigation/report-only continuations available after revocation. The web suite passes 42 tests across seven files; the web production build and TypeScript check pass. The build emits a 502.49 kB main-chunk advisory. This branch has not been deployed.
+Frontend branch `frontend/integration-2026-11-11` is tracked in draft PR [#3](https://github.com/aeaayushdeep36-ship-it/Siphon/pull/3). It connects the digest-bound owner disclosure API from backend PR #2 to the audit workspace, requires consent before continuations that can dispatch AI, and leaves reviewed investigation/report-only continuations available after revocation. The web suite passes 42 tests across seven files; the web production build and TypeScript check pass. The build emits a 502.49 kB main JavaScript chunk advisory. This branch has not been deployed.
 
 A fresh public read-only probe returned Pages 200, production-origin API preflight 204, and unauthenticated audit history 401. These checks confirm public endpoint and CORS behavior only. The user later enabled local browser access and confirmed sign-in in “🔎 Siphon frontend,” but that original tab is not exposed in the current computer-use session; a newly opened Chrome tab showed “Continue with Google.” The authenticated history session was not rechecked. Workspace/progress 503s (`storage_unavailable`) remain unresolved. No real source upload, heat/orbital run, evidence, report, PDF, or cleanup was verified.
+
+The backend working tree now contains partial Workflow phase wiring. Its Worker dispatch branch still accepts only `scientific_*`, so child payloads for `report`, `pdf`, and `finish` do not reach the phase handler. This integration finding was posted to PR #2. The change is uncommitted and does not establish a complete or limit-compliant workflow.
 
 ## Hosted Firebase history integration checkpoint
 

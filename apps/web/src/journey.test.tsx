@@ -302,6 +302,34 @@ describe('authored frontend journey through real browser API contracts', () => {
     expect(requests.every((item) => item.method === 'GET')).toBe(true);
   });
 
+  it('keeps work disabled while saved workspace and progress reads stay unavailable', async () => {
+    vi.useFakeTimers();
+    respond = (path) =>
+      path === `${base}/workspace` || path === `${base}/progress`
+        ? Response.json(
+            {
+              error: {
+                code: 'unavailable',
+                message: 'Saved state unavailable.',
+              },
+            },
+            { status: 503 },
+          )
+        : defaults(path);
+    await mount();
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('.history-item')!.click(),
+    );
+    expect(host.textContent).toContain('Saved state could not be refreshed');
+    expect(host.textContent).toContain('Saved progress unavailable');
+    expect(host.textContent).toContain(
+      'Saved activity is temporarily unavailable.',
+    );
+    expect(button('Start readiness and audit').disabled).toBe(true);
+    expect(host.querySelector<HTMLInputElement>('#files')?.disabled).toBe(true);
+    expect(requests.every((item) => item.method === 'GET')).toBe(true);
+  });
+
   it('keeps loaded progress distinct from a failed workspace read', async () => {
     respond = (path) =>
       path === `${base}/workspace`

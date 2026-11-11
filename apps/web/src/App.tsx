@@ -31,6 +31,7 @@ import { AuditApi, digestBytes, RequestFailure } from './api.js';
 import { auth, signIn, signInErrorMessage } from './auth.js';
 import { label } from './labels.js';
 import { ReportBoundary } from './ReportBoundary.js';
+import { startReadPolling } from './read-polling.js';
 
 const Report = lazy(() =>
   import('./Report.js').then((module) => ({ default: module.Report })),
@@ -503,8 +504,10 @@ function Console({
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [readIssue, setReadIssue] = useState('');
   const [historyState, setHistoryState] = useState('Loading private history…');
   const selection = useRef(0);
+  const refreshSequence = useRef(0);
   const alive = useRef(true);
   const errorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -606,19 +609,39 @@ function Console({
   }, [audit?.id, audit?.currentRevisionId, loadRevisions]);
   const refresh = useCallback(
     async (selected: Audit, token = selection.current) => {
+      const sequence = ++refreshSequence.current;
       const base = `/audits/${selected.id}/revisions/${selected.currentRevisionId}`;
       const results = await Promise.allSettled([
         api.get(`${base}/workspace`, Workspace),
         api.get(`${base}/progress`, ProgressSnapshot),
       ]);
-      if (!alive.current || token !== selection.current) return;
+      if (
+        !alive.current ||
+        token !== selection.current ||
+        sequence !== refreshSequence.current
+      )
+        return;
       const [details, state] = results;
       if (details.status === 'fulfilled') setWorkspace(details.value);
-      else showError(details.reason);
       if (state.status === 'fulfilled') setProgress(state.value);
-      else showError(state.reason);
+      if (details.status === 'rejected' || state.status === 'rejected') {
+        setReadIssue(
+          errorText(
+            details.status === 'rejected'
+              ? details.reason
+              : state.status === 'rejected'
+                ? state.reason
+                : undefined,
+          ) || 'The saved state could not be read.',
+        );
+        return;
+      }
+      setReadIssue('');
+      return state.status === 'fulfilled'
+        ? state.value.pollAfterSeconds
+        : undefined;
     },
-    [api, showError],
+    [api],
   );
   async function open(selected: Audit) {
     const token = ++selection.current;
@@ -630,22 +653,17 @@ function Console({
     setAnswers({});
     setError('');
     setNotice('');
+    setReadIssue('');
     setFiles([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
     setReuseArtifacts(null);
     await refresh(selected, token);
   }
   useEffect(() => {
-    if (!audit || !progress?.pollAfterSeconds) return;
+    if (!audit) return;
     const token = selection.current;
-    const timer = setTimeout(
-      () => {
-        void refresh(audit, token);
-      },
-      Math.max(10, progress.pollAfterSeconds) * 1000,
-    );
-    return () => clearTimeout(timer);
-  }, [audit, progress, refresh]);
+    return startReadPolling(() => refresh(audit, token));
+  }, [audit, refresh]);
   useEffect(() => {
     if (!audit || !progress) return;
     let active = true;
@@ -968,6 +986,17 @@ function Console({
         )}
         {audit && (
           <>
+            {readIssue && (
+              <section className="panel warning" role="status">
+                <h2>Saved state could not be refreshed</h2>
+                <p>{readIssue}</p>
+                <p>
+                  Displayed information may be out of date. Siphon will retry
+                  reading saved state automatically. Use Refresh audit to check
+                  now. Reconnecting does not start experiments or repeat work.
+                </p>
+              </section>
+            )}
             {!!workspace?.operationalIssues.length && (
               <section
                 className="panel warning"

@@ -1,5 +1,9 @@
 # Siphon design system and interaction specification
 
+## Saved-state recovery (2026-11-11)
+
+Connection failures during workspace/progress reads retain the last saved snapshots and display an explicit warning that they may be out of date. Read-only polling resumes automatically with bounded backoff; Refresh audit requests an immediate read. Navigation and sign-out stop the old poller, and terminal/historical server snapshots stop repeated polling. Reconnection never starts or repeats experiments. This change preserves the supplied console design; local polling tests do not establish a completed hosted journey.
+
 ## Frontend design integration (2026-11-09)
 
 The React client now uses the supplied Siphon console design for the landing page, domain selection, audit workspace and evidence report. Heat and Gravitation select the corresponding existing domain values; workspace controls continue to use authenticated API contracts. Example audit data in the supplied design is not presented as a live result. Empty, blocked and unavailable states reflect the data and configuration actually returned by the application. The supplied imagery is stored in `apps/web/public/design/`, and smooth scrolling respects reduced-motion preferences.

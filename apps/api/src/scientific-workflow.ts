@@ -10,6 +10,8 @@ type Services = Pick<
   ReturnType<typeof createInspectionServices>,
   | 'scientificEvaluateForJob'
   | 'scientificInvestigateForJob'
+  | 'scientificPrepareInvestigationForJob'
+  | 'scientificDispatchInvestigationForJob'
   | 'scientificReportForJob'
   | 'scientificPdfForJob'
   | 'scientificFinishForJob'
@@ -39,14 +41,14 @@ export async function runScientificPhase(
     if (evaluation.status !== 'published') return evaluation;
     await dispatch({
       ...common,
-      phase: 'scientific_investigate',
+      phase: 'investigation_prepare',
       phaseKey: evaluation.operationId,
       fence: evaluation.fence,
       operationId: evaluation.operationId,
     });
     return {
       status: 'phase_dispatched' as const,
-      phase: 'scientific_investigate',
+      phase: 'investigation_prepare',
     };
   }
   if (phase.phase === 'scientific_investigate') {
@@ -54,6 +56,62 @@ export async function runScientificPhase(
     if (!operationId) throw new Error('Investigation operation is required');
     const investigation = await steps.run('scientific.investigate', () =>
       services.scientificInvestigateForJob(phase.jobId, fence, operationId),
+    );
+    if (investigation.status !== 'reviewed') return investigation;
+    await dispatch({
+      ...common,
+      phase: 'report',
+      phaseKey: operationId,
+      fence: investigation.fence,
+      operationId,
+    });
+    return { status: 'phase_dispatched' as const, phase: 'report' };
+  }
+  if (phase.phase === 'investigation_prepare') {
+    const operationId = phase.operationId;
+    if (!operationId) throw new Error('Investigation operation is required');
+    const prepared = await steps.run('scientific.investigation.prepare', () =>
+      services.scientificPrepareInvestigationForJob(
+        phase.jobId,
+        fence,
+        operationId,
+      ),
+    );
+    if (prepared.status === 'reviewed') {
+      const operationId = prepared.operationId;
+      await dispatch({
+        ...common,
+        phase: 'report',
+        phaseKey: operationId,
+        fence: prepared.fence,
+        operationId,
+      });
+      return { status: 'phase_dispatched' as const, phase: 'report' };
+    }
+    if (prepared.status !== 'dispatch_ready') return prepared;
+    await dispatch({
+      ...common,
+      phase: 'investigation_dispatch',
+      phaseKey: prepared.operationId,
+      fence: prepared.fence,
+      operationId: prepared.operationId,
+    });
+    return {
+      status: 'phase_dispatched' as const,
+      phase: 'investigation_dispatch',
+    };
+  }
+  if (phase.phase === 'investigation_dispatch') {
+    const operationId = phase.operationId;
+    if (!operationId) throw new Error('Investigation operation is required');
+    const investigation = await steps.run(
+      'scientific.investigation.dispatch',
+      () =>
+        services.scientificDispatchInvestigationForJob(
+          phase.jobId,
+          fence,
+          operationId,
+        ),
     );
     if (investigation.status !== 'reviewed') return investigation;
     await dispatch({

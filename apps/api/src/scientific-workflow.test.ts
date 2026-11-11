@@ -29,6 +29,15 @@ function fixture() {
       status: 'reviewed',
       fence,
     })),
+    scientificPrepareInvestigationForJob: vi.fn(async () => ({
+      status: 'dispatch_ready',
+      fence: { ...fence, generation: fence.generation + 1 },
+      operationId: crypto.randomUUID(),
+    })),
+    scientificDispatchInvestigationForJob: vi.fn(async () => ({
+      status: 'reviewed',
+      fence: { ...fence, generation: fence.generation + 1 },
+    })),
     scientificReportForJob: vi.fn(async () => ({
       status: 'report_published',
       fence: reportFence,
@@ -120,6 +129,8 @@ describe('scientific child phase chain', () => {
     phase:
       | 'scientific_evaluate'
       | 'scientific_investigate'
+      | 'investigation_prepare'
+      | 'investigation_dispatch'
       | 'report'
       | 'pdf'
       | 'finish',
@@ -149,15 +160,59 @@ describe('scientific child phase chain', () => {
       f.services as never,
       async (next) => void dispatched.push(next),
     );
-    expect(result).toMatchObject({ phase: 'scientific_investigate' });
+    expect(result).toMatchObject({ phase: 'investigation_prepare' });
     expect(dispatched).toEqual([
       expect.objectContaining({
-        phase: 'scientific_investigate',
+        phase: 'investigation_prepare',
         phaseKey: operationId,
         operationId,
         fence: f.fence,
       }),
     ]);
+  });
+
+  it('routes prepared investigation work to a separate one-shot dispatch child', async () => {
+    const f = fixture(),
+      dispatched: unknown[] = [];
+    const evaluationId = crypto.randomUUID();
+    const operationId = crypto.randomUUID();
+    f.services.scientificPrepareInvestigationForJob.mockResolvedValueOnce({
+      status: 'dispatch_ready',
+      fence: { ...f.fence, generation: 2 },
+      operationId,
+    } as never);
+    const prepared = await runScientificPhase(
+      payload('investigation_prepare', f.fence, evaluationId),
+      phaseSteps,
+      f.services as never,
+      async (next) => void dispatched.push(next),
+    );
+    expect(prepared).toMatchObject({ phase: 'investigation_dispatch' });
+    expect(dispatched[0]).toMatchObject({
+      phase: 'investigation_dispatch',
+      phaseKey: operationId,
+      operationId,
+      fence: { ...f.fence, generation: 2 },
+    });
+    const result = await runScientificPhase(
+      payload(
+        'investigation_dispatch',
+        { ...f.fence, generation: 2 },
+        operationId,
+      ),
+      phaseSteps,
+      f.services as never,
+      async (next) => void dispatched.push(next),
+    );
+    expect(result).toMatchObject({ phase: 'report' });
+    expect(dispatched[1]).toMatchObject({ phase: 'report', operationId });
+    expect(
+      f.services.scientificDispatchInvestigationForJob,
+    ).toHaveBeenCalledWith(
+      expect.any(String),
+      { ...f.fence, generation: 2 },
+      operationId,
+    );
   });
 
   it('leaves an unreviewed investigation waiting without dispatching report', async () => {

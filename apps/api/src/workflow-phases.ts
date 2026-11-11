@@ -49,6 +49,8 @@ export function isScientificWorkflowPhase(
   return (
     value === 'scientific_evaluate' ||
     value === 'scientific_investigate' ||
+    value === 'investigation_prepare' ||
+    value === 'investigation_dispatch' ||
     value === 'report' ||
     value === 'pdf' ||
     value === 'finish'

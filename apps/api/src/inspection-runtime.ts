@@ -581,6 +581,50 @@ export function createInspectionServices(
       );
     return result;
   };
+  const scientificPrepareInvestigationForJob = async (
+    jobId: string,
+    expected: unknown,
+    evaluationId: unknown,
+  ) => {
+    const { job, fence } = await scientificJob(jobId, expected);
+    if (!ai) return { status: 'unavailable' as const, fence };
+    const result = await new ScientificInvestigationStage(
+      store,
+      ai,
+      new GroqModelJobs(store, ai.apiKey, ai, transport, clock),
+      clock,
+    ).prepare(job.ownerUid, fence, evaluationId);
+    if (result.status === 'blocked')
+      await stageIssue(
+        job.ownerUid,
+        result.fence,
+        result.code,
+        aiIssueMessage(result.code),
+      );
+    return result;
+  };
+  const scientificDispatchInvestigationForJob = async (
+    jobId: string,
+    expected: unknown,
+    operationId: unknown,
+  ) => {
+    const { job, fence } = await scientificJob(jobId, expected);
+    if (!ai) return { status: 'unavailable' as const, fence };
+    const result = await new ScientificInvestigationStage(
+      store,
+      ai,
+      new GroqModelJobs(store, ai.apiKey, ai, transport, clock),
+      clock,
+    ).dispatch(job.ownerUid, fence, operationId);
+    if (result.status === 'blocked')
+      await stageIssue(
+        job.ownerUid,
+        result.fence,
+        result.code,
+        aiIssueMessage(result.code),
+      );
+    return result;
+  };
   const scientificReportForJob = async (
     jobId: string,
     expected: unknown,
@@ -666,6 +710,8 @@ export function createInspectionServices(
     compareBaselinesForJob,
     scientificEvaluateForJob,
     scientificInvestigateForJob,
+    scientificPrepareInvestigationForJob,
+    scientificDispatchInvestigationForJob,
     scientificReportForJob,
     scientificPdfForJob,
     scientificFinishForJob,

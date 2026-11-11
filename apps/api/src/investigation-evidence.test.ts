@@ -176,8 +176,8 @@ async function fixture() {
 describe('owned investigation evidence preparation', () => {
   async function staged(useRest = false) {
     const f = await fixture();
-    const prepared = await f.run();
-    const { evidenceIds, ...identity } = prepared.expected;
+    const sourcePrepared = await f.run();
+    const { evidenceIds, ...identity } = sourcePrepared.expected;
     const draft = {
       schemaVersion: '1.0',
       ...identity,
@@ -232,7 +232,6 @@ describe('owned investigation evidence preparation', () => {
           requestCount: rest?.calls.length ?? 0,
         }),
     );
-    const stageStart = rest?.calls.length ?? 0;
     let modelCalls = 0;
     const stage = new ScientificInvestigationStage(
       store,
@@ -244,16 +243,31 @@ describe('owned investigation evidence preparation', () => {
           modelCalls = (rest?.calls.length ?? before) - before;
           return result;
         },
+        dispatchInvestigation: (...args) =>
+          modelJobs.dispatchInvestigation(...args),
       },
       clock,
     );
-    const result = await stage.run('alice', f.fence, f.operationId);
+    const prepareStart = rest?.calls.length ?? 0;
+    const phasePrepared = await stage.prepare('alice', f.fence, f.operationId);
+    const prepareRequests = (rest?.calls.length ?? prepareStart) - prepareStart;
+    const dispatchStart = rest?.calls.length ?? 0;
+    const result =
+      phasePrepared.status === 'dispatch_ready'
+        ? await stage.dispatch(
+            'alice',
+            phasePrepared.fence,
+            phasePrepared.operationId,
+          )
+        : phasePrepared;
+    const dispatchRequests =
+      (rest?.calls.length ?? dispatchStart) - dispatchStart;
     const stageRequests = rest?.calls.length ?? null;
     if (process.env.SIPHON_TRACE_REST === '1')
-      console.log('Investigation REST segments', {
-        preparation:
-          (rest?.calls.length ?? stageStart) - stageStart - modelCalls,
-        model: modelCalls,
+      console.log('Investigation child REST requests', {
+        prepare: prepareRequests,
+        dispatch: dispatchRequests,
+        modelPrepare: modelCalls,
         total: stageRequests,
         modelSegments: modelBoundaries.slice(1).map((boundary, index) => ({
           from: modelBoundaries[index]!.name,
@@ -296,6 +310,8 @@ describe('owned investigation evidence preparation', () => {
       rest,
       store,
       stageRequests,
+      prepareRequests,
+      dispatchRequests,
       modelBoundaries,
     };
   }
@@ -309,7 +325,11 @@ describe('owned investigation evidence preparation', () => {
           (boundary, index) =>
             boundary.requestCount - f.modelBoundaries[index]!.requestCount,
         ),
-    ).toEqual([8, 5, 5, 5, 4, 10, 11, 6]);
+    ).toEqual([8, 5, 5, 5, 4, 5, 1, 0, 1, 0, 0, 11, 11, 6]);
+    expect(f.prepareRequests).toBe(37);
+    expect(f.dispatchRequests).toBe(47);
+    expect(f.prepareRequests).toBeLessThan(50);
+    expect(f.dispatchRequests).toBeLessThan(50);
     const before = f.rest!.calls.length;
     await f.review('accept');
     const reviewRequests = f.rest!.calls.length - before;

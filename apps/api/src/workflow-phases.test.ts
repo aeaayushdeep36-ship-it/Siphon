@@ -46,6 +46,8 @@ describe('bounded Workflow phase messages', () => {
   it.each([
     'scientific_evaluate',
     'scientific_investigate',
+    'investigation_prepare',
+    'investigation_dispatch',
     'report',
     'pdf',
     'finish',

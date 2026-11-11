@@ -103,7 +103,7 @@ Plots need axis labels/units, legends when needed, baseline/refinement identitie
 
 ## Accessibility and responsive behavior
 
-Target WCAG 2.2 AA: keyboard operation, visible focus, semantic headings/landmarks, associated labels, sufficient contrast, accessible names, and reduced-motion support. Test desktop and 360 CSS-pixel viewport without page-wide horizontal overflow. Wide code/data panels can scroll within labelled regions.
+Target WCAG 2.2 AA: keyboard operation, visible focus, semantic headings/landmarks, associated labels, sufficient contrast, accessible names, and reduced-motion support. Provide a visible-on-focus skip link to the main landmark so keyboard users can bypass the persistent header. Test desktop and 360 CSS-pixel viewport without page-wide horizontal overflow. Wide code/data panels can scroll within labelled regions.
 
 Use a polite live region for coalesced progress; announce material transitions/errors rather than every log line. Focus errors after submission and preserve keyboard position during background updates. Charts must not be the only way to access a finding. Do not hide essential information behind hover-only interactions.
 

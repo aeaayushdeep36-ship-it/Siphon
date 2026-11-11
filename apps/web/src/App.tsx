@@ -171,6 +171,9 @@ export function App() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main">
+        Skip to main content
+      </a>
       <header className="site-header">
         <a href="#hero" className="brand" aria-label="Siphon home">
           <span className="brand-mark" aria-hidden="true">
@@ -232,7 +235,7 @@ export function App() {
           )}
         </div>
       </header>
-      <main id="main" className="page-content">
+      <main id="main" className="page-content" tabIndex={-1}>
         {error && (
           <div className="error global-error" role="alert">
             {error}

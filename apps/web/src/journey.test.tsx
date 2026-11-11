@@ -222,6 +222,17 @@ afterEach(async () => {
 });
 
 describe('authored frontend journey through real browser API contracts', () => {
+  it('provides a keyboard skip link that targets the main landmark', async () => {
+    await mount();
+    const skipLink = host.querySelector<HTMLAnchorElement>('.skip-link');
+    const main = host.querySelector<HTMLElement>('#main');
+
+    expect(skipLink?.textContent).toBe('Skip to main content');
+    expect(skipLink?.getAttribute('href')).toBe('#main');
+    expect(main?.tabIndex).toBe(-1);
+    expect(host.querySelector('.app-shell')?.firstElementChild).toBe(skipLink);
+  });
+
   it('requires consent only when a continuation can dispatch new AI work', () => {
     expect(
       resumeNeedsAiDisclosure({ stage: 'investigating', investigation: null }),

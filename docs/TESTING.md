@@ -1,5 +1,9 @@
 # Siphon testing and scientific validation
 
+## Keyboard access follow-up (2026-11-12)
+
+Added a skip-to-main link before the fixed header and made the main landmark programmatically focusable. The React journey test verifies the link label, target and first-in-document position. A local Vite preview was manually keyboard-checked in Chrome: the link became visible on the first Tab, Enter moved to `#main`, and the next Tab focused the first main-content link, bypassing the header. This preview had no Firebase public configuration, so sign-in was disabled; it did not call the hosted API or alter the signed-in production draft. The test verifies navigation/accessibility behavior only, not full WCAG 2.2 AA conformance.
+
 ## Frontend investigation contract integration (2026-11-11)
 
 The frontend branch merges backend investigation commit `0af58dc`, its finalization prerequisite and validated metric projection commit `4fafaaf`. Five React cases verify accept/omit submission against the exact shared review digest/fence, matching receipt validation, no automatic scientific-run/report mutation, and disabled/absent controls for expired, historical or mismatched-revision drafts. The console renders provider/model, advisory text, verification/validation suggestions, exact metric values/units, targets, uncertainty, intervals, deterministic status, check version, limitations, evidence IDs and recorded expiry. Regression assertions cover the displayed metric fields and verify no score is shown. The complete web suite now passes 42 cases across seven files. The authored metric fixture explicitly states it does not validate a scientific method; these tests do not establish hosted investigation, model quality, report publication or a completed audit. Consent UI/API journey coverage is described below.

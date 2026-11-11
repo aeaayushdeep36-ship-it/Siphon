@@ -97,6 +97,36 @@ describe('AI disclosure panel', () => {
     );
   });
 
+  it('requires a fresh explicit opt-in after permission was revoked', async () => {
+    const onDecision = vi.fn();
+    await act(async () =>
+      root.render(
+        <AiDisclosurePanel
+          disclosure={{
+            ...disclosure,
+            status: 'revoked',
+            acceptedAt: '2026-11-11T12:00:00Z',
+          }}
+          disabled={false}
+          onDecision={onDecision}
+        />,
+      ),
+    );
+
+    expect(host.textContent).toContain('Permission was revoked');
+    const checkbox = host.querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    )!;
+    const allow = [...host.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Allow AI data sharing',
+    )!;
+    expect(checkbox.checked).toBe(false);
+    expect(allow.disabled).toBe(true);
+    await act(async () => checkbox.click());
+    await act(async () => allow.click());
+    expect(onDecision).toHaveBeenCalledExactlyOnceWith('accept');
+  });
+
   it('fails closed when no valid provider configuration is available', async () => {
     await act(async () =>
       root.render(

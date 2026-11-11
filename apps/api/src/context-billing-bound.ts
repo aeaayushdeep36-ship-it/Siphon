@@ -1,3 +1,4 @@
+import { LEGACY_META_MODEL } from './legacy-meta-profile.js';
 import { z } from 'zod';
 import {
   Count,
@@ -24,7 +25,7 @@ import { canonicalJson, sha256 } from './hashing.js';
  * stateless text/JSON no-tools profile throughout the verified tokenizer window. */
 export const MetaBillingProfileVerification = z.strictObject({
   schemaVersion: z.literal('1.0'),
-  model: z.literal('muse-wonder-1.0'),
+  model: z.literal(LEGACY_META_MODEL),
   protocol: z.literal('responses.v1'),
   profile: z.literal('stateless_text_json_no_tools.v1'),
   countingVerificationDigest: Digest,

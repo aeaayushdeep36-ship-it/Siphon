@@ -10,6 +10,43 @@ import { reserveOperation, type Operation } from './accounting.js';
 import { randomUUID } from 'node:crypto';
 
 describe('Firestore value boundary', () => {
+  it('routes every document read to the selected named database', async () => {
+    const calls: string[] = [];
+    const client = new FirestoreClient(
+      'siphon-test',
+      async () => 'test-only-credential',
+      async (input) => {
+        calls.push(String(input));
+        return new Response(null, { status: 404 });
+      },
+      'private-audits',
+    );
+    expect(client.database).toBe(
+      'projects/siphon-test/databases/private-audits',
+    );
+    expect(await client.get('testers/alice')).toBeNull();
+    expect(calls).toEqual([
+      'https://firestore.googleapis.com/v1/projects/siphon-test/databases/private-audits/documents/testers/alice',
+    ]);
+  });
+
+  it('rejects invalid database identifiers before credential use or transport', () => {
+    for (const databaseId of ['', '../other', '(default)/documents', 'UPPER'])
+      expect(
+        () =>
+          new FirestoreClient(
+            'siphon-test',
+            async () => {
+              throw new Error('must not request credentials');
+            },
+            async () => {
+              throw new Error('must not send requests');
+            },
+            databaseId,
+          ),
+      ).toThrow('Invalid Firestore database ID');
+  });
+
   it('round trips integer money, nulls, arrays and native timestamps', () => {
     const input = {
       money: 135_000_000,

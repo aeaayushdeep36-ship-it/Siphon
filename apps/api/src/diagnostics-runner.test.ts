@@ -98,7 +98,7 @@ describe('data-only diagnostic transport (offline)', () => {
     const read = vi.fn(async () => new Response('{}').body!);
     const sandbox = {
       sandboxId: 'fixture',
-      files: { write, read },
+      files: { write, read, makeDir: vi.fn(async () => true) },
       commands: { run },
     } as unknown as Sandbox;
     const session = new E2bDiagnosticsSession(sandbox);

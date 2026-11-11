@@ -10,6 +10,10 @@ import {
 import { ReportRepository } from './reports.js';
 import { MAX_PDF_BYTES } from './pdf-runner.js';
 import { PdfPipeline } from './pdf-pipeline.js';
+import { ScientificFinishStage } from './scientific-finish-stage.js';
+import { ScientificPdfStage } from './scientific-pdf-stage.js';
+import { SandboxJobs } from './sandbox-jobs.js';
+import { AdmissionRepository } from './admission.js';
 
 async function setup() {
   const docs = new TestDocuments(),
@@ -191,6 +195,123 @@ async function setup() {
 }
 
 describe('private PDF publication authority', () => {
+  it('reserves a PDF renderer and does not repeat an uncertain dispatch', async () => {
+    const f = await setup(),
+      id = crypto.randomUUID();
+    const fence = {
+      auditId: f.audit.id,
+      revisionId: f.audit.currentRevisionId,
+      inputDigest: f.report.inputDigest,
+      generation: 0,
+    };
+    f.docs.documents.set('configuration/pdf_dispatch', {
+      templateEvidenceId: id,
+      lifetimeSeconds: 60,
+    });
+    f.docs.documents.set(`sandboxTemplates/${id}`, {
+      schemaVersion: '1.0',
+      id,
+      templateId: 'authored-pdf',
+      role: 'pdf',
+      imageDigest: 'c'.repeat(64),
+      runtimeDigest: 'd'.repeat(64),
+      verifiedAt: f.now.toISOString(),
+      expiresAt: '2026-10-31T00:00:00.000Z',
+      networkIsolationVerified: true,
+      privateAccessVerified: true,
+      resourceLimitsVerified: true,
+      singlePrivateBuildVerified: true,
+      microUsdPerSecondCeiling: 10,
+    });
+    for (const [key, limit] of [
+      ['e2b_global_micro_usd', 10000],
+      [`e2b_seconds_${fence.revisionId}`, 900],
+    ] as const)
+      f.docs.documents.set(`budgets/${key}`, {
+        schemaVersion: '1.0',
+        limit,
+        reserved: 0,
+        spent: 0,
+        halted: false,
+      });
+    const pipeline = {
+      run: vi.fn(async () => ({ status: 'awaiting_termination' as const })),
+      recover: vi.fn(async () => ({
+        status: 'published' as const,
+        artifactId: crypto.randomUUID(),
+        reportDigest: f.reportDigest,
+        replayed: true,
+      })),
+    };
+    const stage = new ScientificPdfStage(
+      f.docs,
+      new SandboxJobs(f.docs, () => f.now),
+      pipeline,
+      () => f.now,
+    );
+    const first = await stage.run('alice', fence);
+    expect(first.status).toBe('awaiting_termination');
+    expect(
+      f.docs.documents.get(`operations/${first.operationId}`),
+    ).toMatchObject({ outcome: 'reserved', providerHandle: null });
+    f.docs.documents.get(`operations/${first.operationId}`)!.outcome =
+      'dispatching';
+    expect(await stage.run('alice', fence)).toMatchObject({
+      status: 'blocked',
+      code: 'pdf_requires_reconciliation',
+    });
+    expect(pipeline.run).toHaveBeenCalledOnce();
+  });
+  it('finishes as partial only after the structured report and PDF proofs agree', async () => {
+    const f = await setup();
+    const fence = {
+      auditId: f.audit.id,
+      revisionId: f.audit.currentRevisionId,
+      inputDigest: f.report.inputDigest,
+      generation: 0,
+    };
+    await f.candidate();
+    f.terminated();
+    await f.publications.publish(f.operationId);
+    const finish = new ScientificFinishStage(f.docs, () => f.now);
+    const exportRecord = f.docs.documents.get(
+      `${f.base}/reports/${f.report.reportId}/exports/pdf`,
+    )!;
+    const savedSha = exportRecord.pdfSha256;
+    exportRecord.pdfSha256 = '0'.repeat(64);
+    await expect(finish.finish('alice', fence, f.operationId)).rejects.toThrow(
+      'proof changed',
+    );
+    f.docs.documents.get(
+      `${f.base}/reports/${f.report.reportId}/exports/pdf`,
+    )!.pdfSha256 = savedSha;
+    const lease = await new AdmissionRepository(f.docs, () => f.now).acquire(
+      'alice',
+      fence,
+    );
+    const held = f.docs.documents.get(`slotLeases/${lease.id}`)!;
+    held.pendingOperations = 1;
+    held.dispatchMayHaveStarted = true;
+    await expect(finish.finish('alice', fence, f.operationId)).rejects.toThrow(
+      'Capacity cannot be released',
+    );
+    f.docs.documents.get(`slotLeases/${lease.id}`)!.pendingOperations = 0;
+    await expect(
+      finish.finish('alice', fence, f.operationId),
+    ).resolves.toMatchObject({
+      status: 'partial',
+      reportId: f.report.reportId,
+    });
+    expect(f.docs.documents.get(f.base)).toMatchObject({
+      stage: 'finished',
+      status: 'partial',
+      generation: 1,
+      slotLeaseId: null,
+    });
+    expect(f.docs.documents.get(`slotLeases/${lease.id}`)?.status).toBe(
+      'released',
+    );
+  });
   it('reserves once, charges PUT before I/O, publishes only after termination and exposes matching download metadata', async () => {
     const f = await setup();
     await f.bind();
@@ -456,6 +577,14 @@ async function assemblyFixture() {
     plan,
     planDigest,
   });
+  const parameters = { densityKgM3: 1, heatCapacityJKgK: 1 };
+  f.docs.documents.set(`${f.base}/scientificParameters/current`, {
+    ...common,
+    planDigest,
+    parameters,
+    parametersDigest: await sha256(canonicalJson(parameters)),
+    declaration: 'user_supplied',
+  });
   const savedEvidence = {
     ...common,
     operationId: evaluationId,
@@ -510,6 +639,12 @@ describe('authoritative report assembly', () => {
     expect(result.report.metrics[0]?.status).toBe('inconclusive');
     expect(result.report.experiments[0]?.resultDigest).toBe('7'.repeat(64));
     expect(result.report.narrative.hypotheses).toEqual([]);
+    expect(result.report.assumptions).toEqual([
+      expect.objectContaining({
+        basis: 'user_declaration',
+        statement: expect.stringContaining('density 1 kg/m³'),
+      }),
+    ]);
     expect((await f.publish()).replayed).toBe(true);
   });
   it('rejects a modified evaluation payload and mismatched termination before publishing', async () => {
@@ -521,5 +656,14 @@ describe('authoritative report assembly', () => {
     g.docs.documents.get(`sandboxTerminations/${g.operationId}`)!.sandboxId =
       'another_vm';
     await expect(g.publish()).rejects.toThrow('termination mismatch');
+  });
+  it('rejects thermal declarations that do not match the evaluated profile', async () => {
+    const f = await assemblyFixture();
+    const record = f.docs.documents.get(
+      `${f.base}/scientificParameters/current`,
+    )!;
+    record.parameters = { densityKgM3: 2, heatCapacityJKgK: 1 };
+    record.parametersDigest = await sha256(canonicalJson(record.parameters));
+    await expect(f.publish()).rejects.toThrow('thermal declarations differ');
   });
 });

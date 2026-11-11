@@ -1,3 +1,4 @@
+import { LEGACY_META_MODEL } from './legacy-meta-profile.js';
 import { z } from 'zod';
 import {
   ContextProposal,
@@ -10,6 +11,8 @@ import {
   ResourcePolicy,
 } from '@siphon/contracts';
 import { MetaRequest } from './meta-client.js';
+import { GroqRequest, strictJsonSchema } from './groq-client.js';
+import { type AiConfiguration } from './ai-config.js';
 import { type DocumentStore, type DocumentTransaction } from './firestore.js';
 import {
   authorize,
@@ -39,7 +42,7 @@ export const ContextTask = z.strictObject({
   generation: z.number().int().nonnegative(),
   domain: Domain,
   requestDigest: Digest,
-  promptVersion: z.literal('context.2'),
+  promptVersion: z.enum(['context.2', 'context.groq.1']),
   sources: z.array(sourceIndex).min(1).max(10),
   createdAt: Timestamp,
 });
@@ -51,7 +54,9 @@ export const SourceContextReview = z.strictObject({
   auditId: Id,
   artifactId: Id,
   sourceDigest: Digest,
-  purpose: z.literal('meta_context'),
+  purpose: z.enum(['meta_context', 'groq_context']),
+  model: z.string().min(1).optional(),
+  endpoint: z.string().url().optional(),
   approved: z.literal(true),
   verifiedAt: Timestamp,
   expiresAt: Timestamp,
@@ -71,6 +76,7 @@ export async function requireContextSourceDisclosure(
   }[],
   now: Date,
   validThrough: Date = now,
+  aiConfig?: AiConfiguration,
 ): Promise<void> {
   if (
     sources.length < 1 ||
@@ -93,6 +99,11 @@ export async function requireContextSourceDisclosure(
       review.auditId !== auditId ||
       review.artifactId !== source.artifactId ||
       review.sourceDigest !== source.sourceDigest ||
+      (aiConfig
+        ? review.purpose !== 'groq_context' ||
+          review.model !== aiConfig.model ||
+          review.endpoint !== aiConfig.endpoint
+        : review.purpose !== 'meta_context') ||
       Date.parse(review.verifiedAt) > now.getTime() ||
       Date.parse(review.expiresAt) <= validThrough.getTime() ||
       !artifact ||
@@ -120,6 +131,7 @@ export class ContextTasks {
       'inspecting',
       'clarifying',
     ],
+    private readonly aiConfig?: AiConfiguration,
   ) {}
   async prepare(uid: string, expected: unknown, sourceValues: unknown) {
     const fence = DispatchFence.parse(expected);
@@ -167,6 +179,8 @@ export class ContextTasks {
         fence.auditId,
         sources,
         now,
+        now,
+        this.aiConfig,
       );
       for (const source of sources) {
         const file = manifest.find(
@@ -187,8 +201,8 @@ export class ContextTasks {
         inputDigest: fence.inputDigest,
         domain: audit.domain,
       };
-      const request = MetaRequest.parse({
-        model: 'muse-wonder-1.0',
+      const legacyRequest = {
+        model: LEGACY_META_MODEL,
         input: [
           { role: 'developer', content: instructions },
           {
@@ -216,10 +230,35 @@ export class ContextTasks {
             schema: z.toJSONSchema(ContextProposal),
           },
         },
-      });
+      };
+      const request = this.aiConfig
+        ? GroqRequest.parse({
+            model: this.aiConfig.model,
+            messages: [
+              { role: 'system', content: instructions },
+              legacyRequest.input[1],
+            ],
+            reasoning_effort: this.aiConfig.reasoningEffort,
+            reasoning_format: 'hidden',
+            max_completion_tokens: Math.min(
+              policy.modelOutputTokens,
+              this.aiConfig.maxOutputTokens,
+            ),
+            stream: false,
+            response_format: {
+              type: 'json_schema',
+              json_schema: {
+                name: 'SiphonContext',
+                strict: true,
+                schema: strictJsonSchema(z.toJSONSchema(ContextProposal)),
+              },
+            },
+          })
+        : MetaRequest.parse(legacyRequest);
       return {
         request,
         snapshot,
+        sourceValues: sources,
         sources: sources.map(({ text, ...source }) => ({
           ...source,
           lineCount: text.split(/\r\n|\r|\n/).length,
@@ -262,7 +301,7 @@ export class ContextTasks {
         ...prepared.snapshot,
         generation: fence.generation,
         requestDigest: prepared.requestDigest,
-        promptVersion: 'context.2',
+        promptVersion: this.aiConfig ? 'context.groq.1' : 'context.2',
         sources: prepared.sources,
         createdAt: this.clock().toISOString(),
       });

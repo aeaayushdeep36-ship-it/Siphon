@@ -28,15 +28,31 @@ export function firebaseCertificateResolver(
   let loading: Promise<void> | null = null;
   const keys = new Map<string, CryptoKey>();
   async function refresh(): Promise<void> {
+    let phase = 'fetch';
     try {
       const response = await transport(certificatesUrl, {
         signal: AbortSignal.timeout(5000),
-        redirect: 'error',
+        redirect: 'follow',
       });
+      if (response.redirected) {
+        phase = 'redirect';
+        const finalUrl = new URL(response.url);
+        if (
+          finalUrl.origin !== 'https://www.googleapis.com' ||
+          finalUrl.pathname !==
+            '/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com' ||
+          finalUrl.search
+        ) {
+          await response.body?.cancel();
+          throw new Error('Unexpected certificate redirect');
+        }
+      }
       if (!response.ok) {
+        phase = `http_${response.status}`;
         await response.body?.cancel();
         throw new Error('Key service unavailable');
       }
+      phase = 'parse';
       const certificates = z
         .record(z.string().min(1).max(200), z.string().min(1).max(10000))
         .parse(await readJsonBounded(response, 64 * 1024));
@@ -45,6 +61,7 @@ export function firebaseCertificateResolver(
         Object.keys(certificates).length > 20
       )
         throw new Error('Invalid certificate count');
+      phase = 'cache';
       const maxAge = /(?:^|,)\s*max-age=(\d+)/i.exec(
         response.headers.get('cache-control') ?? '',
       );
@@ -55,7 +72,37 @@ export function firebaseCertificateResolver(
       cached = certificates;
       keys.clear();
       expiresAt = clock() + Math.max(0, Math.min(seconds - age, 86400)) * 1000;
-    } catch {
+    } catch (error) {
+      const kind =
+        error instanceof Error &&
+        ['TypeError', 'TimeoutError', 'AbortError'].includes(error.name)
+          ? error.name
+          : 'other';
+      const cause = error instanceof Error ? error.cause : undefined;
+      const causeKind =
+        cause instanceof Error &&
+        ['TypeError', 'TimeoutError', 'AbortError'].includes(cause.name)
+          ? cause.name
+          : 'none';
+      const message = error instanceof Error ? error.message.toLowerCase() : '';
+      const safeMessage = message.includes('redirect')
+        ? 'redirect'
+        : message.includes('timeout') || message.includes('timed out')
+          ? 'timeout'
+          : message.includes('abort')
+            ? 'abort'
+            : message.includes('network') || message.includes('connect')
+              ? 'network'
+              : message.includes('fetch')
+                ? 'fetch'
+                : 'unavailable';
+      console.error(
+        'firebase_certificate_refresh_failed',
+        phase,
+        kind,
+        causeKind,
+        safeMessage,
+      );
       throw new IdentityError('identity_unavailable');
     }
   }
@@ -77,6 +124,7 @@ export function firebaseCertificateResolver(
       try {
         key = await importX509(certificate, 'RS256');
       } catch {
+        console.error('firebase_certificate_import_failed');
         throw new IdentityError('identity_unavailable');
       }
       keys.set(header.kid, key);

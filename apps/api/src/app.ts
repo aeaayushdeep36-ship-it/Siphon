@@ -23,20 +23,27 @@ import { type ProgressRepository } from './progress.js';
 import { type ReportRepository, type ReportDownloads } from './reports.js';
 import {
   SubmitAdapterReview,
+  ContinueAdapterReview,
   SubmitScientificAnswer,
   type WorkspaceRepository,
 } from './workspace.js';
 import { type HistoryRepository } from './history.js';
 import { type RunService, type ResumeService } from './runs.js';
+import { SubmitHeatParameters } from './scientific-parameters.js';
 
 export interface ApiDependencies {
   runs: Pick<RunService, 'start'>;
-  resumes: Pick<ResumeService, 'resume'>;
+  resumes: Pick<ResumeService, 'resume'> &
+    Partial<Pick<ResumeService, 'resumeScientific'>>;
   workspace: Pick<WorkspaceRepository, 'get'> &
     Partial<
       Pick<
         WorkspaceRepository,
-        'submitAdapterReview' | 'submitScientificAnswer'
+        | 'submitAdapterReview'
+        | 'submitScientificAnswer'
+        | 'continueAdapterReview'
+        | 'prepareScientificPlan'
+        | 'submitHeatParameters'
       >
     >;
   history: Pick<HistoryRepository, 'list'>;
@@ -57,6 +64,24 @@ export interface ApiDependencies {
   // Hosting must supply an edge gate before token verification/Firestore work.
   edgeRateGate(request: Request): Promise<boolean>;
   allowedOrigins: readonly string[];
+}
+
+/** Error text can contain caller data; map only exact internal invariants to
+ * fixed labels suitable for server-side correlation. */
+function internalFailureCode(error: unknown): string {
+  if (!(error instanceof Error)) return 'non_error_throw';
+  switch (error.message) {
+    case 'History document identity mismatch':
+      return 'history_document_identity';
+    case 'History owner/scope mismatch':
+      return 'history_owner_scope';
+    case 'Invalid history request':
+      return 'history_request_invalid';
+    case 'Invalid history scope':
+      return 'history_scope_invalid';
+    default:
+      return 'unclassified';
+  }
 }
 
 export function createApp(deps: ApiDependencies) {
@@ -99,18 +124,36 @@ export function createApp(deps: ApiDependencies) {
     const match = /^Bearer ([^\s]+)$/.exec(authorization ?? '');
     if (!match?.[1])
       throw new ApiError(401, 'invalid_credentials', 'Sign in to continue.');
-    const identity = await deps.verifyIdentity(match[1]);
-    c.set('identity', identity);
-    await deps.userRateGate.consume(
-      identity.uid,
-      !['GET', 'HEAD', 'OPTIONS'].includes(c.req.method),
-    );
-    if (!(await deps.repository.isInvited(identity.uid)))
-      throw new ApiError(
-        403,
-        'invitation_required',
-        'An active invitation is required.',
+    let phase = 'identity_verification';
+    try {
+      const identity = await deps.verifyIdentity(match[1]);
+      c.set('identity', identity);
+      phase = 'user_rate_gate';
+      await deps.userRateGate.consume(
+        identity.uid,
+        !['GET', 'HEAD', 'OPTIONS'].includes(c.req.method),
       );
+      phase = 'invitation_check';
+      if (!(await deps.repository.isInvited(identity.uid)))
+        throw new ApiError(
+          403,
+          'invitation_required',
+          'An active invitation is required.',
+        );
+    } catch (error) {
+      if (
+        !(error instanceof ApiError) &&
+        !(error instanceof IdentityError) &&
+        !(error instanceof FirestoreFailure)
+      )
+        console.error('siphon_auth_phase_error', {
+          requestId: c.get('requestId'),
+          phase,
+          errorType:
+            error instanceof Error ? error.constructor.name : typeof error,
+        });
+      throw error;
+    }
     await next();
   });
   app.post('/api/v1/audits', async (c) => {
@@ -190,6 +233,36 @@ export function createApp(deps: ApiDependencies) {
         c.req.query('cursor'),
       ),
     ),
+  );
+  app.post(
+    '/api/v1/audits/:auditId/revisions/:revisionId/scientific-run',
+    async (c) => {
+      const auditId = Id.parse(c.req.param('auditId')),
+        revisionId = Id.parse(c.req.param('revisionId'));
+      const key = c.req.header('Idempotency-Key');
+      if (!key)
+        throw new ApiError(
+          422,
+          'invalid_idempotency_key',
+          'Provide a valid Idempotency-Key.',
+        );
+      if (!deps.resumes.resumeScientific)
+        throw new ApiError(
+          503,
+          'audit_execution_unavailable',
+          'Audit execution is not configured yet.',
+        );
+      return c.json(
+        await deps.resumes.resumeScientific(
+          c.get('identity').uid,
+          auditId,
+          revisionId,
+          await parseRequestJson(c.req.raw, StartAudit),
+          key,
+        ),
+        202,
+      );
+    },
   );
   app.post(
     '/api/v1/audits/:auditId/revisions/:revisionId/resume',
@@ -483,6 +556,70 @@ export function createApp(deps: ApiDependencies) {
     },
   );
   app.post(
+    '/api/v1/audits/:auditId/revisions/:revisionId/adapter-review/continue',
+    async (c) => {
+      const auditId = Id.parse(c.req.param('auditId')),
+        revisionId = Id.parse(c.req.param('revisionId'));
+      if (!deps.workspace.continueAdapterReview)
+        throw new ApiError(
+          503,
+          'service_unavailable',
+          'Adapter continuation is unavailable.',
+        );
+      const input = await parseRequestJson(c.req.raw, ContinueAdapterReview);
+      return c.json(
+        await deps.workspace.continueAdapterReview(
+          c.get('identity').uid,
+          auditId,
+          revisionId,
+          input,
+        ),
+      );
+    },
+  );
+  app.post(
+    '/api/v1/audits/:auditId/revisions/:revisionId/scientific-plan',
+    async (c) => {
+      const auditId = Id.parse(c.req.param('auditId')),
+        revisionId = Id.parse(c.req.param('revisionId'));
+      if (!deps.workspace.prepareScientificPlan)
+        throw new ApiError(
+          503,
+          'service_unavailable',
+          'Scientific planning is unavailable.',
+        );
+      const input = await parseRequestJson(c.req.raw, ContinueAdapterReview);
+      const result = await deps.workspace.prepareScientificPlan(
+        c.get('identity').uid,
+        auditId,
+        revisionId,
+        input,
+      );
+      return c.json(result, result.replayed ? 200 : 201);
+    },
+  );
+  app.post(
+    '/api/v1/audits/:auditId/revisions/:revisionId/heat-parameters',
+    async (c) => {
+      const auditId = Id.parse(c.req.param('auditId')),
+        revisionId = Id.parse(c.req.param('revisionId'));
+      if (!deps.workspace.submitHeatParameters)
+        throw new ApiError(
+          503,
+          'service_unavailable',
+          'Heat parameters are unavailable.',
+        );
+      const input = await parseRequestJson(c.req.raw, SubmitHeatParameters);
+      const result = await deps.workspace.submitHeatParameters(
+        c.get('identity').uid,
+        auditId,
+        revisionId,
+        input,
+      );
+      return c.json(result, result.replayed ? 200 : 201);
+    },
+  );
+  app.post(
     '/api/v1/audits/:auditId/revisions/:revisionId/scientific-answer',
     async (c) => {
       const auditId = Id.safeParse(c.req.param('auditId')),
@@ -537,6 +674,20 @@ export function createApp(deps: ApiDependencies) {
     throw new ApiError(404, 'not_found', 'Resource was not found.');
   });
   app.onError((error, c) => {
+    if (
+      !(error instanceof ApiError) &&
+      !(error instanceof IdentityError) &&
+      !(error instanceof FirestoreFailure)
+    ) {
+      // Correlate unexpected server failures without logging request bodies,
+      // provider responses, credentials, error messages, or stack contents.
+      console.error('siphon_api_unhandled_error', {
+        requestId: c.get('requestId'),
+        failureCode: internalFailureCode(error),
+        errorType:
+          error instanceof Error ? error.constructor.name : typeof error,
+      });
+    }
     const normalized =
       error instanceof ApiError
         ? error

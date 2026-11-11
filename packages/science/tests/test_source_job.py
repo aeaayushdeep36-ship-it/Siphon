@@ -165,6 +165,40 @@ class SourceJobTests(unittest.TestCase):
                 np.load(root / "observations/obs_temperature.npy"), [[3.0], [5.0]]
             )
 
+    def test_numeric_inputs_are_validated_before_source_execution(self):
+        object_array = io.BytesIO()
+        np.save(object_array, np.array(["private"], dtype=object), allow_pickle=True)
+        invalid_inputs = [
+            ("values.csv", b"time,value\n0,1\n"),
+            ("values.csv", b"1,nan\n"),
+            ("values.npy", object_array.getvalue()),
+            ("values.npy", b"not an npy file"),
+        ]
+        for name, payload in invalid_inputs:
+            with (
+                self.subTest(name=name, payload=payload[:12]),
+                tempfile.TemporaryDirectory() as temporary,
+            ):
+                root = Path(temporary) / "job"
+                request = request_for('raise AssertionError("source executed")', [(name, payload)])
+                with self.assertRaisesRegex(SourceJobError, "invalid_numeric_input"):
+                    execute_source_job(request, root)
+                self.assertFalse(root.exists())
+
+    def test_supports_numeric_npy_input_without_changing_its_bytes(self):
+        payload = io.BytesIO()
+        np.save(payload, np.array([[3.0], [5.0]]), allow_pickle=False)
+        source = 'import numpy as np\nt = np.array([0., 1.])\nT = np.load("samples.npy", allow_pickle=False)\n'
+        request = request_for(source, [("samples.npy", payload.getvalue())])
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "job"
+            execute_source_job(request, root)
+            self.assertEqual((root / "input/samples.npy").read_bytes(), payload.getvalue())
+            np.testing.assert_array_equal(
+                np.load(root / "observations/obs_temperature.npy", allow_pickle=False),
+                [[3.0], [5.0]],
+            )
+
     def test_rejects_bad_hash_paths_and_case_collisions_before_creating_workspace(self):
         for kind in ("hash", "path", "case"):
             request = request_for(SOURCE)

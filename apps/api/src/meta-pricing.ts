@@ -1,3 +1,4 @@
+import { LEGACY_META_MODEL } from './legacy-meta-profile.js';
 import { z } from 'zod';
 import { Count, SchemaVersion, Timestamp } from '@siphon/contracts';
 import { type MetaUsage } from './meta-client.js';
@@ -7,7 +8,7 @@ export const MetaPricing = z
   .strictObject({
     schemaVersion: SchemaVersion,
     version: z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/),
-    model: z.literal('muse-wonder-1.0'),
+    model: z.literal(LEGACY_META_MODEL),
     mode: z.literal('standard'),
     verifiedAt: Timestamp,
     effectiveFrom: Timestamp,

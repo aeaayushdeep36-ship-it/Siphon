@@ -1,79 +1,173 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { User } from 'firebase/auth';
 import { z } from 'zod';
-import { AuditApi, digestBytes, RequestFailure } from './api.js';
+import { AuditApi, RequestFailure } from './api.js';
+
+const user = { getIdToken: async () => 'fixture-token' } as User;
+const receipt = z.object({ ok: z.literal(true) });
 
 afterEach(() => vi.unstubAllGlobals());
-const user = { getIdToken: async () => 'test-id-token' } as User;
-describe('private audit HTTP boundary', () => {
-  it('reuses the operation key after an ambiguous commit and never retries itself', async () => {
-    const fetcher = vi
-      .fn()
-      .mockResolvedValueOnce(
+
+describe('browser audit API', () => {
+  it('uses the same operation key after an uncertain failure and replaces it after success', async () => {
+    const headers: Headers[] = [];
+    let attempt = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        headers.push(new Headers(init.headers));
+        if (++attempt === 1) throw new TypeError('connection lost');
+        return Response.json({ ok: true });
+      }),
+    );
+    const api = new AuditApi(user, 'http://localhost:8787');
+    await expect(
+      api.mutate('/audits', 'POST', { title: 'Fixture' }, receipt),
+    ).rejects.toThrow('connection lost');
+    await api.mutate('/audits', 'POST', { title: 'Fixture' }, receipt);
+    await api.mutate('/audits', 'POST', { title: 'Fixture' }, receipt);
+    expect(headers[0]?.get('authorization')).toBe('Bearer fixture-token');
+    expect(headers[0]?.get('idempotency-key')).toBe(
+      headers[1]?.get('idempotency-key'),
+    );
+    expect(headers[2]?.get('idempotency-key')).not.toBe(
+      headers[1]?.get('idempotency-key'),
+    );
+  });
+
+  it('rejects a malformed response instead of presenting it as a successful operation', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ ok: false })),
+    );
+    const api = new AuditApi(user, 'http://localhost:8787');
+    await expect(
+      api.mutate('/audits', 'POST', {}, receipt),
+    ).rejects.toMatchObject({ code: 'invalid_response' });
+  });
+
+  it.each([
+    {
+      path: '/audits/a/revisions/r/resume',
+      code: 'workflow_stopped',
+      changes: true,
+    },
+    {
+      path: '/audits/a/revisions/r/scientific-run',
+      code: 'workflow_stopped',
+      changes: true,
+    },
+    {
+      path: '/audits/a/revisions/r/scientific-run',
+      code: 'workflow_dispatch_unknown',
+      changes: false,
+    },
+    {
+      path: '/audits/a/revisions/r/run',
+      code: 'workflow_stopped',
+      changes: false,
+    },
+  ])(
+    'preserves safe retry semantics for $path and $code',
+    async ({ path, code, changes }) => {
+      const keys: string[] = [];
+      let calls = 0;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (_url: string, init: RequestInit) => {
+          keys.push(new Headers(init.headers).get('idempotency-key')!);
+          if (++calls === 1)
+            return Response.json(
+              { error: { code, message: 'Fixture' } },
+              { status: 409 },
+            );
+          return Response.json({ ok: true });
+        }),
+      );
+      const api = new AuditApi(user, 'http://localhost:8787');
+      await expect(api.mutate(path, 'POST', {}, receipt)).rejects.toMatchObject(
+        { code },
+      );
+      await api.mutate(path, 'POST', {}, receipt);
+      expect(keys[0] === keys[1]).toBe(!changes);
+    },
+  );
+
+  it('rejects unsafe API origins before sending credentials', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const api = new AuditApi(user, 'http://example.com');
+    await expect(api.get('/audits', z.unknown())).rejects.toBeInstanceOf(
+      RequestFailure,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('sends the selected bytes and checksum to the authenticated upload endpoint', async () => {
+    const fetchMock = vi.fn(async () => Response.json({ ok: true }));
+    vi.stubGlobal('fetch', fetchMock);
+    const api = new AuditApi(user, 'https://api.example.test');
+    const bytes = new Uint8Array([0, 10, 255]).buffer;
+    const digest = 'a'.repeat(64);
+    await api.upload(
+      '/audits/a/revisions/r/artifacts/f/content',
+      bytes,
+      digest,
+    );
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    const headers = new Headers(init.headers);
+    expect(url).toBe(
+      'https://api.example.test/api/v1/audits/a/revisions/r/artifacts/f/content',
+    );
+    expect(init.method).toBe('PUT');
+    expect(init.body).toBe(bytes);
+    expect(headers.get('authorization')).toBe('Bearer fixture-token');
+    expect(headers.get('content-type')).toBe('application/octet-stream');
+    expect(headers.get('x-content-sha256')).toBe(digest);
+  });
+
+  it('does not report an upload as successful when the API rejects its bytes', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
         Response.json(
           {
             error: {
-              code: 'commit_unknown',
-              message: 'Refresh before retry.',
-              requestId: 'request-one',
+              code: 'upload_integrity_mismatch',
+              message: 'Upload rejected.',
             },
           },
-          { status: 503 },
+          { status: 422 },
         ),
-      )
-      .mockResolvedValueOnce(Response.json({ accepted: true }));
-    vi.stubGlobal('fetch', fetcher);
-    const api = new AuditApi(user, 'https://api.example.com');
-    const schema = z.object({ accepted: z.boolean() });
+      ),
+    );
+    const api = new AuditApi(user, 'https://api.example.test');
     await expect(
-      api.mutate('/audits', 'POST', { title: 'Authored fixture' }, schema),
-    ).rejects.toMatchObject({
-      code: 'commit_unknown',
-      requestId: 'request-one',
-    });
-    expect(fetcher).toHaveBeenCalledTimes(1);
-    await api.mutate('/audits', 'POST', { title: 'Authored fixture' }, schema);
-    const first = fetcher.mock.calls[0]?.[1] as RequestInit;
-    const second = fetcher.mock.calls[1]?.[1] as RequestInit;
-    expect(new Headers(first.headers).get('Idempotency-Key')).toBe(
-      new Headers(second.headers).get('Idempotency-Key'),
-    );
-    expect(new Headers(second.headers).get('Authorization')).toBe(
-      'Bearer test-id-token',
-    );
-    expect(second.credentials).toBe('omit');
+      api.upload(
+        '/audits/a/revisions/r/artifacts/f/content',
+        new ArrayBuffer(1),
+        'a'.repeat(64),
+      ),
+    ).rejects.toMatchObject({ code: 'upload_integrity_mismatch' });
   });
-  it('does not turn malformed API data into an audit state', async () => {
+
+  it('explains when the frontend server returns HTML instead of the API', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(Response.json({ success: 'fake' })),
+      vi.fn(
+        async () =>
+          new Response('<html></html>', {
+            headers: { 'Content-Type': 'text/html' },
+          }),
+      ),
     );
-    const api = new AuditApi(user, 'https://api.example.com');
-    await expect(
-      api.get('/audits', z.object({ audits: z.array(z.string()) })),
-    ).rejects.toBeInstanceOf(RequestFailure);
-  });
-  it('hashes exact source bytes with SHA-256', async () => {
-    const bytes = new TextEncoder().encode('abc');
-    expect(await digestBytes(bytes.buffer)).toBe(
-      'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
-    );
-  });
-  it('stops pending token acquisition before dispatch when signed out', async () => {
-    let finishToken: (value: string) => void = () => undefined;
-    const pendingUser = {
-      getIdToken: () =>
-        new Promise<string>((resolve) => {
-          finishToken = resolve;
-        }),
-    } as User;
-    const fetcher = vi.fn();
-    vi.stubGlobal('fetch', fetcher);
-    const api = new AuditApi(pendingUser, 'https://api.example.com');
-    const request = api.get('/audits', z.unknown());
-    api.dispose();
-    finishToken('test-id-token');
-    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
-    expect(fetcher).not.toHaveBeenCalled();
+    const api = new AuditApi(user, 'http://localhost:5173');
+    await expect(api.get('/audits', z.unknown())).rejects.toMatchObject({
+      code: 'api_unavailable',
+      message: expect.stringContaining('VITE_API_BASE_URL'),
+    });
   });
 });

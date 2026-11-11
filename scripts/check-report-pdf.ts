@@ -1,3 +1,4 @@
+import { sciencePython } from './science-python.js';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -173,26 +174,22 @@ const requiredText = [
   report.references[0]!.url,
   report.limitations[1]!,
 ];
-const raw = execFileSync(
-  process.env.SIPHON_PYTHON ?? 'python',
-  ['-c', python],
-  {
-    cwd: fileURLToPath(new URL('../packages/science/', import.meta.url)),
-    encoding: 'utf8',
-    timeout: 30_000,
-    maxBuffer: 8 * 1024 * 1024,
-    windowsHide: true,
-    input: JSON.stringify({
-      cases,
-      document: JSON.stringify(heat),
-      requiredText,
-      extremeDocument: JSON.stringify({
-        ...heat,
-        blocks: [{ kind: 'plot', plot: extreme }],
-      }),
+const raw = execFileSync(sciencePython, ['-c', python], {
+  cwd: fileURLToPath(new URL('../packages/science/', import.meta.url)),
+  encoding: 'utf8',
+  timeout: 30_000,
+  maxBuffer: 8 * 1024 * 1024,
+  windowsHide: true,
+  input: JSON.stringify({
+    cases,
+    document: JSON.stringify(heat),
+    requiredText,
+    extremeDocument: JSON.stringify({
+      ...heat,
+      blocks: [{ kind: 'plot', plot: extreme }],
     }),
-  },
-);
+  }),
+});
 const result = z
   .strictObject({
     cases: z.number().int().positive(),

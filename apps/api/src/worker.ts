@@ -31,6 +31,7 @@ import { RedisRateFilter } from './redis-rate-filter.js';
 export interface WorkerEnvironment {
   SIPHON_API_ENABLED: string;
   FIREBASE_PROJECT_ID: string;
+  FIRESTORE_DATABASE_ID?: string;
   GOOGLE_SERVICE_ACCOUNT_EMAIL: string;
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: string;
   SIPHON_ALLOWED_ORIGINS: string;
@@ -78,6 +79,7 @@ export function createWorkerRuntime(
     config.FIREBASE_PROJECT_ID,
     token,
     transport,
+    config.FIRESTORE_DATABASE_ID,
   );
   const certificates = firebaseCertificateResolver(transport);
   const objects = environment.SIPHON_PRIVATE_KV
@@ -161,8 +163,16 @@ export function createWorkerRuntime(
   });
 }
 
-function unavailable() {
+function unavailable(error?: unknown) {
   const requestId = crypto.randomUUID();
+  if (error !== undefined) {
+    // The Worker boundary can fail before Hono receives the request. Log only
+    // a correlation id and error class; never serialize the error or request.
+    console.error('siphon_worker_unhandled_error', {
+      requestId,
+      errorType: error instanceof Error ? error.constructor.name : typeof error,
+    });
+  }
   return Response.json(
     {
       error: {
@@ -202,8 +212,8 @@ export default {
         runtimes.set(environment, runtime);
       }
       return await runtime.fetch(request);
-    } catch {
-      return unavailable();
+    } catch (error) {
+      return unavailable(error);
     }
   },
 };

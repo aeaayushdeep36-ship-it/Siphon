@@ -15,6 +15,7 @@ import {
   nativeTimestamps,
 } from './audit-commands.js';
 import { SourceContextReview } from './context-tasks.js';
+import { type AiConfiguration } from './ai-config.js';
 import { canonicalJson, sha256 } from './hashing.js';
 
 type Fence = z.infer<typeof DispatchFence>;
@@ -40,7 +41,7 @@ export function scanContextSource(
     if (/-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----/.test(line))
       code = 'private_key';
     else if (
-      /(?:\bAKIA[A-Z0-9]{16}\b|\bgh[pousr]_[A-Za-z0-9]{20,}|\bsk-[A-Za-z0-9_-]{16,}|\bBearer\s+[A-Za-z0-9._~+/-]{16,})/.test(
+      /(?:\bAKIA[A-Z0-9]{16}\b|\bgh[pousr]_[A-Za-z0-9]{20,}|\bgsk_[A-Za-z0-9]{20,}\b|\bsk-[A-Za-z0-9_-]{16,}|\bBearer\s+[A-Za-z0-9._~+/-]{16,})/.test(
         line,
       )
     )
@@ -65,6 +66,7 @@ export class ContextSourceReviews {
     private readonly store: DocumentStore,
     private readonly downloads: Pick<ArtifactDownloadService, 'readBatch'>,
     private readonly clock: () => Date = () => new Date(),
+    private readonly aiConfig?: AiConfiguration,
   ) {}
 
   private async inspect(tx: DocumentTransaction, uid: string, fence: Fence) {
@@ -197,7 +199,10 @@ export class ContextSourceReviews {
       findings.push(...scanContextSource(file.artifactId, text));
       const digest = await sha256(
         canonicalJson({
-          purpose: 'meta_context',
+          purpose: this.aiConfig ? 'groq_context' : 'meta_context',
+          ...(this.aiConfig
+            ? { model: this.aiConfig.model, endpoint: this.aiConfig.endpoint }
+            : {}),
           profile: 'credential_literal_scan.v1',
           ownerUid: uid,
           auditId: fence.auditId,
@@ -253,7 +258,10 @@ export class ContextSourceReviews {
           auditId: fence.auditId,
           artifactId: source.artifactId,
           sourceDigest: source.sourceDigest,
-          purpose: 'meta_context',
+          purpose: this.aiConfig ? 'groq_context' : 'meta_context',
+          ...(this.aiConfig
+            ? { model: this.aiConfig.model, endpoint: this.aiConfig.endpoint }
+            : {}),
           approved: true,
           verifiedAt: now.toISOString(),
           expiresAt,

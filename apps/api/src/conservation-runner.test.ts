@@ -128,7 +128,7 @@ describe('conservation transport and actual authored scientific callable', () =>
     const read = vi.fn(async () => new Response('{}').body!);
     const session = new E2bConservationSession({
       sandboxId: 'fresh',
-      files: { write, read },
+      files: { write, read, makeDir: vi.fn(async () => true) },
       commands: { run },
     } as unknown as Sandbox);
     const signal = AbortSignal.timeout(1000),

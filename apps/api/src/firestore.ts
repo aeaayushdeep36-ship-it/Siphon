@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import { Timestamp } from '@siphon/contracts';
+import { readJsonBounded } from './http.js';
+import {
+  DEFAULT_FIRESTORE_DATABASE_ID,
+  FirestoreDatabaseId,
+} from './firebase-config.js';
 
 export type FirestoreValue =
   | { nullValue: null }
@@ -114,6 +119,23 @@ export class FirestoreFailure extends Error {
   constructor(
     public readonly status: number,
     public readonly ambiguousCommit: boolean,
+    public readonly source: 'http' | 'transport' | 'response' = 'response',
+    public readonly reason:
+      | 'missing_index'
+      | 'invalid_query'
+      | 'permission_denied'
+      | 'api_disabled'
+      | 'other' = 'other',
+    public readonly apiStatus:
+      | 'INVALID_ARGUMENT'
+      | 'FAILED_PRECONDITION'
+      | 'PERMISSION_DENIED'
+      | 'UNAUTHENTICATED'
+      | 'NOT_FOUND'
+      | 'SERVICE_DISABLED'
+      | 'RESOURCE_EXHAUSTED'
+      | 'UNAVAILABLE'
+      | 'other' = 'other',
   ) {
     super(
       ambiguousCommit
@@ -139,10 +161,14 @@ export class FirestoreClient {
     projectId: string,
     private readonly accessToken: () => Promise<string>,
     private readonly transport: typeof fetch = fetch,
+    databaseId = DEFAULT_FIRESTORE_DATABASE_ID,
   ) {
     if (!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(projectId))
       throw new Error('Invalid Firebase project ID');
-    this.database = `projects/${projectId}/databases/(default)`;
+    const parsedDatabase = FirestoreDatabaseId.safeParse(databaseId);
+    if (!parsedDatabase.success)
+      throw new Error('Invalid Firestore database ID');
+    this.database = `projects/${projectId}/databases/${parsedDatabase.data}`;
   }
 
   private async request(
@@ -156,7 +182,8 @@ export class FirestoreClient {
       throw new Error('Invalid OAuth credential');
     let response: Response;
     try {
-      response = await this.transport(
+      const transport = this.transport;
+      response = await transport(
         `https://firestore.googleapis.com/v1/${this.database}/documents${suffix}`,
         {
           method,
@@ -166,21 +193,131 @@ export class FirestoreClient {
           },
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),
           signal: AbortSignal.timeout(10_000),
-          redirect: 'error',
+          redirect: 'manual',
         },
       );
-    } catch {
-      throw new FirestoreFailure(503, commit);
+    } catch (error) {
+      const message = error instanceof Error ? error.message.toLowerCase() : '';
+      const errorCode =
+        error instanceof TypeError && message.includes('fetch failed')
+          ? 'network_fetch_type_error'
+          : error instanceof TypeError &&
+              (message.includes('url') || message.includes('request'))
+            ? 'request_url_type_error'
+            : error instanceof TypeError && message.includes('redirect')
+              ? 'redirect_mode_type_error'
+              : error instanceof TypeError && message.includes('signal')
+                ? 'request_signal_type_error'
+                : error instanceof TypeError && message.includes('body')
+                  ? 'request_body_type_error'
+                  : error instanceof TypeError && message.includes('header')
+                    ? 'request_header_type_error'
+                    : error instanceof TypeError && message.includes('network')
+                      ? 'network_fetch_type_error'
+                      : error instanceof Error &&
+                          ['TimeoutError', 'AbortError'].includes(error.name)
+                        ? 'request_cancelled'
+                        : 'other_transport_error';
+      console.error('firestore_transport_failed', {
+        errorCode,
+        errorType:
+          error instanceof Error ? error.constructor.name : typeof error,
+        causeType:
+          error instanceof Error && error.cause instanceof Error
+            ? error.cause.constructor.name
+            : undefined,
+      });
+      throw new FirestoreFailure(503, commit, 'transport');
     }
     if (!response.ok) {
-      await response.body?.cancel();
+      let reason: FirestoreFailure['reason'] = 'other';
+      let apiStatus: FirestoreFailure['apiStatus'] = 'other';
+      try {
+        const payload = await readJsonBounded(response, 16 * 1024);
+        const payloadEntry = Array.isArray(payload) ? payload[0] : payload;
+        const payloadRecord =
+          typeof payloadEntry === 'object' &&
+          payloadEntry !== null &&
+          !Array.isArray(payloadEntry)
+            ? payloadEntry
+            : null;
+        const nestedError =
+          payloadRecord &&
+          'error' in payloadRecord &&
+          typeof payloadRecord.error === 'object' &&
+          payloadRecord.error !== null
+            ? payloadRecord.error
+            : null;
+        const errorRecord = nestedError ?? payloadRecord;
+        const remoteMessage =
+          payloadRecord &&
+          'error' in payloadRecord &&
+          typeof payloadRecord.error === 'string'
+            ? payloadRecord.error
+            : errorRecord &&
+                'message' in errorRecord &&
+                typeof errorRecord.message === 'string'
+              ? errorRecord.message
+              : typeof payload === 'string'
+                ? payload
+                : '';
+        const message = remoteMessage.toLowerCase();
+        const status =
+          errorRecord &&
+          'status' in errorRecord &&
+          typeof errorRecord.status === 'string'
+            ? errorRecord.status
+            : payloadRecord &&
+                'status' in payloadRecord &&
+                typeof payloadRecord.status === 'string'
+              ? payloadRecord.status
+              : undefined;
+        apiStatus =
+          status &&
+          [
+            'INVALID_ARGUMENT',
+            'FAILED_PRECONDITION',
+            'PERMISSION_DENIED',
+            'UNAUTHENTICATED',
+            'NOT_FOUND',
+            'SERVICE_DISABLED',
+            'RESOURCE_EXHAUSTED',
+            'UNAVAILABLE',
+          ].includes(status)
+            ? (status as Exclude<FirestoreFailure['apiStatus'], 'other'>)
+            : 'other';
+        reason = message.includes('index')
+          ? 'missing_index'
+          : message.includes('invalid argument') ||
+              message.includes('invalid query')
+            ? 'invalid_query'
+            : message.includes('permission') || message.includes('denied')
+              ? 'permission_denied'
+              : message.includes('not enabled')
+                ? 'api_disabled'
+                : apiStatus === 'FAILED_PRECONDITION'
+                  ? 'missing_index'
+                  : apiStatus === 'INVALID_ARGUMENT'
+                    ? 'invalid_query'
+                    : apiStatus === 'PERMISSION_DENIED' ||
+                        apiStatus === 'UNAUTHENTICATED'
+                      ? 'permission_denied'
+                      : apiStatus === 'SERVICE_DISABLED'
+                        ? 'api_disabled'
+                        : 'other';
+      } catch {
+        await response.body?.cancel().catch(() => undefined);
+      }
       throw new FirestoreFailure(
         response.status,
         commit && response.status !== 409,
+        'http',
+        reason,
+        apiStatus,
       );
     }
     const reader = response.body?.getReader();
-    if (!reader) throw new FirestoreFailure(503, commit);
+    if (!reader) throw new FirestoreFailure(503, commit, 'response');
     const chunks: Uint8Array[] = [];
     let bytes = 0;
     try {

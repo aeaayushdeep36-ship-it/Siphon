@@ -1,5 +1,13 @@
 # Siphon security specification
 
+## Current AI provider boundary (2026-11-08)
+
+Groq free-tier inference supersedes the Meta selection, Standard-mode rule and USD 150 assumption below. Old Meta code is legacy compatibility/history, never a production fallback. Invalid or absent explicit Groq settings block dispatch; a key does not authorize a paid upgrade, provider change or uncertain-operation retry.
+
+Keep `GROQ_API_KEY` only in ignored `apps/api/.dev.vars` locally or a hosted Worker secret. Never expose it through `VITE_*`, logs, sandboxes, reports or persisted jobs/configuration digests. The configured HTTPS endpoint must match the official Groq origin/path allowlist; arbitrary, credential-bearing and redirect URLs are rejected. Configuration errors must not echo secret values. Verify account free limits and data controls before private-code use.
+
+Disclosure reviews bind source hashes to the configured model/endpoint and scan recognized credential patterns, including Groq tokens; they do not establish universal confidentiality. Recheck ownership, current revision, source expiry and immutable job/request configuration before dispatch. Independent full-request byte screening is not rendered-token measurement; reserve configured full input/output tokens, reconcile actual usage, halt overruns and preserve uncertain reservations. Strict JSON and original Zod validation do not establish truth or override scientific decisions. Service/database configurability does not make protocol allowlists or scientific/security invariants arbitrary settings. No live security certification is claimed.
+
 Version: 1.5 | Updated: 2026-10-30 | Status: required controls and local verification; not a deployed security certification.
 
 ## Deadline integration status (2026-10-30)
@@ -137,3 +145,6 @@ Required negative tests: cross-user reads/downloads/listeners, inactive invitati
 Before invited release, record observed isolation, resource enforcement, credentials separation, free-tier CPU feasibility, and deletion/cleanup evidence. No credit-consuming test or paid resource activation is authorized merely by this document.
 
 On suspected abuse: stop new dispatch, revoke affected invitation/credentials, request termination of provider handles, preserve minimized operation/audit evidence, determine exposure, rotate secrets, repair the failing control, and rerun relevant tests before reopening. Do not contact third parties or users without explicit authorization. Record material limitations openly; do not disguise them as successful audits.
+# Current deployment note — 2026-11-11
+
+Firebase ID-token verification in the Cloudflare Worker fetches Google's public signing certificates. The fetch follows redirects only after checking that the final URL has the exact `https://www.googleapis.com` origin, the pinned Firebase certificate pathname, and no query string. Keys remain cache-controlled public verification material; the verifier still checks RS256, Firebase issuer/audience and required claims. The current production diagnostic with a deliberately forged JWT reaches signature-key lookup and fails closed as `401 invalid_credentials`.

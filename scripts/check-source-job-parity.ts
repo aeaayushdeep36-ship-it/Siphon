@@ -1,3 +1,4 @@
+import { sciencePython } from './science-python.js';
 import { execFileSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -80,7 +81,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert diagnostic_result["metrics"][0]["value"]==12.
     print(json.dumps({"source":result,"validationRequest":validation_request,"validationResult":validation_result,"diagnosticRequest":diagnostic_request,"diagnosticResult":diagnostic_result}))`;
 const output: unknown = JSON.parse(
-  execFileSync(process.env.SIPHON_PYTHON ?? 'python', ['-c', code], {
+  execFileSync(sciencePython, ['-c', code], {
     cwd: fileURLToPath(new URL('../packages/science/', import.meta.url)),
     input: JSON.stringify(request),
     encoding: 'utf8',

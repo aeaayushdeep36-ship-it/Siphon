@@ -1,5 +1,13 @@
 # Siphon agent instructions
 
+## Current AI decision and configuration (2026-11-08)
+
+The user selected Qwen 3.8 27B through Groq's free API tier. This supersedes conflicting Meta model, Standard-mode and USD 150-credit requirements below. The active Worker path requires explicit validated `SIPHON_AI_*` settings and server-only `GROQ_API_KEY`; the selected model belongs in configuration. Old Meta transport/counting/pricing modules and authored fixtures remain legacy compatibility/history, never a production fallback. No paid upgrade, silent provider change or automatic repeat of uncertain calls is authorized.
+
+Keep deployment choices configurable: AI model/endpoint/reasoning/quotas/transport limits, Firebase project/account/database, public web configuration, origins, Redis and deployment bindings. `FIRESTORE_DATABASE_ID` selects a named database or its documented compatible `(default)` fallback. Protocol allowlists, schemas, prompt/check versions, reviewed science, lifecycle safety maxima, versioned policy and fixtures are intentional constants. Do not claim every existing numeric timeout has been centralized.
+
+Groq admission screens full serialized bytes against the independent configured input-byte and transport caps; it does not measure rendered tokens or manufacture Meta counting/billing proof. Reserve the configured input-plus-output token allowance, enforce rolling-minute and UTC-day quotas, reconcile actual usage and halt on overrun. Preserve source disclosure, ownership, request digests and revision fencing. Strict JSON conversion never replaces semantic Zod validation. The local key location is ignored `apps/api/.dev.vars`; only the empty-key example belongs in Git. No live model call or finished audit is established by this migration.
+
 Scope: the entire repository. Updated: 2026-10-29. Status: backend foundation underway; the complete application is not built or deployed.
 
 ## Deadline integration status (2026-10-30)

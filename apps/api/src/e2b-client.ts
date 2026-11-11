@@ -1,4 +1,4 @@
-import { Sandbox, type SandboxOpts, type SandboxApiOpts } from 'e2b';
+import { Sandbox, Template, type SandboxOpts, type SandboxApiOpts } from 'e2b';
 import { z } from 'zod';
 import { DEFAULT_POLICY, Digest, Id } from '@siphon/contracts';
 import { canonicalJson, sha256 } from './hashing.js';
@@ -18,6 +18,74 @@ import {
   E2bFidelitySession,
   type FidelitySession,
 } from './fidelity-session.js';
+import { readJsonBounded } from './http.js';
+
+export type TemplateVerification = {
+  buildId: string;
+  tagBuildId: string | null;
+  buildCount: number;
+  isPrivate: boolean;
+};
+
+const ProviderTemplate = z.object({
+  templateID: z.string().min(1).max(128),
+  buildID: z.string().min(1).max(128),
+  buildCount: z.number().int().nonnegative(),
+  public: z.boolean(),
+});
+
+function matchesSinglePrivateBuild(
+  value: TemplateVerification | null,
+  expectedBuildId: string,
+): boolean {
+  return (
+    value?.buildId === expectedBuildId &&
+    value.tagBuildId === expectedBuildId &&
+    value.buildCount === 1 &&
+    value.isPrivate
+  );
+}
+
+async function verifyE2bTemplate(
+  apiKey: string,
+  templateId: string,
+  tag: string,
+  signal: AbortSignal,
+  apiUrl: string,
+): Promise<TemplateVerification | null> {
+  const endpoint = new URL(
+    `/templates/${encodeURIComponent(templateId)}`,
+    apiUrl,
+  );
+  const [response, tags] = await Promise.all([
+    fetch(endpoint, {
+      headers: { 'X-API-Key': apiKey },
+      redirect: 'manual',
+      signal,
+    }),
+    Template.getTags(templateId, {
+      apiKey,
+      apiUrl,
+      retries: 0,
+      requestTimeoutMs: 30_000,
+      signal,
+    }),
+  ]);
+  if (!response.ok) {
+    await response.body?.cancel();
+    return null;
+  }
+  const record = ProviderTemplate.parse(
+    await readJsonBounded(response, 64 * 1024, signal),
+  );
+  if (record.templateID !== templateId) return null;
+  return {
+    buildId: record.buildID,
+    tagBuildId: tags.find((item) => item.tag === tag)?.buildId ?? null,
+    buildCount: record.buildCount,
+    isPrivate: !record.public,
+  };
+}
 
 const ProviderId = z.string().regex(/^[a-zA-Z0-9_-]{1,128}$/);
 export const SandboxRequest = z.strictObject({
@@ -27,6 +95,8 @@ export const SandboxRequest = z.strictObject({
   inputDigest: Digest,
   role: z.enum(['inspection', 'source', 'evaluation', 'pdf']),
   templateId: ProviderId,
+  templateBuildId: ProviderId.optional(),
+  templateTag: ProviderId.optional(),
   templateEvidenceId: Id,
   lifetimeSeconds: z
     .number()
@@ -54,6 +124,13 @@ export interface SandboxDispatchGate {
 }
 
 export interface SandboxControlPlane {
+  verifyTemplate?(
+    apiKey: string,
+    templateId: string,
+    tag: string,
+    signal: AbortSignal,
+    apiUrl: string,
+  ): Promise<TemplateVerification | null>;
   create(
     templateId: string,
     options: SandboxOpts,
@@ -70,6 +147,7 @@ export interface SandboxControlPlane {
   kill(sandboxId: string, options: SandboxApiOpts): Promise<boolean>;
 }
 const sdk: SandboxControlPlane = {
+  verifyTemplate: verifyE2bTemplate,
   create: async (template, options) => {
     const sandbox = await Sandbox.create(template, options);
     return {
@@ -91,6 +169,7 @@ export class SandboxControlFailure extends Error {
     public readonly code:
       | 'create_unknown'
       | 'handle_unrecorded'
+      | 'template_verification_failed'
       | 'kill_unknown'
       | 'termination_unrecorded',
     public readonly sandboxId: string | null = null,
@@ -101,12 +180,24 @@ export class SandboxControlFailure extends Error {
 
 /** Control plane only; no uploaded code is evaluated here. No default admission gate. */
 export class E2bClient {
+  private readonly apiUrl: string;
   constructor(
     private readonly apiKey: string,
     private readonly gate: SandboxDispatchGate,
     private readonly provider: SandboxControlPlane = sdk,
+    apiUrl = 'https://api.e2b.app',
   ) {
     if (!apiKey.trim()) throw new Error('E2B credentials are not configured');
+    const endpoint = new URL(apiUrl);
+    if (
+      endpoint.protocol !== 'https:' ||
+      endpoint.username ||
+      endpoint.password ||
+      endpoint.search ||
+      endpoint.hash
+    )
+      throw new Error('E2B API endpoint must be a clean HTTPS URL');
+    this.apiUrl = endpoint.toString();
   }
 
   async create(
@@ -147,6 +238,25 @@ export class E2bClient {
   }> {
     const request = Object.freeze(SandboxRequest.parse(value));
     signal?.throwIfAborted();
+    if (request.templateBuildId || request.templateTag) {
+      if (
+        !request.templateBuildId ||
+        !request.templateTag ||
+        !this.provider.verifyTemplate
+      )
+        throw new Error('Pinned E2B template verification is unavailable');
+      const verification = await this.provider.verifyTemplate(
+        this.apiKey,
+        request.templateId,
+        request.templateTag,
+        signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(30_000)])
+          : AbortSignal.timeout(30_000),
+        this.apiUrl,
+      );
+      if (!matchesSinglePrivateBuild(verification, request.templateBuildId))
+        throw new Error('Pinned E2B template build mismatch');
+    }
     await this.gate.authorizeCreate(
       request,
       await sha256(canonicalJson(request)),
@@ -163,23 +273,33 @@ export class E2bClient {
     let conservationSession: ValidationSession | undefined;
     let fidelitySession: FidelitySession | undefined;
     try {
-      const result = await this.provider.create(request.templateId, {
-        apiKey: this.apiKey,
-        retries: 0,
-        requestTimeoutMs: 30_000,
-        timeoutMs: request.lifetimeSeconds * 1000,
-        signal: signal
-          ? AbortSignal.any([signal, AbortSignal.timeout(30_000)])
-          : AbortSignal.timeout(30_000),
-        allowInternetAccess: false,
-        network: { allowPublicTraffic: false },
-        lifecycle: { onTimeout: 'kill', autoResume: false },
-        envs: {},
-        metadata: {
-          siphonOperationId: request.operationId,
-          siphonRole: request.role,
+      const result = await this.provider.create(
+        request.templateTag
+          ? `${request.templateId}:${request.templateTag}`
+          : request.templateId,
+        {
+          apiKey: this.apiKey,
+          apiUrl: this.apiUrl,
+          // Team-scoped provider key, derived from the durable operation rather
+          // than a caller-supplied value. Unknown creates are still reconciled,
+          // not retried here: provider retention and final outcome can vary.
+          idempotencyKey: await sha256(`siphon-sandbox:${request.operationId}`),
+          retries: 0,
+          requestTimeoutMs: 30_000,
+          timeoutMs: request.lifetimeSeconds * 1000,
+          signal: signal
+            ? AbortSignal.any([signal, AbortSignal.timeout(30_000)])
+            : AbortSignal.timeout(30_000),
+          allowInternetAccess: false,
+          network: { allowPublicTraffic: false },
+          lifecycle: { onTimeout: 'kill', autoResume: false },
+          envs: {},
+          metadata: {
+            siphonOperationId: request.operationId,
+            siphonRole: request.role,
+          },
         },
-      });
+      );
       sandboxId = ProviderId.parse(result.sandboxId);
       inspectionSession = result.inspectionSession;
       sourceSession = result.sourceSession;
@@ -195,7 +315,37 @@ export class E2bClient {
     try {
       await this.gate.recordCreated(request.operationId, sandboxId);
     } catch {
-      throw new SandboxControlFailure('handle_unrecorded', sandboxId);
+      // This journal write is idempotent for the same operation and handle.
+      // It may have committed despite a lost response; never repeat provider
+      // creation and never expose a session until the linkage is durable.
+      try {
+        await this.gate.recordCreated(request.operationId, sandboxId);
+      } catch {
+        throw new SandboxControlFailure('handle_unrecorded', sandboxId);
+      }
+    }
+    // Recheck provider build count, visibility and tag mapping after creation.
+    // This detects a second build or retag observed across the create window.
+    if (request.templateBuildId && request.templateTag) {
+      try {
+        signal?.throwIfAborted();
+        const verification = await this.provider.verifyTemplate!(
+          this.apiKey,
+          request.templateId,
+          request.templateTag,
+          signal
+            ? AbortSignal.any([signal, AbortSignal.timeout(30_000)])
+            : AbortSignal.timeout(30_000),
+          this.apiUrl,
+        );
+        if (!matchesSinglePrivateBuild(verification, request.templateBuildId))
+          throw new Error('mismatch');
+      } catch {
+        throw new SandboxControlFailure(
+          'template_verification_failed',
+          sandboxId,
+        );
+      }
     }
     return {
       sandboxId,

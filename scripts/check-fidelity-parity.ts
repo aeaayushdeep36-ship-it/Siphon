@@ -1,3 +1,4 @@
+import { sciencePython } from './science-python.js';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { BaselineComparison } from '../packages/contracts/src/index.js';
@@ -13,17 +14,13 @@ for right in (left, {'time': np.array([0.,2.])}, {}):
     results.append(compare_baselines(left,right,required_keys=('time',),maximum_total_elements=4))
 print(json.dumps(results))
 `;
-const output = execFileSync(
-  process.env.SIPHON_PYTHON ?? 'python',
-  ['-c', code],
-  {
-    cwd: fileURLToPath(new URL('../packages/science/', import.meta.url)),
-    encoding: 'utf8',
-    timeout: 10_000,
-    maxBuffer: 100_000,
-    windowsHide: true,
-  },
-);
+const output = execFileSync(sciencePython, ['-c', code], {
+  cwd: fileURLToPath(new URL('../packages/science/', import.meta.url)),
+  encoding: 'utf8',
+  timeout: 10_000,
+  maxBuffer: 100_000,
+  windowsHide: true,
+});
 const results: unknown = JSON.parse(output);
 if (!Array.isArray(results) || results.length !== 3)
   throw new Error('Unexpected fixture output');

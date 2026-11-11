@@ -1,5 +1,13 @@
 # Siphon database and artifact storage
 
+## Current Groq records and database selection (2026-11-08)
+
+Groq free-tier quotas replace the active Meta credit/count evidence requirements below; old Meta record/code descriptions remain legacy compatibility/history, not a production fallback. `FIRESTORE_DATABASE_ID` configures a named database or preserves the compatible `(default)` when omitted. IDs are validated before REST/document-path construction; the selected database separately needs its intended rules, indexes and IAM setup.
+
+Groq `modelJobs/{operationId}` records bind provider, configured model/endpoint, purpose, request digest, credential-free configuration digest, input/output reservations and admission profile `request_bytes_screen_not_token_measurement.v1`. This profile means an independent full-request byte screen, not token measurement or financial proof. Source disclosure records bind actual artifact hashes to Groq purpose/model/endpoint. API keys and raw source do not belong in these job/configuration records.
+
+`aiQuotaWindows/groq` stores rolling 60-second dispatch inventory, cooldown and halt state. Server-only `budgets/groq_requests_day_{YYYYMMDD}` and `budgets/groq_tokens_day_{YYYYMMDD}` hold UTC-day attempts and conservative token reservations, alongside revision attempts. Reserve configured full input/output capacity, reconcile validated provider usage, retain uncertainty and halt overruns. Settlement never turns unknown completion into permission to redispatch. Existing Meta shapes remain readable only through the explicit legacy path.
+
 Version: 1.5 | Updated: 2026-10-30 | Status: target data model and local implementation; dedicated Firebase project created, no hosted database/rules provisioned.
 
 ## Deadline integration status (2026-10-30)
@@ -139,6 +147,10 @@ FirestoreAccountingStore accepts an additional provider validation callback, inv
 
 
 Sandbox bindings (2026-10-29): server-only sandboxTemplates/{evidenceId} holds reviewed role/template/image/runtime identity, validity dates, verification properties and a complete resource cost ceiling. sandboxJobs/{operationId} freezes the request/digest, owner, template evidence/digest, reserved micro-USD and creation time. Evidence timestamps normalize to UTC milliseconds before hashing and persist as native timestamps. Binding replay verifies the frozen request/evidence hash; creating a new binding after dispatch is refused. The dispatch gate now rechecks live evidence against the saved digest, validity through the requested lifetime, exact reservation coverage and verified account allocation before calling E2B.
+
+Template review update (2026-11-11): `immutableTemplateVerified` is replaced by `singlePrivateBuildVerified`. Siphon launches a configured `templateId:tag` because the current E2B sandbox-creation request has no build-ID selector. Before admission and after create, `E2bClient` queries E2B template metadata and tags and requires private visibility, exactly one build, and matching current/tag build IDs. A second build or changed mapping blocks dispatch or session handoff. This is an observed single-build invariant, not a provider-enforced immutability guarantee. `npm run audit:e2b-templates` performs the same read-only check for configured roles. It does not create the approval document: operators still need to review network isolation, resource limits, role-specific smoke results and cost ceilings before writing `sandboxTemplates/{evidenceId}`.
+
+For numeric uploads, source template evidence may additionally carry `numericInputValidation: headerless-csv-npy-v1`. This assertion applies only to the explicitly pinned source build and must be recorded after independent verification of that build's pre-execution validator. Without the assertion and both build ID and tag, numeric inputs remain blocked. It does not establish provider tag immutability, available credit, or scientific correctness; all existing runtime, accounting, and dispatch checks still apply.
 
 sandboxHandles/{sandboxId} stores the unique operation/owner/audit/revision relationship and native timestamps. Handle recording updates operations/{id}.providerHandle in the same transaction and may run after cancellation. A different handle cannot replace an existing operation binding; another operation cannot claim a bound sandbox. These records must survive until termination/reconciliation; deleting an audit does not authorize early deletion of the only provider handle. No provider resources or evidence records have been provisioned by this code.
 

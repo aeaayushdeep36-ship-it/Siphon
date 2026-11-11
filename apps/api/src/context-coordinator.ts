@@ -36,6 +36,9 @@ import { AdmissionRepository } from './admission.js';
 import { BudgetCounter, Operation, reserveOperation } from './accounting.js';
 import { FirestoreAccountingStore } from './firestore-accounting.js';
 import { canonicalJson, sha256 } from './hashing.js';
+import { type AiConfiguration } from './ai-config.js';
+import { GroqAdmissionBlocked, GroqModelJobs } from './groq-model-jobs.js';
+import { MetaRequest } from './meta-client.js';
 
 type Fence = z.infer<typeof DispatchFence>;
 const ContextQuestionDraft = QuestionSet.safeExtend({
@@ -48,9 +51,10 @@ export type ContextQuestionHook = (snapshot: {
   fence: Fence;
 }) => Promise<z.infer<typeof Question>[]>;
 
-/** Concrete inspection -> disclosed context -> count -> bounded paid operation
- * -> real model -> settlement -> immutable context/questions continuation.
- * The caller supplies stable IDs; replays cannot issue another paid request. */
+/** Concrete inspection -> disclosed context -> bounded provider operation ->
+ * settlement -> immutable context/questions continuation. Configured Groq calls
+ * reserve free-tier quotas; the legacy Meta path is retained for existing fixtures.
+ * The caller supplies stable IDs; replays cannot issue another provider request. */
 export class ContextCoordinator {
   constructor(
     private readonly store: DocumentStore,
@@ -59,6 +63,7 @@ export class ContextCoordinator {
     private readonly fetcher: typeof fetch = fetch,
     private readonly clock: () => Date = () => new Date(),
     private readonly supplementalQuestions?: ContextQuestionHook,
+    private readonly aiConfig?: AiConfiguration,
   ) {}
 
   private async snapshot(uid: string, expected: Fence) {
@@ -175,9 +180,52 @@ export class ContextCoordinator {
       return {
         status: 'blocked' as const,
         fence,
-        code: 'meta_credentials_required',
-        required: ['Meta API key'],
+        code: this.aiConfig
+          ? 'ai_credentials_required'
+          : 'meta_credentials_required',
+        required: [this.aiConfig ? 'Groq API key' : 'Meta API key'],
       };
+    if (this.aiConfig) {
+      const reviewed = await new ContextSourceReviews(
+        this.store,
+        this.downloads,
+        this.clock,
+        this.aiConfig,
+      ).loadAndReview(uid, fence, signal);
+      if (reviewed.status === 'blocked')
+        return {
+          status: 'blocked' as const,
+          fence,
+          code: 'source_disclosure_blocked',
+          findings: reviewed.findings,
+        };
+      const prepared = await new ContextTasks(
+        this.store,
+        this.clock,
+        undefined,
+        this.aiConfig,
+      ).prepare(uid, fence, reviewed.sources);
+      try {
+        await new GroqModelJobs(
+          this.store,
+          this.apiKey,
+          this.aiConfig,
+          this.fetcher,
+          this.clock,
+        ).run(uid, fence, ids.operationId, prepared, 'context', signal);
+      } catch (error) {
+        if (!(error instanceof GroqAdmissionBlocked)) throw error;
+        return {
+          status: 'blocked' as const,
+          fence,
+          code: error.code,
+          required: [
+            'Review the configured AI allowance or existing operation before resuming.',
+          ],
+        };
+      }
+      return this.continue(uid, fence, ids.operationId);
+    }
     const configuration = await this.configuration(uid, fence);
     if (configuration.status === 'blocked') return { ...configuration, fence };
     const reviewed = await new ContextSourceReviews(
@@ -193,7 +241,8 @@ export class ContextCoordinator {
         findings: reviewed.findings,
       };
     const tasks = new ContextTasks(this.store, this.clock),
-      prepared = await tasks.prepare(uid, fence, reviewed.sources);
+      prepared = await tasks.prepare(uid, fence, reviewed.sources),
+      request = MetaRequest.parse(prepared.request);
     const deadline = signal
       ? AbortSignal.any([signal, AbortSignal.timeout(180000)])
       : AbortSignal.timeout(180000);
@@ -217,7 +266,7 @@ export class ContextCoordinator {
         `audits/${fence.auditId}/revisions/${fence.revisionId}`,
       ),
       policy = ResourcePolicy.parse(revision?.policy);
-    const outputTokens = prepared.request.max_output_tokens;
+    const outputTokens = request.max_output_tokens;
     const cost = reserveMetaCost(
       configuration.pricing,
       bound.inputTokenUpperBound,
@@ -274,7 +323,7 @@ export class ContextCoordinator {
       this.apiKey,
       this.fetcher,
       this.clock,
-    ).run(ids.operationId, prepared.request, deadline);
+    ).run(ids.operationId, request, deadline);
     return this.continue(uid, fence, ids.operationId);
   }
 

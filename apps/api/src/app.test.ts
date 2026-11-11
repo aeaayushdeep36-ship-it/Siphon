@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createApp } from './app.js';
 import { FirestoreAuditRepository } from './audit-repository.js';
 import { FirestoreUserRateGate } from './rate-limit.js';
@@ -99,6 +99,55 @@ function setup() {
 }
 
 describe('private audit HTTP integration (local ports)', () => {
+  it('routes planning only through authenticated validated requests', async () => {
+    const f = setup();
+    const auditId = crypto.randomUUID(),
+      revisionId = crypto.randomUUID();
+    const spy = vi
+      .spyOn(WorkspaceRepository.prototype, 'prepareScientificPlan')
+      .mockResolvedValue({
+        schemaVersion: '1.0',
+        planDigest: 'a'.repeat(64),
+        replayed: false,
+      });
+    try {
+      const path = `/api/v1/audits/${auditId}/revisions/${revisionId}/scientific-plan`;
+      const body = {
+        schemaVersion: '1.0',
+        expectedGeneration: 1,
+        expectedInputDigest: 'b'.repeat(64),
+      };
+      const unauthenticated = await f.app.request(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      expect(unauthenticated.status).toBe(401);
+      expect(spy).not.toHaveBeenCalled();
+      const response = await f.app.request(path, {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer alice',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      expect(response.status).toBe(201);
+      expect(spy).toHaveBeenCalledWith('alice', auditId, revisionId, body);
+      const invalid = await f.app.request(path, {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer alice',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...body, unexpected: true }),
+      });
+      expect(invalid.status).toBe(422);
+      expect(spy).toHaveBeenCalledTimes(1);
+    } finally {
+      spy.mockRestore();
+    }
+  });
   it('serves the exact owner report and explicit PDF-not-ready state through authenticated rate-limited routes', async () => {
     const f = setup();
     const { audit } = await f.repository.create(

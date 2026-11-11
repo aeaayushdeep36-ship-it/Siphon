@@ -2,6 +2,7 @@ import { EvidenceReportResponse } from '@siphon/contracts';
 import type { z } from 'zod';
 import { useState } from 'react';
 import { digestBytes, RequestFailure, type AuditApi } from './api.js';
+import { label } from './labels.js';
 
 type ReportResponse = z.infer<typeof EvidenceReportResponse>;
 function EvidencePlot({
@@ -22,7 +23,7 @@ function EvidencePlot({
   const y = (value: number) =>
     225 -
     (yMax === yMin ? 0.5 : (value / yMagnitude - yMin) / (yMax - yMin)) * 180;
-  const colors = ['#155c4b', '#9a481a', '#3e53a1', '#8c376f'];
+  const colors = ['#f97316', '#7bd1fa', '#8ddbb5', '#e2b2d6'];
   return (
     <figure className="evidence-plot">
       <svg
@@ -31,6 +32,13 @@ function EvidencePlot({
         aria-label={`${plot.title}. ${plot.description} Exact values are available in the accompanying data table.`}
       >
         <path d="M65 35V225H545" fill="none" stroke="#6b7b72" />
+        <path d="M65 130H545M65 35H545" fill="none" stroke="#ffffff1a" />
+        <text x="58" y="39" textAnchor="end" fontSize="10">
+          {Math.max(...points.map((point) => point.y)).toString()}
+        </text>
+        <text x="58" y="225" textAnchor="end" fontSize="10">
+          {Math.min(...points.map((point) => point.y)).toString()}
+        </text>
         <text x="65" y="245" fontSize="11">
           {Math.min(...points.map((point) => point.x)).toString()}
         </text>
@@ -83,7 +91,6 @@ function EvidencePlot({
     </figure>
   );
 }
-export const label = (value: string) => value.replaceAll('_', ' ');
 function TextList({ items }: { items: string[] }) {
   return (
     <ul>
@@ -116,7 +123,11 @@ export function Report({
         response.headers.get('Content-Type')?.split(';')[0] !==
         'application/pdf'
       )
-        throw new Error('The service did not return a PDF.');
+        throw new RequestFailure(
+          'invalid_pdf',
+          'The service did not return a PDF. Refresh the report and retry.',
+          null,
+        );
       const bytes = await response.blob();
       if (
         bytes.size !== metadata.bytes ||
@@ -139,7 +150,11 @@ export function Report({
     }
   }
   return (
-    <section aria-labelledby="report-title" className="panel">
+    <section
+      aria-labelledby="report-title"
+      className="panel report-panel"
+      id="evidence"
+    >
       <div className="section-heading">
         <div>
           <p className="eyebrow">
@@ -264,71 +279,91 @@ export function Report({
         <details key={plot.id}>
           <summary>{plot.title}</summary>
           <p>{plot.description}</p>
-          <EvidencePlot plot={plot} />
-          <p>
-            Axes: {plot.xLabel} ({plot.xUnit}); {plot.yLabel} ({plot.yUnit}).
-            Display points may be sampled; metrics use their recorded evidence.
-          </p>
-          {plot.series.map((series) => (
-            <div key={series.label}>
-              <h4>{series.label}</h4>
+          <div className="plot-layout">
+            <div>
+              <EvidencePlot plot={plot} />
               <p>
-                {series.points.length} displayed of {series.originalPointCount}{' '}
-                original points. Experiment {series.experimentId}.
+                Axes: {plot.xLabel} ({plot.xUnit}); {plot.yLabel} ({plot.yUnit}
+                ). Display points may be sampled; metrics use their recorded
+                evidence.
               </p>
-              <div
-                className="scroll-region"
-                tabIndex={0}
-                role="region"
-                aria-label={`${series.label} plot data`}
-              >
-                <table>
-                  <thead>
-                    <tr>
-                      <th>
-                        {plot.xLabel} ({plot.xUnit})
-                      </th>
-                      <th>
-                        {plot.yLabel} ({plot.yUnit})
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {series.points.map((point, i) => (
-                      <tr key={i}>
-                        <td>{point.x.toString()}</td>
-                        <td>{point.y.toString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </div>
-          ))}
+            <div className="plot-data">
+              {plot.series.map((series) => (
+                <div key={series.label}>
+                  <h4>{series.label}</h4>
+                  <p>
+                    {series.points.length} displayed of{' '}
+                    {series.originalPointCount} original points. Experiment{' '}
+                    {series.experimentId}.
+                  </p>
+                  <div
+                    className="scroll-region"
+                    data-lenis-prevent
+                    tabIndex={0}
+                    role="region"
+                    aria-label={`${series.label} plot data`}
+                  >
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>
+                            {plot.xLabel} ({plot.xUnit})
+                          </th>
+                          <th>
+                            {plot.yLabel} ({plot.yUnit})
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {series.points.map((point, i) => (
+                          <tr key={i}>
+                            <td>{point.x.toString()}</td>
+                            <td>{point.y.toString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </details>
       ))}
-      <h3>Observed facts</h3>
-      {report.narrative.facts.map((item, i) => (
-        <p key={i}>
-          {item.text} <small>Evidence: {item.evidenceIds.join(', ')}</small>
-        </p>
-      ))}
-      <h3>Possible causes · hypotheses</h3>
-      {report.narrative.hypotheses.map((item, i) => (
-        <div key={i}>
-          <p>{item.text}</p>
-          <p>Verify by: {item.verification}</p>
-          <small>Evidence: {item.evidenceIds.join(', ')}</small>
+      <div className="narrative-grid">
+        <div>
+          <h3>Observed facts</h3>
+          {report.narrative.facts.map((item, i) => (
+            <p key={i}>
+              {item.text} <small>Evidence: {item.evidenceIds.join(', ')}</small>
+            </p>
+          ))}
+          {!report.narrative.facts.length && <p>None recorded.</p>}
         </div>
-      ))}
-      <h3>Recommendations</h3>
-      {report.narrative.recommendations.map((item, i) => (
-        <div key={i}>
-          <p>{item.text}</p>
-          <p>Validate by: {item.validation}</p>
-          <small>Evidence: {item.evidenceIds.join(', ')}</small>
+        <div>
+          <h3>Possible causes · hypotheses</h3>
+          {report.narrative.hypotheses.map((item, i) => (
+            <div key={i}>
+              <p>{item.text}</p>
+              <p>Verify by: {item.verification}</p>
+              <small>Evidence: {item.evidenceIds.join(', ')}</small>
+            </div>
+          ))}
+          {!report.narrative.hypotheses.length && <p>None recorded.</p>}
         </div>
-      ))}
+        <div>
+          <h3>Recommendations</h3>
+          {report.narrative.recommendations.map((item, i) => (
+            <div key={i}>
+              <p>{item.text}</p>
+              <p>Validate by: {item.validation}</p>
+              <small>Evidence: {item.evidenceIds.join(', ')}</small>
+            </div>
+          ))}
+          {!report.narrative.recommendations.length && <p>None recorded.</p>}
+        </div>
+      </div>
       <h3>Reproduction</h3>
       <TextList
         items={[

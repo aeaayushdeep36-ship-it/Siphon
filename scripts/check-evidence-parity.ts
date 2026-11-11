@@ -1,3 +1,4 @@
+import { sciencePython } from './science-python.js';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -16,7 +17,7 @@ cases=[(0.5,1.,0.1),(2.,1.,0.1),(1.,1.,0.1),(0.,1.,None),
 print(json.dumps([asdict(decide_absolute_metric(m,target=t,absolute_uncertainty_bound=u))
                   for m,t,u in cases],allow_nan=False))
 `;
-const raw = execFileSync(process.env.SIPHON_PYTHON ?? 'python', ['-c', code], {
+const raw = execFileSync(sciencePython, ['-c', code], {
   cwd: fileURLToPath(new URL('../packages/science/', import.meta.url)),
   encoding: 'utf8',
   timeout: 10_000,

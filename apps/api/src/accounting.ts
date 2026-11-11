@@ -13,7 +13,14 @@ export type BudgetCounter = z.infer<typeof BudgetCounter>;
 export const Charge = z.strictObject({
   counterKey: z.string().regex(/^[a-zA-Z0-9_-]{1,200}$/),
   amount: Count,
-  unit: z.enum(['micro_usd', 'seconds', 'bytes', 'attempts', 'operations']),
+  unit: z.enum([
+    'micro_usd',
+    'seconds',
+    'bytes',
+    'attempts',
+    'operations',
+    'tokens',
+  ]),
   // Attempts/requests are consumed on dispatch, even if a provider returns an error.
   consumeOnDispatch: z.boolean(),
 });

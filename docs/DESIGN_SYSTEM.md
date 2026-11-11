@@ -1,5 +1,17 @@
 # Siphon design system and interaction specification
 
+## Frontend design integration (2026-11-09)
+
+The React client now uses the supplied Siphon console design for the landing page, domain selection, audit workspace and evidence report. Heat and Gravitation select the corresponding existing domain values; workspace controls continue to use authenticated API contracts. Example audit data in the supplied design is not presented as a live result. Empty, blocked and unavailable states reflect the data and configuration actually returned by the application. The supplied imagery is stored in `apps/web/public/design/`, and smooth scrolling respects reduced-motion preferences.
+
+Local browser checks used authored fixtures for audit creation, uploads, context and mapping answers, scientific questions, start/cancel/delete, revision creation, report rendering and PDF integrity handling. The checks do not establish hosted operation or a completed scientific audit. Firebase, E2B and other hosted services remain to be configured and verified; the backend still has the documented scientific planning and execution gaps. Older references below to a deferred homepage describe prior milestones.
+
+## Current AI service presentation (2026-11-08)
+
+Configured Groq inference, initially Qwen 3.8 27B, supersedes Meta-specific setup text below. Provider credentials are operator-only backend settings, never user upload fields or browser variables. Missing configuration, free-quota exhaustion/cooldown, unsupported request size and uncertain outcomes must remain operational blockers with truthful next actions. Do not show fake scientific failures, completed reviews, token counts or percentages, or silently truncate source to fit the independent byte screen.
+
+AI interpretation/mapping remain backend-checked proposals; strict JSON is not scientific approval. Preserve option/custom-text questions, unknown assumptions, actual progress and evidence limitations. Hosted authenticated operation and the full audit/report flow remain unverified; homepage styling is still deferred. Conflicting older provider/status notes below remain historical.
+
 Version: 1.1 | Updated: 2026-10-30 | Status: interaction contract with a locally reviewed report fixture; final visual identity/homepage is deferred.
 
 ## Deadline integration status (2026-10-30)

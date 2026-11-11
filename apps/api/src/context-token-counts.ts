@@ -1,3 +1,4 @@
+import { LEGACY_META_MODEL } from './legacy-meta-profile.js';
 import { z } from 'zod';
 import {
   Count,
@@ -29,7 +30,7 @@ import { AdapterTasks } from './adapter-tasks.js';
  */
 export const MetaCountingVerification = z.strictObject({
   schemaVersion: z.literal('1.0'),
-  model: z.literal('muse-wonder-1.0'),
+  model: z.literal(LEGACY_META_MODEL),
   protocol: z.literal('responses.v1'),
   profile: z.literal('stateless_text_json_no_tools.v1'),
   countingCharge: z.literal('no_charge'),
@@ -48,7 +49,7 @@ export const ContextTokenMeasurement = z
     inputDigest: Digest,
     generation: Count,
     requestDigest: Digest,
-    model: z.literal('muse-wonder-1.0'),
+    model: z.literal(LEGACY_META_MODEL),
     protocol: z.literal('responses.v1'),
     measurement: z.literal('rendered_context'),
     verificationDigest: Digest,

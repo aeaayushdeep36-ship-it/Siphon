@@ -1,5 +1,13 @@
 # Siphon product requirements
 
+## Current AI decision (2026-11-08)
+
+Groq's free API tier, initially configured as `qwen/qwen3.8-27b`, supersedes conflicting Meta selections, Standard-mode conditions and the USD 150 allocation below. Old Meta modules/fixtures remain legacy compatibility/history, not an automatic production fallback. Zero out-of-pocket spending and no paid upgrades remain requirements; a key alone does not verify the account's plan, limits or privacy settings.
+
+For Groq, LIM-04 retains versioned revision attempt limits and bounded work, tightened by explicit `SIPHON_AI_*` settings. LIM-05's Meta credit allocation is inactive: reserve requests and full configured input-plus-output tokens under rolling 60-second and UTC-day quotas. Actual usage is reconciled; unknown completion retains reservations and forbids redispatch, while overruns halt later calls. Exhaustion is an operational limit, never a scientific failure or upgrade permission.
+
+The initial no-tokenizer path screens complete serialized UTF-8 request bytes against the independently configured input-byte screen and transport-byte cap. The example sets a 6,000-byte screen separately from the 6,000-input/1,000-output token reservations; bytes are not measured rendered tokens or proof of context fit. Larger inputs may block without source truncation or invented tokenizer evidence. Structured AI output remains semantically checked, and deterministic code owns scientific verdicts. Live model quality, service access and the complete audit pipeline remain unverified.
+
 Version: 1.2 | Updated: 2026-10-29 | Status: target specification; not a claim of complete implementation or scientific certification.
 
 ## Deadline integration status (2026-10-30)
@@ -23,7 +31,7 @@ Repository: https://github.com/aeaayushdeep36-ship-it/Siphon. Intended checkout:
 ## Supported scope
 
 - SCOPE-01: Explicit `heat_diffusion` or `orbital_dynamics` selection, shared pipeline, separate reviewed registries. AI can flag a mismatch but cannot silently switch domains.
-- SCOPE-02: Existing `.py` scripts and optional `.csv`/`.npy` numeric inputs. No required user template. Approved simulation libraries: NumPy, SciPy, Matplotlib, Pint, REBOUND; pin tested versions at image construction. Exclude notebooks, archives, executables, pickle/object arrays, and unrestricted package installation.
+- SCOPE-02: Existing `.py` scripts and optional `.csv`/`.npy` numeric inputs. CSV uploads are headerless until the upload contract carries an explicit header declaration. Numeric files must be validated inside the isolated source sandbox before source execution; these checks establish numeric structure only, not units or scientific meaning. Admission stays blocked until server-side evidence identifies a pinned source build with the verified `headerless-csv-npy-v1` validator. No required user template. Approved simulation libraries: NumPy, SciPy, Matplotlib, Pint, REBOUND; pin tested versions at image construction. Exclude notebooks, archives, executables, pickle/object arrays, and unrestricted package installation.
 - SCOPE-03: Transient linear 1D/2D Cartesian heat diffusion on rectangular uniform grids with constant positive conductivity/density/heat capacity. Declared temperature, normal-flux/insulated, or periodic boundaries and extractable sources; every combination needs explicit eligibility. Exclude curvilinear/unstructured meshes, variable properties, radiation/convection boundary models, phase changes, and coupled fluids.
 - SCOPE-04: Deterministic 2D/3D Newtonian point-mass gravity: isolated mutually interacting bodies, or one test satellite in a fixed central field. Distinguish those profiles. Exclude drag, thrust, collisions, softening, relativity, prescribed moving massive bodies, changing masses, and long-term stability certification.
 - SCOPE-05: Numerical observations and relevant controls must be extractable faithfully. Plot-only outputs without recoverable numerical evidence block dependent checks. Nondeterministic baselines are unsupported in v1. Missing capabilities exclude affected checks, not other eligible checks.

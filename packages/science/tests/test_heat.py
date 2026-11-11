@@ -61,6 +61,33 @@ class HeatTests(unittest.TestCase):
         self.assertEqual(result.time_quadrature, "piecewise_linear_trapezoidal")
         self.assertFalse(hasattr(result, "status"))
 
+    def test_periodic_diffusion_with_source_and_seeded_energy_loss(self):
+        # Authored finite-difference fixture: diffusion redistributes energy;
+        # a constant source adds four joules per second in total.
+        cells, steps, dt = 16, 80, 0.1
+        initial = np.sin(np.arange(cells, dtype=np.float64) * (2 * np.pi / cells))
+        times = np.arange(steps + 1, dtype=np.float64) * dt
+
+        def simulate(loss):
+            current = initial.copy()
+            snapshots = [current.copy()]
+            for _ in range(steps):
+                current = (
+                    current
+                    + 0.1 * (np.roll(current, 1) - 2 * current + np.roll(current, -1))
+                    + dt * (0.25 - loss)
+                )
+                snapshots.append(current.copy())
+            return self.energy(np.stack(snapshots), np.ones(cells), rho=1, cp=1)
+
+        source = np.full(steps + 1, 4.0)
+        outward = np.zeros(steps + 1)
+        correct = self.balance(times, simulate(0), source, outward)
+        faulty = self.balance(times, simulate(0.05), source, outward)
+        self.assertLess(np.max(np.abs(correct.residual_j)), 1e-10)
+        self.assertAlmostEqual(faulty.residual_j[-1], -6.4, places=10)
+        self.assertFalse(hasattr(correct, "status"))
+
     def test_rejects_bad_shapes_material_and_weights(self):
         for weights in ([0, 1], [-1, 1], [np.inf, 1], [1]):
             with self.assertRaises(NumericInputError):

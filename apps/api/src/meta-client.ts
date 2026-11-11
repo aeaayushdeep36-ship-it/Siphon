@@ -1,10 +1,14 @@
+import {
+  LEGACY_META_MODEL,
+  LEGACY_META_RESPONSES_ENDPOINT,
+} from './legacy-meta-profile.js';
 import { z } from 'zod';
 import { Count, DEFAULT_POLICY } from '@siphon/contracts';
 import { canonicalJson, sha256 } from './hashing.js';
 import { readJsonBounded } from './http.js';
 
 export const MetaRequest = z.strictObject({
-  model: z.literal('muse-wonder-1.0'),
+  model: z.literal(LEGACY_META_MODEL),
   input: z.tuple([
     z.strictObject({
       role: z.literal('developer'),
@@ -55,7 +59,7 @@ export type MetaUsage = z.infer<typeof usageSchema>;
 const envelopeSchema = z.object({
   object: z.literal('response'),
   id: z.string().min(1).max(300),
-  model: z.literal('muse-wonder-1.0'),
+  model: z.literal(LEGACY_META_MODEL),
   status: z.enum([
     'completed',
     'failed',
@@ -197,9 +201,10 @@ export class MetaClient {
     let response: Response;
     try {
       timeout.throwIfAborted();
-      response = await this.fetcher('https://api.meta.ai/v1/responses', {
+      const fetcher = this.fetcher;
+      response = await fetcher(LEGACY_META_RESPONSES_ENDPOINT, {
         method: 'POST',
-        redirect: 'error',
+        redirect: 'manual',
         signal: timeout,
         headers: {
           Authorization: `Bearer ${this.apiKey}`,

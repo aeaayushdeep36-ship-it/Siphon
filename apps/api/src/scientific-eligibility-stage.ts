@@ -3,6 +3,7 @@ import {
   Answer,
   BaselineComparison,
   ContextProposal,
+  EligibilityInput,
   Id,
   ObservationValidationResult,
   QuestionSet,
@@ -19,6 +20,7 @@ import { FidelityRequest, validateFidelityResult } from './fidelity-runner.js';
 import { buildScientificEligibility } from './scientific-context.js';
 import { assessEligibility } from './eligibility.js';
 import { canonicalJson, sha256 } from './hashing.js';
+import { inspectScientificReservation } from './scientific-reservation.js';
 
 /** Read the current, server-produced evidence before calculating eligibility.
  * This does not reserve compute, certify a physical model, or start a run. */
@@ -242,17 +244,52 @@ export class ScientificEligibilityStage {
             ? [scienceAnswer]
             : [],
       });
+      const reservationId = await inspectScientificReservation(
+        tx,
+        uid,
+        fence,
+        assessmentInput,
+        revision,
+        this.clock(),
+      );
+      if (reservationId)
+        assessmentInput.assertions.push({
+          requirement: 'resource_budget_available',
+          state: 'satisfied',
+          evidenceIds: [reservationId],
+        });
       const assessment = assessEligibility(assessmentInput);
       const assessmentDigest = await sha256(canonicalJson(assessment));
+      const eligibilityInputDigest = await sha256(
+        canonicalJson(assessmentInput),
+      );
       if (prior) {
         if (
           prior.ownerUid !== uid ||
+          prior.auditId !== fence.auditId ||
+          prior.revisionId !== fence.revisionId ||
           prior.inputDigest !== fence.inputDigest ||
           prior.assessmentDigest !==
             (await sha256(canonicalJson(prior.assessment)))
         )
           throw new Error('Scientific eligibility snapshot changed');
-        if (prior.assessmentDigest === assessmentDigest)
+        const hasStoredInput =
+          prior.eligibilityInput !== undefined ||
+          prior.eligibilityInputDigest !== undefined;
+        if (hasStoredInput) {
+          const storedInput = EligibilityInput.parse(prior.eligibilityInput);
+          if (
+            prior.eligibilityInputDigest !==
+              (await sha256(canonicalJson(storedInput))) ||
+            canonicalJson(assessEligibility(storedInput)) !==
+              canonicalJson(prior.assessment)
+          )
+            throw new Error('Scientific eligibility input provenance changed');
+        }
+        if (
+          prior.assessmentDigest === assessmentDigest &&
+          prior.eligibilityInputDigest === eligibilityInputDigest
+        )
           return {
             schemaVersion: '1.0' as const,
             assessment,
@@ -262,10 +299,13 @@ export class ScientificEligibilityStage {
           };
         if (plan)
           throw new Error('Published plan prevents eligibility changes');
-        tx.set(
-          `${base}/eligibilityHistory/${String(prior.assessmentDigest)}`,
-          prior,
+        const historyId = await sha256(
+          canonicalJson({
+            assessmentDigest: prior.assessmentDigest,
+            eligibilityInputDigest: prior.eligibilityInputDigest ?? null,
+          }),
         );
+        tx.set(`${base}/eligibilityHistory/${historyId}`, prior);
       }
       tx.set(`${base}/eligibility/current`, {
         schemaVersion: '1.0',
@@ -275,6 +315,8 @@ export class ScientificEligibilityStage {
         inputDigest: fence.inputDigest,
         assessment,
         assessmentDigest,
+        eligibilityInput: assessmentInput,
+        eligibilityInputDigest,
         createdAt: this.clock(),
         expiresAt: new Date(Timestamp.parse(verified.expiresAt)),
       });

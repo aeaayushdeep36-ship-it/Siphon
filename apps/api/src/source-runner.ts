@@ -1,4 +1,4 @@
-import { type Sandbox } from 'e2b';
+import { CommandExitError, type Sandbox } from 'e2b';
 import {
   SourceJobRequest,
   validateSourceJobResult,
@@ -12,6 +12,12 @@ export const SOURCE_COMMAND =
   '/opt/siphon/venv/bin/python -I -m siphon_science.source_job < /tmp/siphon-source-request.json > /dev/null 2>&1';
 export const REFERENCE_SOURCE_COMMAND =
   '/opt/siphon/venv/bin/python -I -m siphon_science.reference_source_job < /tmp/siphon-source-request.json > /dev/null 2>&1';
+/** The sandbox reported a nonzero exit; no private output is exposed. */
+export class SourceJobFailed extends Error {
+  constructor() {
+    super('source_job_failed');
+  }
+}
 export interface SourceSession {
   readonly sandboxId: string;
   writeRequest(bytes: Uint8Array, signal: AbortSignal): Promise<void>;
@@ -55,18 +61,23 @@ export class E2bSourceSession implements SourceSession {
   async run(signal: AbortSignal, profile: 'adapter_v1' | 'reference_v1') {
     if (profile !== 'adapter_v1' && profile !== 'reference_v1')
       throw new Error('Invalid source extraction profile');
-    const result = await this.sandbox.commands.run(
-      profile === 'reference_v1' ? REFERENCE_SOURCE_COMMAND : SOURCE_COMMAND,
-      {
-        signal,
-        requestTimeoutMs: 30000,
-        timeoutMs: 120000,
-        retainOutput: false,
-        cwd: '/tmp',
-        envs: {},
-      },
-    );
-    return result.exitCode;
+    try {
+      const result = await this.sandbox.commands.run(
+        profile === 'reference_v1' ? REFERENCE_SOURCE_COMMAND : SOURCE_COMMAND,
+        {
+          signal,
+          requestTimeoutMs: 30000,
+          timeoutMs: 120000,
+          retainOutput: false,
+          cwd: '/tmp',
+          envs: {},
+        },
+      );
+      return result.exitCode;
+    } catch (error) {
+      if (error instanceof CommandExitError) return error.exitCode;
+      throw error;
+    }
   }
   readManifest(signal: AbortSignal) {
     return this.sandbox.files.read('/tmp/siphon-source-result.json', {
@@ -128,7 +139,7 @@ export class SourceRunner {
       await this.session.writeRequest(bytes, deadline);
       await this.gate.authorizeCollection(request.operationId);
       if ((await this.session.run(deadline, profile)) !== 0)
-        throw new Error('Source job failed');
+        throw new SourceJobFailed();
       await this.gate.authorizeCollection(request.operationId);
       const raw = await readJsonBounded(
         new Response(await this.session.readManifest(deadline)),
@@ -164,8 +175,11 @@ export class SourceRunner {
         payloads,
         validation: 'unvalidated_numeric_bytes' as const,
       };
-    } catch {
+    } catch (error) {
       // Caller retains accounting and terminates/reconciles the source VM.
+      if (error instanceof SourceJobFailed) throw error;
+      // Provider and sandbox failures may contain private output or credentials.
+      // eslint-disable-next-line preserve-caught-error
       throw new Error('source_execution_or_collection_failed');
     }
   }

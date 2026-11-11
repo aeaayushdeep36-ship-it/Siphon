@@ -388,4 +388,41 @@ describe('durable public run trigger boundary', () => {
     expect(create).toHaveBeenCalledTimes(1);
     expect(get).toHaveBeenCalledTimes(1);
   });
+  it.each(['errored', 'terminated', 'unrecognized'])(
+    'does not claim a %s workflow was accepted after ambiguous creation',
+    async (status) => {
+      const enqueue = vi.fn(async () => ({
+        receipt: {
+          schemaVersion: '1.0' as const,
+          jobId: 'a'.repeat(64),
+          auditId: crypto.randomUUID(),
+          revisionId: crypto.randomUUID(),
+          inputDigest: 'b'.repeat(64),
+          generation: 1,
+          stage: 'draft' as const,
+          status: 'queued' as const,
+        },
+        replayed: false,
+      }));
+      const create = vi.fn(async () => {
+        throw new Error('create failed');
+      });
+      const get = vi.fn(async () => ({ status: async () => ({ status }) }));
+      await expect(
+        new RunService({ enqueue }, { create, get }, true).start(
+          'alice',
+          'audit',
+          'revision',
+          {},
+          'key',
+        ),
+      ).rejects.toMatchObject({
+        code:
+          status === 'unrecognized'
+            ? 'workflow_dispatch_unknown'
+            : 'workflow_stopped',
+      });
+      expect(create).toHaveBeenCalledTimes(1);
+    },
+  );
 });

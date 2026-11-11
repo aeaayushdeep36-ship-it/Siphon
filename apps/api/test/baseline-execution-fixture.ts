@@ -32,7 +32,7 @@ export async function baselineExecutionFixture(dependency = 'numpy') {
     networkIsolationVerified: true,
     privateAccessVerified: true,
     resourceLimitsVerified: true,
-    immutableTemplateVerified: true,
+    singlePrivateBuildVerified: true,
     microUsdPerSecondCeiling: 10,
   });
   f.docs.documents.set('configuration/e2b_credits', {
@@ -113,6 +113,12 @@ export async function baselineExecutionFixture(dependency = 'numpy') {
     client = new E2bClient('authored-no-real-key', jobs, {
       create: creates,
       kill,
+      verifyTemplate: vi.fn(async () => ({
+        buildId: 'fixture-build',
+        tagBuildId: 'fixture-build',
+        buildCount: 1,
+        isPrivate: true,
+      })),
     });
   const putOnce = vi.fn(
     async (_key: string, bytes: Uint8Array, hash: string) => ({

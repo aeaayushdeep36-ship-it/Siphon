@@ -126,6 +126,8 @@ async function setup(
     schemaVersion: '1.0',
     id: templateId,
     templateId: 'authored-inspection',
+    templateBuildId: 'authored-build',
+    templateTag: 'authored-build-tag',
     role: 'inspection',
     imageDigest: 'a'.repeat(64),
     runtimeDigest: 'b'.repeat(64),
@@ -134,7 +136,7 @@ async function setup(
     networkIsolationVerified: true,
     privateAccessVerified: true,
     resourceLimitsVerified: true,
-    immutableTemplateVerified: true,
+    singlePrivateBuildVerified: true,
     microUsdPerSecondCeiling: 1,
   });
   docs.documents.set('configuration/e2b_credits', {
@@ -194,6 +196,14 @@ async function setup(
       ).body!,
   };
   const provider = {
+    verifyTemplate: vi.fn<NonNullable<SandboxControlPlane['verifyTemplate']>>(
+      async () => ({
+        buildId: 'authored-build',
+        tagBuildId: 'authored-build',
+        buildCount: 1,
+        isPrivate: true,
+      }),
+    ),
     create: vi.fn<SandboxControlPlane['create']>(async () => ({
       sandboxId: session.sandboxId,
       inspectionSession: session,

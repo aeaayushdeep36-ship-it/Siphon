@@ -25,9 +25,9 @@ const messages: Record<z.infer<typeof ProgressActivity>, string> = {
   verifying_adapter:
     'Verifying observation extraction against the original simulation.',
   planning_checks: 'Selecting applicable checks.',
-  running_experiment: 'Running a planned experiment.',
-  evaluating_evidence: 'Computing numerical evidence.',
-  investigating_findings: 'Investigating evidence and possible causes.',
+  running_experiment: 'Preparing or running a planned experiment.',
+  evaluating_evidence: 'Preparing or computing numerical evidence.',
+  investigating_findings: 'Preparing evidence for the report.',
   rendering_report: 'Preparing the evidence report.',
   finished: 'Audit work has ended. Review the reported outcome.',
   cancel_requested:

@@ -20,6 +20,7 @@ import numpy as np
 
 from .adapter import extract_observations, validate_mapping_metadata
 from .inspection_job import DIGEST, UUID, _unique_object
+from .numeric_inputs import NumericInputError, read_csv, read_npy
 from .reference_extraction import extract_reference
 
 
@@ -148,6 +149,27 @@ def execute_source_job(request, root, *, extraction_kind="adapter"):
         decoded.append((path, raw))
     if entry is None:
         raise SourceJobError("entry_missing")
+    # A defensive second check runs inside the isolated source VM before it
+    # creates the workspace or imports any uploaded Python module. CSV files
+    # are headerless because the upload contract carries no header declaration.
+    for path, raw in decoded:
+        try:
+            if path.endswith(".csv"):
+                read_csv(
+                    raw,
+                    maximum_bytes=5 * 1024**2,
+                    maximum_elements=max(1, len(raw)),
+                    has_header=False,
+                )
+            elif path.endswith(".npy"):
+                read_npy(
+                    raw,
+                    maximum_bytes=5 * 1024**2,
+                    maximum_elements=max(1, len(raw)),
+                    maximum_dimensions=4,
+                )
+        except NumericInputError as error:
+            raise SourceJobError("invalid_numeric_input") from error
     root = Path(root).absolute()
     root.mkdir(parents=False, exist_ok=False)
     workspace, output = root / "input", root / "observations"

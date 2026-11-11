@@ -135,4 +135,22 @@ describe('internal inspection stage orchestration (offline)', () => {
       expect.any(AbortSignal),
     );
   });
+  it('terminates a sandbox if template verification fails after creation', async () => {
+    const f = setup();
+    f.sandboxes.createInspection.mockRejectedValueOnce(
+      new SandboxControlFailure(
+        'template_verification_failed',
+        'known-sandbox',
+      ),
+    );
+    await expect(f.run()).rejects.toMatchObject({
+      code: 'template_verification_failed',
+    });
+    expect(f.jobs.publish).not.toHaveBeenCalled();
+    expect(f.sandboxes.kill).toHaveBeenCalledWith(
+      f.request.operationId,
+      'known-sandbox',
+      expect.any(AbortSignal),
+    );
+  });
 });

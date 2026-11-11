@@ -58,7 +58,7 @@ describe('bounded Meta transport', () => {
       async (url, init) => {
         sequence.push('fetch');
         expect(url).toBe('https://api.meta.ai/v1/responses');
-        expect(init?.redirect).toBe('error');
+        expect(init?.redirect).toBe('manual');
         expect(JSON.parse(String(init?.body))).toEqual(request);
         return Response.json(response());
       },

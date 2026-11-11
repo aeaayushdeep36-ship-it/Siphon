@@ -1,6 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { z } from 'zod';
+import type Lenis from 'lenis';
 import {
   Audit,
   AuditWorkspace,
@@ -19,8 +28,13 @@ import {
   RevisionHistoryResponse,
 } from '@siphon/contracts';
 import { AuditApi, digestBytes, RequestFailure } from './api.js';
-import { auth, signIn } from './auth.js';
-import { Report, label } from './Report.js';
+import { auth, signIn, signInErrorMessage } from './auth.js';
+import { label } from './labels.js';
+import { ReportBoundary } from './ReportBoundary.js';
+
+const Report = lazy(() =>
+  import('./Report.js').then((module) => ({ default: module.Report })),
+);
 
 const AuditResponse = z.object({
   schemaVersion: z.literal('1.0'),
@@ -36,10 +50,39 @@ const CommandReceipt = z.object({ cleanup: z.enum(['confirmed', 'pending']) });
 type Workspace = z.infer<typeof Workspace>;
 type Questions = z.infer<typeof QuestionsResponse>;
 type ResponseReport = z.infer<typeof EvidenceReportResponse>;
+type DomainValue = z.infer<typeof Domain>;
+
+const domainDetails: Record<
+  DomainValue,
+  { title: string; scope: string; detail: string; checks: string[] }
+> = {
+  heat_diffusion: {
+    title: 'Heat',
+    scope: 'Heat diffusion',
+    detail:
+      'Transient 1D/2D diffusion on a uniform Cartesian grid with constant material properties.',
+    checks: ['Energy balance', 'Geometry and units', 'Boundary assumptions'],
+  },
+  orbital_dynamics: {
+    title: 'Gravitation',
+    scope: 'Orbital dynamics',
+    detail:
+      'Newtonian point masses in an isolated system or a fixed central field.',
+    checks: ['Energy', 'Angular momentum', 'Coordinate frame'],
+  },
+};
 
 function errorText(error: unknown): string {
   if (error instanceof RequestFailure)
     return `${error.message} (${error.code}${error.requestId ? `; request ${error.requestId}` : ''})`;
+  if (
+    error instanceof Error &&
+    [
+      'Choose an option or enter a custom answer.',
+      'Answer every mapping question',
+    ].includes(error.message)
+  )
+    return error.message;
   return error instanceof Error && error.name === 'AbortError'
     ? ''
     : 'The request could not be completed. Check the connection and retry. Your simulation has not been changed.';
@@ -48,7 +91,48 @@ function errorText(error: unknown): string {
 export function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(!auth);
+  const [signInPending, setSignInPending] = useState(false);
+  const signInInProgress = useRef(false);
   const [error, setError] = useState('');
+  const [selectedDomain, setSelectedDomain] = useState<DomainValue | ''>('');
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let scroller: Lenis | undefined;
+    let animationFrame = 0;
+    let generation = 0;
+    const configure = () => {
+      const currentGeneration = ++generation;
+      cancelAnimationFrame(animationFrame);
+      scroller?.destroy();
+      scroller = undefined;
+      if (preference.matches) return;
+      void import('lenis')
+        .then(({ default: SmoothScroller }) => {
+          if (currentGeneration !== generation || preference.matches) return;
+          scroller = new SmoothScroller({
+            duration: 1.25,
+            lerp: 0.08,
+            smoothWheel: true,
+          });
+          const animate = (time: number) => {
+            scroller?.raf(time);
+            animationFrame = requestAnimationFrame(animate);
+          };
+          animationFrame = requestAnimationFrame(animate);
+        })
+        .catch(() => {
+          // Native scrolling remains available if the optional chunk cannot load.
+        });
+    };
+    configure();
+    preference.addEventListener('change', configure);
+    return () => {
+      generation++;
+      preference.removeEventListener('change', configure);
+      cancelAnimationFrame(animationFrame);
+      scroller?.destroy();
+    };
+  }, []);
   useEffect(
     () =>
       auth
@@ -60,82 +144,338 @@ export function App() {
         : undefined,
     [],
   );
+  const continueWithGoogle = () => {
+    if (signInInProgress.current) return;
+    signInInProgress.current = true;
+    setSignInPending(true);
+    setError('');
+    void signIn()
+      .catch((reason: unknown) => setError(signInErrorMessage(reason)))
+      .finally(() => {
+        signInInProgress.current = false;
+        setSignInPending(false);
+      });
+  };
+
   return (
-    <>
+    <div className="app-shell">
       <header className="site-header">
-        <a href="#main" className="brand">
-          Siphon<span>Simulation audit console</span>
+        <a href="#hero" className="brand" aria-label="Siphon home">
+          <span className="brand-mark" aria-hidden="true">
+            S
+          </span>
+          <span className="brand-name">Siphon</span>
+          <span className="brand-caption">Simulation audit console</span>
         </a>
-        {user && (
-          <div className="identity">
-            <span>{user.displayName ?? 'Signed in'}</span>
-            <button
-              className="secondary"
-              onClick={() => {
-                if (auth)
-                  void signOut(auth).catch(() =>
-                    setError('Sign-out failed. Please retry.'),
-                  );
+        <nav className="top-nav" aria-label="Main navigation">
+          <a href="#hero">Overview</a>
+          <a href="#domains">Domains</a>
+          <a href="#workspace">Workspace</a>
+          <a href="#testplan">Test plan</a>
+          <a href="#evidence">Evidence</a>
+        </nav>
+        <div className="header-actions">
+          <details className="mobile-menu">
+            <summary aria-label="Navigation menu">Menu</summary>
+            <nav
+              aria-label="Mobile navigation"
+              onClick={(event) => {
+                if ((event.target as HTMLElement).closest('a'))
+                  event.currentTarget.parentElement?.removeAttribute('open');
               }}
             >
-              Sign out
+              <a href="#hero">Overview</a>
+              <a href="#domains">Domains</a>
+              <a href="#workspace">Workspace</a>
+              <a href="#testplan">Test plan</a>
+              <a href="#evidence">Evidence</a>
+            </nav>
+          </details>
+          {user ? (
+            <>
+              <span className="signed-in-label">
+                {user.displayName ?? 'Signed in'}
+              </span>
+              <button
+                className="header-button"
+                onClick={() => {
+                  if (auth)
+                    void signOut(auth).catch(() =>
+                      setError('Sign-out failed. Please retry.'),
+                    );
+                }}
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <button
+              className="header-button primary-button"
+              disabled={!auth || signInPending}
+              onClick={continueWithGoogle}
+            >
+              {signInPending ? 'Opening sign-in…' : 'Continue with Google'}{' '}
+              <span aria-hidden="true">↗</span>
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </header>
-      <main id="main">
+      <main id="main" className="page-content">
         {error && (
-          <div className="error" role="alert">
+          <div className="error global-error" role="alert">
             {error}
           </div>
         )}
-        {!authReady ? (
-          <p role="status">Checking sign-in…</p>
-        ) : !user ? (
-          <section className="panel welcome">
-            <p className="eyebrow">Inspect · Measure · Understand</p>
-            <h1>Evidence for your simulation.</h1>
-            <p>
-              Audit an existing Python heat-diffusion or orbital simulation.
-              Review applicable numerical checks, measured evidence and
-              recommendations.
+        <section className="hero" id="hero" aria-labelledby="hero-title">
+          <div className="hero-art" aria-hidden="true" />
+          <div className="hero-vignette" aria-hidden="true" />
+          <div className="hero-center" aria-hidden="true">
+            SIPHON
+          </div>
+          <div className="hero-copy">
+            <p className="eyebrow hero-kicker">
+              <span className="status-dot" /> Inspect · Measure · Understand
             </p>
-            <p>
-              Google sign-in and an active invitation are required. Your audits
-              stay private.
+            <h1 id="hero-title">Evidence for your simulation.</h1>
+            <p className="hero-description">
+              Review an existing Python heat-diffusion or orbital-dynamics
+              model. Siphon is being built to show applicable checks, their
+              evidence, and the assumptions and limits behind each result.
             </p>
-            <button
-              disabled={!auth}
-              onClick={() =>
-                void signIn().catch(() =>
-                  setError(
-                    'Google sign-in could not finish. Check the authorized domain and try again.',
-                  ),
-                )
-              }
-            >
-              Continue with Google
-            </button>
+            <p className="hero-access">
+              Google sign-in and an active invitation are required for private
+              audit history.
+            </p>
+            <div className="hero-actions">
+              <a className="primary-button" href="#domains">
+                Inspect physics domains <span aria-hidden="true">↓</span>
+              </a>
+              <a className="secondary-button" href="#workspace">
+                {user ? 'Open audit workspace' : 'Workspace access'}{' '}
+                <span aria-hidden="true">↗</span>
+              </a>
+            </div>
             {!auth && (
-              <p className="warning">
-                Sign-in unavailable: the operator must configure Firebase public
-                web settings before this console can connect.
+              <p className="hero-config-note" role="status">
+                Sign-in unavailable until the operator configures Firebase
+                public web settings.
               </p>
             )}
-          </section>
-        ) : (
-          <Console key={user.uid} user={user} />
-        )}
+          </div>
+          <a className="hero-scroll" href="#domains">
+            Scroll to explore
+          </a>
+        </section>
+
+        <section
+          id="domains"
+          className="domain-section"
+          aria-labelledby="domain-heading"
+        >
+          <div className="content-width">
+            <div className="domain-heading">
+              <div>
+                <p className="eyebrow">01 // Simulation domain · required</p>
+                <h2 id="domain-heading">
+                  Choose the physics. Bring your code.
+                </h2>
+              </div>
+              <p>
+                Selection narrows which reviewed checks can be considered.
+                Assumptions and required observations must still be established.
+              </p>
+            </div>
+            <div
+              className="domain-grid"
+              role="group"
+              aria-label="Choose a simulation domain"
+            >
+              {(
+                Object.entries(domainDetails) as [
+                  DomainValue,
+                  (typeof domainDetails)[DomainValue],
+                ][]
+              ).map(([key, item]) => (
+                <article
+                  className={`domain-card ${key === 'heat_diffusion' ? 'heat-card' : 'gravity-card'} ${selectedDomain === key ? 'is-selected' : ''}`}
+                  key={key}
+                >
+                  <div className="domain-card-shade" aria-hidden="true" />
+                  <div className="domain-card-head">
+                    <span className="domain-chip">
+                      <i className="status-dot" /> DOMAIN: {key}
+                    </span>
+                    <span className="domain-code">
+                      {key === 'heat_diffusion'
+                        ? 'HEAT DIFFUSION'
+                        : 'ORBITAL DYNAMICS'}
+                    </span>
+                  </div>
+                  <div className="domain-card-body">
+                    <h3>{item.title}</h3>
+                    <p>{item.detail}</p>
+                    <div
+                      className="domain-checks"
+                      aria-label="Relevant context"
+                    >
+                      {item.checks.map((check) => (
+                        <span key={check}>{check}</span>
+                      ))}
+                    </div>
+                    <div className="domain-card-footer">
+                      <span>{item.scope} · prerequisites apply</span>
+                      <button
+                        type="button"
+                        className="select-domain"
+                        aria-pressed={selectedDomain === key}
+                        onClick={() => {
+                          setSelectedDomain(key);
+                          document.getElementById('workspace')?.scrollIntoView({
+                            behavior: window.matchMedia(
+                              '(prefers-reduced-motion: reduce)',
+                            ).matches
+                              ? 'instant'
+                              : 'smooth',
+                          });
+                        }}
+                      >
+                        {selectedDomain === key
+                          ? 'Selected'
+                          : `Select ${item.title}`}{' '}
+                        <span aria-hidden="true">↗</span>
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+            <p className="domain-status" aria-live="polite">
+              {selectedDomain ? (
+                <>
+                  <strong>
+                    {domainDetails[selectedDomain].title} selected.
+                  </strong>{' '}
+                  {user
+                    ? 'Continue in the workspace to create a private audit.'
+                    : 'Sign in with an active invitation to create a private audit.'}
+                </>
+              ) : (
+                'Choose Heat or Gravitation. You can change this selection before creating an audit.'
+              )}
+            </p>
+          </div>
+        </section>
+
+        <section
+          id="workspace"
+          className="workspace-section"
+          aria-labelledby="workspace-heading"
+        >
+          <div className="content-width">
+            <div className="workspace-intro">
+              <p className="eyebrow">02 // Active audit workbench</p>
+              <h2 id="workspace-heading">
+                Console execution &amp; adapter review
+              </h2>
+            </div>
+            {!authReady ? (
+              <p className="workspace-gate" role="status">
+                Checking sign-in…
+              </p>
+            ) : user ? (
+              <Console
+                key={user.uid}
+                user={user}
+                selectedDomain={selectedDomain}
+                onSelectDomain={setSelectedDomain}
+              />
+            ) : (
+              <section className="workspace-gate" id="workspace-access">
+                <div>
+                  <p className="eyebrow">Private workspace</p>
+                  <h3>Sign in to view audit history or start a review.</h3>
+                  <p>
+                    Access requires Google sign-in and an active invitation.
+                    This preview does not create demo audits or show sample
+                    results as real data.
+                  </p>
+                </div>
+                <button
+                  className="primary-button"
+                  disabled={!auth || signInPending}
+                  onClick={continueWithGoogle}
+                >
+                  {signInPending ? 'Opening sign-in…' : 'Continue with Google'}{' '}
+                  <span aria-hidden="true">↗</span>
+                </button>
+              </section>
+            )}
+            {!user && (
+              <div className="workspace-placeholders">
+                <section className="panel" id="testplan">
+                  <p className="eyebrow">Deterministic test plan</p>
+                  <h3>Checks depend on your simulation.</h3>
+                  <p>
+                    Sign in and select an audit to review its applicable checks,
+                    exclusions, and assumptions.
+                  </p>
+                </section>
+                <section className="panel" id="evidence">
+                  <p className="eyebrow">Evidence report</p>
+                  <h3>Results appear here when published.</h3>
+                  <p>
+                    Open an audit to see its recorded evidence and report
+                    availability.
+                  </p>
+                </section>
+              </div>
+            )}
+          </div>
+        </section>
       </main>
-      <footer>
-        Siphon audits and recommends. Results apply to the recorded checks,
-        assumptions and accuracy policies.
+      <footer className="site-footer">
+        <div className="footer-main">
+          <a className="brand-name" href="#hero">
+            Siphon
+          </a>
+          <p>Scientific simulation audit console</p>
+          <nav aria-label="Footer navigation">
+            <a href="#domains">Domains</a>
+            <a href="#workspace">Workspace</a>
+            <a href="#testplan">Test plan</a>
+            <a href="#evidence">Evidence</a>
+            <a
+              href="https://github.com/aeaayushdeep36-ship-it/Siphon"
+              target="_blank"
+              rel="noreferrer"
+            >
+              GitHub
+            </a>
+          </nav>
+        </div>
+        <p className="footer-note">
+          Siphon audits and recommends. Results apply to the recorded checks,
+          assumptions and accuracy policies. They do not certify that a
+          scientific model is correct.
+        </p>
+        <p className="footer-stack">
+          Cloudflare Workers API · Firebase Auth &amp; Firestore · E2B sandbox
+          execution · Python scientific engine
+        </p>
       </footer>
-    </>
+    </div>
   );
 }
 
-function Console({ user }: { user: User }) {
+function Console({
+  user,
+  selectedDomain,
+  onSelectDomain,
+}: {
+  user: User;
+  selectedDomain: DomainValue | '';
+  onSelectDomain: (domain: DomainValue) => void;
+}) {
   const api = useMemo(() => new AuditApi(user), [user]);
   const [history, setHistory] = useState<Audit[]>([]);
   const [historyCursor, setHistoryCursor] = useState<string | null>(null);
@@ -149,11 +489,14 @@ function Console({ user }: { user: User }) {
   const [progress, setProgress] = useState<ProgressSnapshot | null>(null);
   const [questions, setQuestions] = useState<Questions | null>(null);
   const [report, setReport] = useState<ResponseReport | null>(null);
+  const [refreshCount, setRefreshCount] = useState(0);
   const [answers, setAnswers] = useState<
     Record<string, { option: string | null; text: string }>
   >({});
   const [title, setTitle] = useState('');
-  const [domain, setDomain] = useState<z.infer<typeof Domain> | ''>('');
+  const [density, setDensity] = useState('');
+  const [heatCapacity, setHeatCapacity] = useState('');
+  const [domain, setDomain] = useState<DomainValue | ''>(selectedDomain);
   const [files, setFiles] = useState<File[]>([]);
   const [filePaths, setFilePaths] = useState<string[]>([]);
   const [reuseArtifacts, setReuseArtifacts] = useState<string[] | null>(null);
@@ -164,6 +507,7 @@ function Console({ user }: { user: User }) {
   const selection = useRef(0);
   const alive = useRef(true);
   const errorRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     api.activate();
     alive.current = true;
@@ -173,6 +517,13 @@ function Console({ user }: { user: User }) {
       selection.current++;
     };
   }, [api]);
+  useEffect(() => {
+    if (selectedDomain) setDomain(selectedDomain);
+  }, [selectedDomain]);
+  useEffect(() => {
+    setDensity('');
+    setHeatCapacity('');
+  }, [audit?.id, workspace?.revisionId]);
   const showError = useCallback((reason: unknown) => {
     if (alive.current) setError(errorText(reason));
   }, []);
@@ -197,7 +548,7 @@ function Console({ user }: { user: User }) {
           );
           setHistoryCursor(value.nextCursor);
           setHistoryState(
-            value.audits.length
+            value.audits.length || cursor
               ? ''
               : 'No audits yet. Create your first audit below.',
           );
@@ -280,6 +631,7 @@ function Console({ user }: { user: User }) {
     setError('');
     setNotice('');
     setFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setReuseArtifacts(null);
     await refresh(selected, token);
   }
@@ -296,31 +648,60 @@ function Console({ user }: { user: User }) {
   }, [audit, progress, refresh]);
   useEffect(() => {
     if (!audit || !progress) return;
+    let active = true;
     const token = selection.current;
     const base = `/audits/${audit.id}/revisions/${audit.currentRevisionId}`;
-    if (progress.status === 'waiting_for_input') {
+    if (
+      progress.status === 'waiting_for_input' &&
+      progress.stage === 'clarifying'
+    ) {
       void api
         .get(`${base}/questions`, QuestionsResponse)
         .then((value) => {
-          if (alive.current && token === selection.current) setQuestions(value);
+          if (active && alive.current && token === selection.current)
+            setQuestions(value);
         })
-        .catch(showError);
-    }
+        .catch((reason) => {
+          if (active && alive.current && token === selection.current)
+            showError(reason);
+        });
+    } else setQuestions(null);
     if (
-      ['completed', 'partial', 'failed', 'cancelled'].includes(progress.status)
+      progress.stage === 'reporting' ||
+      ['completed', 'partial', 'failed', 'cancelled', 'unsupported'].includes(
+        progress.status,
+      )
     ) {
       void api
         .get(`${base}/report`, EvidenceReportResponse)
         .then((value) => {
-          if (alive.current && token === selection.current) setReport(value);
+          if (active && alive.current && token === selection.current)
+            setReport(value);
         })
         .catch((reason) => {
-          if (reason instanceof RequestFailure && reason.code === 'not_found')
+          if (!active || !alive.current || token !== selection.current) return;
+          if (
+            reason instanceof RequestFailure &&
+            ['not_found', 'report_not_ready'].includes(reason.code)
+          ) {
+            setReport(null);
             return;
+          }
           showError(reason);
         });
     }
-  }, [api, audit, progress?.status, showError]);
+    return () => {
+      active = false;
+    };
+  }, [
+    api,
+    audit,
+    progress?.status,
+    progress?.stage,
+    progress?.updatedAt,
+    refreshCount,
+    showError,
+  ]);
   async function act(name: string, action: () => Promise<void>) {
     if (busy) return;
     setBusy(name);
@@ -452,6 +833,7 @@ function Console({ user }: { user: User }) {
     }
     setFiles([]);
     setFilePaths([]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
     setNotice(
       'Upload bytes stored. Readiness and scientific applicability still need inspection.',
     );
@@ -516,7 +898,7 @@ function Console({ user }: { user: User }) {
             {notice}
           </p>
         )}
-        <section className="panel">
+        <section className="panel new-audit-panel">
           <p className="eyebrow">New audit</p>
           <h1>Choose the physics. Bring your code.</h1>
           <label htmlFor="audit-title">Audit title</label>
@@ -533,7 +915,10 @@ function Console({ user }: { user: User }) {
                 type="radio"
                 name="domain"
                 checked={domain === 'heat_diffusion'}
-                onChange={() => setDomain('heat_diffusion')}
+                onChange={() => {
+                  setDomain('heat_diffusion');
+                  onSelectDomain('heat_diffusion');
+                }}
               />
               <span>
                 <strong>Heat Diffusion</strong>
@@ -548,7 +933,10 @@ function Console({ user }: { user: User }) {
                 type="radio"
                 name="domain"
                 checked={domain === 'orbital_dynamics'}
-                onChange={() => setDomain('orbital_dynamics')}
+                onChange={() => {
+                  setDomain('orbital_dynamics');
+                  onSelectDomain('orbital_dynamics');
+                }}
               />
               <span>
                 <strong>Orbital Dynamics</strong>
@@ -566,6 +954,18 @@ function Console({ user }: { user: User }) {
             Create private audit
           </button>
         </section>
+        {!audit && (
+          <div className="workspace-placeholders">
+            <section className="panel" id="testplan">
+              <h2>Deterministic test plan</h2>
+              <p>Select or create an audit to see its plan.</p>
+            </section>
+            <section className="panel" id="evidence">
+              <h2>Evidence report</h2>
+              <p>Select an audit to see its report when available.</p>
+            </section>
+          </div>
+        )}
         {audit && (
           <>
             {!!workspace?.operationalIssues.length && (
@@ -585,7 +985,7 @@ function Console({ user }: { user: User }) {
                 ) &&
                   workspace.status === 'running' && (
                     <button
-                      disabled={!!busy}
+                      disabled={!!busy || !progress?.isCurrentRevision}
                       onClick={() =>
                         void act('Resuming review', async () => {
                           await api.mutate(
@@ -607,7 +1007,7 @@ function Console({ user }: { user: User }) {
                   )}
               </section>
             )}
-            <section className="panel">
+            <section className="panel active-audit-panel">
               <div className="section-heading">
                 <div>
                   <p className="eyebrow">{label(audit.domain)}</p>
@@ -624,6 +1024,7 @@ function Console({ user }: { user: User }) {
                       );
                       setAudit(value.audit);
                       await refresh(value.audit);
+                      setRefreshCount((count) => count + 1);
                     })
                   }
                 >
@@ -741,9 +1142,14 @@ function Console({ user }: { user: User }) {
                   disabled={
                     !!busy ||
                     !progress ||
-                    ['completed', 'partial', 'failed', 'cancelled'].includes(
-                      progress.status,
-                    )
+                    !progress.isCurrentRevision ||
+                    [
+                      'completed',
+                      'partial',
+                      'failed',
+                      'cancelled',
+                      'unsupported',
+                    ].includes(progress.status)
                   }
                   onClick={() =>
                     void act('Requesting cancellation', async () => {
@@ -796,7 +1202,7 @@ function Console({ user }: { user: User }) {
                 </button>
               </div>
             </section>
-            <section className="panel">
+            <section className="panel upload-panel">
               <h2>Source and supporting data</h2>
               <p>
                 Existing .py scripts with optional .csv/.npy numeric input. No
@@ -857,19 +1263,35 @@ function Console({ user }: { user: User }) {
               ) : (
                 <p>No source uploads recorded.</p>
               )}
-              <label htmlFor="files">Choose simulation and numeric files</label>
-              <input
-                id="files"
-                disabled={locked}
-                type="file"
-                accept=".py,.csv,.npy"
-                multiple
-                onChange={(event) => {
-                  const chosen = Array.from(event.target.files ?? []);
+              <div
+                className={`upload-dropzone${locked ? ' is-disabled' : ''}`}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  if (locked) return;
+                  const chosen = Array.from(event.dataTransfer.files);
                   setFiles(chosen);
                   setFilePaths(chosen.map((file) => file.name));
                 }}
-              />
+              >
+                <label htmlFor="files">
+                  Drop simulation files here or choose files
+                </label>
+                <p>Python source and optional CSV or NPY data.</p>
+                <input
+                  id="files"
+                  ref={fileInputRef}
+                  disabled={locked}
+                  type="file"
+                  accept=".py,.csv,.npy"
+                  multiple
+                  onChange={(event) => {
+                    const chosen = Array.from(event.target.files ?? []);
+                    setFiles(chosen);
+                    setFilePaths(chosen.map((file) => file.name));
+                  }}
+                />
+              </div>
               {files.length > 0 && (
                 <ul>
                   {files.map((file, index) => (
@@ -920,7 +1342,7 @@ function Console({ user }: { user: User }) {
                 ].includes(workspace.status) && (
                   <button
                     className="secondary"
-                    disabled={!!busy}
+                    disabled={!!busy || !progress?.isCurrentRevision}
                     onClick={() =>
                       void act('Creating successor', async () => {
                         const receipt = await api.mutate(
@@ -949,7 +1371,7 @@ function Console({ user }: { user: User }) {
                   </button>
                 )}
             </section>
-            <section className="panel">
+            <section className="panel context-panel">
               <h2>Readiness and simulation context</h2>
               {workspace?.adapterProposal && (
                 <div>
@@ -988,12 +1410,61 @@ function Console({ user }: { user: User }) {
                         themselves verify the adapter.
                       </p>
                       {workspace.adapterReview ? (
-                        <p role="status">
-                          Mapping review saved.{' '}
-                          {workspace.adapterReview.allDeclaredConfirmed
-                            ? 'All mappings were declared confirmed.'
-                            : 'Some answers need further review.'}
-                        </p>
+                        <>
+                          <p role="status">
+                            Mapping review saved.{' '}
+                            {workspace.adapterReview.allDeclaredConfirmed
+                              ? 'All mappings were declared confirmed.'
+                              : 'Some answers need further review.'}
+                          </p>
+                          {workspace.adapterReview.allDeclaredConfirmed && (
+                            <button
+                              type="button"
+                              className="secondary"
+                              disabled={
+                                !!busy ||
+                                !progress?.isCurrentRevision ||
+                                workspace.stage !== 'adapting'
+                              }
+                              onClick={() =>
+                                void act(
+                                  'Continuing mapping review',
+                                  async () => {
+                                    const result = await api.mutate(
+                                      `${path}/adapter-review/continue`,
+                                      'POST',
+                                      {
+                                        schemaVersion: '1.0',
+                                        expectedGeneration:
+                                          workspace.generation,
+                                        expectedInputDigest:
+                                          workspace.inputDigest,
+                                      },
+                                      z.object({
+                                        schemaVersion: z.literal('1.0'),
+                                        status: z.enum([
+                                          'waiting',
+                                          'comparison_unmatched',
+                                          'continued',
+                                        ]),
+                                      }),
+                                    );
+                                    await refresh(audit);
+                                    setNotice(
+                                      result.status === 'continued'
+                                        ? 'Mapping verification continued.'
+                                        : result.status === 'waiting'
+                                          ? 'Waiting for the baseline comparison.'
+                                          : 'The baseline outputs did not match; dependent checks cannot continue.',
+                                    );
+                                  },
+                                )
+                              }
+                            >
+                              Continue mapping verification
+                            </button>
+                          )}
+                        </>
                       ) : (
                         <>
                           {workspace.adapterQuestions.questions.map(
@@ -1025,6 +1496,21 @@ function Console({ user }: { user: User }) {
                                       {option.label}
                                     </label>
                                   ))}
+                                  <button
+                                    type="button"
+                                    className="text-button"
+                                    onClick={() =>
+                                      setAnswers((previous) => ({
+                                        ...previous,
+                                        [question.id]: {
+                                          ...answer,
+                                          option: null,
+                                        },
+                                      }))
+                                    }
+                                  >
+                                    Clear option
+                                  </button>
                                   <label
                                     htmlFor={`adapter-custom-${question.id}`}
                                   >
@@ -1170,7 +1656,7 @@ function Console({ user }: { user: User }) {
               )}
             </section>
             {questions && (
-              <section className="panel">
+              <section className="panel clarification-panel">
                 <h2>Clarify the simulation</h2>
                 <p>
                   Choose an option, add custom text, or both. Unknown answers
@@ -1296,7 +1782,168 @@ function Console({ user }: { user: User }) {
                 </button>
               </section>
             )}
-            <section className="panel">
+            {workspace?.scientificQuestions && (
+              <section className="panel">
+                <h2>Scientific context</h2>
+                {workspace.scientificQuestions.answer ? (
+                  <>
+                    <p role="status">
+                      Your answer was saved. You can recheck eligibility if the
+                      assessment was interrupted.
+                    </p>
+                    <button
+                      type="button"
+                      className="secondary"
+                      disabled={!!busy || !progress?.isCurrentRevision}
+                      onClick={() =>
+                        void act(
+                          'Rechecking scientific eligibility',
+                          async () => {
+                            const snapshot = workspace.scientificQuestions;
+                            if (!snapshot?.answer) return;
+                            await api.mutate(
+                              `${path}/scientific-answer`,
+                              'POST',
+                              {
+                                schemaVersion: '1.0',
+                                expectedGeneration: workspace.generation,
+                                expectedInputDigest: workspace.inputDigest,
+                                questionSetDigest: snapshot.questionSetDigest,
+                                answer: snapshot.answer,
+                              },
+                              z.object({
+                                schemaVersion: z.literal('1.0'),
+                                replayed: z.boolean(),
+                                assessmentDigest: Digest,
+                              }),
+                            );
+                            await refresh(audit);
+                            setNotice('Scientific eligibility rechecked.');
+                          },
+                        )
+                      }
+                    >
+                      Recheck eligibility
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {workspace.scientificQuestions.questionSet.questions.map(
+                      (question) => {
+                        const answer = answers[question.id] ?? {
+                          option: null,
+                          text: '',
+                        };
+                        return (
+                          <fieldset key={question.id} disabled={!!busy}>
+                            <legend>{question.prompt}</legend>
+                            <p>{question.reason}</p>
+                            {question.options.map((option) => (
+                              <label className="option" key={option.id}>
+                                <input
+                                  type="radio"
+                                  name={`scientific-${question.id}`}
+                                  checked={answer.option === option.id}
+                                  onChange={() =>
+                                    setAnswers((previous) => ({
+                                      ...previous,
+                                      [question.id]: {
+                                        ...answer,
+                                        option: option.id,
+                                      },
+                                    }))
+                                  }
+                                />
+                                {option.label}
+                                {option.unknown ? ' (unknown)' : ''}
+                              </label>
+                            ))}
+                            <button
+                              type="button"
+                              className="text-button"
+                              onClick={() =>
+                                setAnswers((previous) => ({
+                                  ...previous,
+                                  [question.id]: { ...answer, option: null },
+                                }))
+                              }
+                            >
+                              Clear option
+                            </button>
+                            <label htmlFor={`scientific-custom-${question.id}`}>
+                              Custom answer or additional context
+                            </label>
+                            <textarea
+                              id={`scientific-custom-${question.id}`}
+                              rows={3}
+                              maxLength={4000}
+                              value={answer.text}
+                              onChange={(event) =>
+                                setAnswers((previous) => ({
+                                  ...previous,
+                                  [question.id]: {
+                                    ...answer,
+                                    text: event.target.value,
+                                  },
+                                }))
+                              }
+                            />
+                            <button
+                              type="button"
+                              className="secondary"
+                              disabled={!progress?.isCurrentRevision}
+                              onClick={() =>
+                                void act(
+                                  'Saving scientific answer',
+                                  async () => {
+                                    const snapshot =
+                                      workspace.scientificQuestions;
+                                    if (!snapshot) return;
+                                    if (!answer.option && !answer.text.trim())
+                                      throw new Error(
+                                        'Choose an option or enter a custom answer.',
+                                      );
+                                    await api.mutate(
+                                      `${path}/scientific-answer`,
+                                      'POST',
+                                      {
+                                        schemaVersion: '1.0',
+                                        expectedGeneration:
+                                          workspace.generation,
+                                        expectedInputDigest:
+                                          workspace.inputDigest,
+                                        questionSetDigest:
+                                          snapshot.questionSetDigest,
+                                        answer: {
+                                          schemaVersion: '1.0',
+                                          questionId: question.id,
+                                          selectedOptionId: answer.option,
+                                          customText: answer.text,
+                                        },
+                                      },
+                                      z.object({
+                                        schemaVersion: z.literal('1.0'),
+                                        replayed: z.boolean(),
+                                        assessmentDigest: Digest,
+                                      }),
+                                    );
+                                    await refresh(audit);
+                                    setNotice('Scientific answer saved.');
+                                  },
+                                )
+                              }
+                            >
+                              Save scientific answer
+                            </button>
+                          </fieldset>
+                        );
+                      },
+                    )}
+                  </>
+                )}
+              </section>
+            )}
+            <section className="panel plan-panel" id="testplan">
               <h2>Deterministic test plan</h2>
               {workspace?.plan ? (
                 <>
@@ -1304,6 +1951,117 @@ function Console({ user }: { user: User }) {
                     Eligibility is determined by reviewed rules. Unresolved or
                     unreleased checks do not produce passes.
                   </p>
+                  {audit.domain === 'heat_diffusion' &&
+                    workspace.plan.checks.some(
+                      (check) =>
+                        check.checkId === 'H_ENERGY' &&
+                        check.selection === 'selected',
+                    ) && (
+                      <div>
+                        <h3>Thermal material properties</h3>
+                        <p>
+                          Enter the constant values used by your model. These
+                          are your declarations and will be used to calculate
+                          sampled thermal energy.
+                        </p>
+                        {workspace.heatParameters ? (
+                          <p>
+                            Density: {workspace.heatParameters.densityKgM3}{' '}
+                            kg/m³ · Specific heat capacity:{' '}
+                            {workspace.heatParameters.heatCapacityJKgK} J/(kg·K)
+                          </p>
+                        ) : (
+                          <>
+                            <label htmlFor="heat-density">
+                              Density (kg/m³)
+                            </label>
+                            <input
+                              id="heat-density"
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={density}
+                              onChange={(event) =>
+                                setDensity(event.target.value)
+                              }
+                            />
+                            <label htmlFor="heat-capacity">
+                              Specific heat capacity (J/(kg·K))
+                            </label>
+                            <input
+                              id="heat-capacity"
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={heatCapacity}
+                              onChange={(event) =>
+                                setHeatCapacity(event.target.value)
+                              }
+                            />
+                            <button
+                              type="button"
+                              className="secondary"
+                              disabled={
+                                !!busy ||
+                                !progress?.isCurrentRevision ||
+                                workspace.stage !== 'adapting'
+                              }
+                              onClick={() =>
+                                void act(
+                                  'Saving thermal properties',
+                                  async () => {
+                                    if (
+                                      !workspace.planDigest ||
+                                      !density.trim() ||
+                                      !heatCapacity.trim()
+                                    )
+                                      throw new Error(
+                                        'Enter both thermal properties.',
+                                      );
+                                    const values = {
+                                      densityKgM3: Number(density),
+                                      heatCapacityJKgK: Number(heatCapacity),
+                                    };
+                                    if (
+                                      !Number.isFinite(values.densityKgM3) ||
+                                      !Number.isFinite(
+                                        values.heatCapacityJKgK,
+                                      ) ||
+                                      values.densityKgM3 <= 0 ||
+                                      values.heatCapacityJKgK <= 0
+                                    )
+                                      throw new Error(
+                                        'Thermal properties must be positive finite numbers.',
+                                      );
+                                    await api.mutate(
+                                      `${path}/heat-parameters`,
+                                      'POST',
+                                      {
+                                        schemaVersion: '1.0',
+                                        expectedGeneration:
+                                          workspace.generation,
+                                        expectedInputDigest:
+                                          workspace.inputDigest,
+                                        planDigest: workspace.planDigest,
+                                        parameters: values,
+                                      },
+                                      z.object({
+                                        schemaVersion: z.literal('1.0'),
+                                        replayed: z.boolean(),
+                                      }),
+                                    );
+                                    await refresh(audit);
+                                    setNotice('Thermal properties saved.');
+                                  },
+                                )
+                              }
+                            >
+                              Save thermal properties
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
                   {workspace.plan.assessment.decisions.map((decision) => (
                     <article className="check" key={decision.checkId}>
                       <h3>
@@ -1325,6 +2083,50 @@ function Console({ user }: { user: User }) {
                       </ul>
                     </article>
                   ))}
+                  {(audit.domain !== 'heat_diffusion' ||
+                    workspace.heatParameters) &&
+                    [
+                      'adapting',
+                      'planning',
+                      'executing',
+                      'evaluating',
+                      'investigating',
+                      'reporting',
+                    ].includes(workspace.stage) && (
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={
+                          !!busy ||
+                          !progress?.isCurrentRevision ||
+                          workspace.status !== 'running'
+                        }
+                        onClick={() =>
+                          void act('Starting planned checks', async () => {
+                            await api.mutate(
+                              `${path}/scientific-run`,
+                              'POST',
+                              {
+                                schemaVersion: '1.0',
+                                expectedGeneration: workspace.generation,
+                                expectedInputDigest: workspace.inputDigest,
+                              },
+                              ResumedAuditReceipt,
+                            );
+                            await refresh(audit);
+                            setNotice(
+                              'Evaluation or report preparation requested.',
+                            );
+                          })
+                        }
+                      >
+                        {['investigating', 'reporting'].includes(
+                          workspace.stage,
+                        )
+                          ? 'Resume report preparation'
+                          : 'Run planned checks'}
+                      </button>
+                    )}
                   <h3>Check procedures and accuracy requirements</h3>
                   {workspace.plan.checks.map((check) => (
                     <details key={check.checkId}>
@@ -1378,25 +2180,47 @@ function Console({ user }: { user: User }) {
                   </ul>
                 </>
               ) : (
-                <p>
-                  No deterministic plan has been published. Applicable checks
-                  and exclusions will appear when their prerequisites are
-                  established.
-                </p>
+                <>
+                  <p>
+                    No deterministic plan has been published. Applicable checks
+                    and exclusions will appear when their prerequisites are
+                    established.
+                  </p>
+                  {workspace?.scientificQuestions?.answer &&
+                    workspace.stage === 'adapting' && (
+                      <button
+                        type="button"
+                        className="secondary"
+                        disabled={!!busy || !progress?.isCurrentRevision}
+                        onClick={() =>
+                          void act('Preparing scientific plan', async () => {
+                            await api.mutate(
+                              `${path}/scientific-plan`,
+                              'POST',
+                              {
+                                schemaVersion: '1.0',
+                                expectedGeneration: workspace.generation,
+                                expectedInputDigest: workspace.inputDigest,
+                              },
+                              z.object({
+                                schemaVersion: z.literal('1.0'),
+                                planDigest: Digest,
+                                replayed: z.boolean(),
+                              }),
+                            );
+                            await refresh(audit);
+                            setNotice(
+                              'Scientific plan prepared. Evaluation has not started.',
+                            );
+                          })
+                        }
+                      >
+                        Prepare test plan
+                      </button>
+                    )}
+                </>
               )}
             </section>
-            {report ? (
-              <Report value={report} api={api} onError={showError} />
-            ) : (
-              <section className="panel">
-                <h2>Evidence report</h2>
-                <p>
-                  No structured report has been published for this revision.
-                  Refreshing reads saved results; it does not start experiments
-                  or render a PDF.
-                </p>
-              </section>
-            )}
           </>
         )}
         {busy && (
@@ -1405,6 +2229,32 @@ function Console({ user }: { user: User }) {
           </p>
         )}
       </div>
+      {audit && (
+        <div className="console-report">
+          {report ? (
+            <ReportBoundary key={report.report.reportId}>
+              <Suspense
+                fallback={
+                  <section className="panel" id="evidence" role="status">
+                    Loading evidence report…
+                  </section>
+                }
+              >
+                <Report value={report} api={api} onError={showError} />
+              </Suspense>
+            </ReportBoundary>
+          ) : (
+            <section className="panel report-empty" id="evidence">
+              <h2>Evidence report</h2>
+              <p>
+                No structured report has been published for this revision.
+                Refreshing reads saved results; it does not start experiments or
+                render a PDF.
+              </p>
+            </section>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -28,9 +28,16 @@ import {
 } from './context-questions.js';
 import { persistProgress } from './progress.js';
 import { transition } from './lifecycle.js';
+import { type AiConfiguration } from './ai-config.js';
+import {
+  FreeModelJob,
+  GroqAdmissionBlocked,
+  GroqModelJobs,
+} from './groq-model-jobs.js';
+import { MetaRequest } from './meta-client.js';
 
 /** One source-bound mapping request following actual resolved declarations.
- * Every model call uses the same billing/attempt/privacy gates as context.
+ * Every model call uses the same provider quota/attempt/privacy gates as context.
  * The resulting proposal never grants source execution or scientific eligibility.
  */
 export class AdapterCoordinator {
@@ -40,6 +47,7 @@ export class AdapterCoordinator {
     private readonly apiKey: string,
     private readonly transport: typeof fetch = fetch,
     private readonly clock: () => Date = () => new Date(),
+    private readonly aiConfig?: AiConfiguration,
   ) {}
   async run(
     uid: string,
@@ -50,7 +58,9 @@ export class AdapterCoordinator {
     if (!this.apiKey.trim())
       return {
         status: 'blocked' as const,
-        code: 'meta_credentials_required',
+        code: this.aiConfig
+          ? 'ai_credentials_required'
+          : 'meta_credentials_required',
         fence: initial,
       };
     const stage = await this.documents.transaction(async (tx) => {
@@ -75,7 +85,9 @@ export class AdapterCoordinator {
         `modelJobs/${task.operationId}`,
       ]);
       const contextOperation = Operation.parse(contextOperationRaw),
-        contextJob = ModelJob.parse(contextJobRaw);
+        contextJob = this.aiConfig
+          ? FreeModelJob.parse(contextJobRaw)
+          : ModelJob.parse(contextJobRaw);
       if (
         contextOperation.id !== task.operationId ||
         contextOperation.ownerUid !== uid ||
@@ -269,8 +281,40 @@ export class AdapterCoordinator {
         }).decode(file.bytes),
       };
     });
-    const tasks = new AdapterTasks(this.documents, this.clock),
+    const tasks = new AdapterTasks(this.documents, this.clock, this.aiConfig),
       prepared = await tasks.prepare(uid, fence, sources);
+    if (this.aiConfig) {
+      try {
+        await new GroqModelJobs(
+          this.documents,
+          this.apiKey,
+          this.aiConfig,
+          this.transport,
+          this.clock,
+        ).run(uid, fence, stage.operationId, prepared, 'adapter', signal);
+      } catch (error) {
+        if (!(error instanceof GroqAdmissionBlocked)) throw error;
+        return { status: 'blocked' as const, fence, code: error.code };
+      }
+      const published = await this.documents.get(
+        `${base}/adapterProposals/current`,
+      );
+      const proposal = AdapterProposal.parse(published?.proposal);
+      if (
+        published?.ownerUid !== uid ||
+        published.operationId !== stage.operationId ||
+        published.adapterDigest !== (await sha256(canonicalJson(proposal)))
+      )
+        throw new Error('Groq adapter publication integrity mismatch');
+      return {
+        status: 'proposal_ready' as const,
+        fence,
+        proposal,
+        adapterDigest: String(published.adapterDigest),
+        operationId: stage.operationId,
+      };
+    }
+    const request = MetaRequest.parse(prepared.request);
     await new ContextTokenCounts(
       this.documents,
       this.apiKey,
@@ -293,7 +337,7 @@ export class AdapterCoordinator {
     const cost = reserveMetaCost(
       price,
       bound.inputTokenUpperBound,
-      prepared.request.max_output_tokens,
+      request.max_output_tokens,
       this.clock(),
     ).microUsd;
     await new AdmissionRepository(this.documents, this.clock).acquire(
@@ -344,7 +388,7 @@ export class AdapterCoordinator {
     await new ModelJobs(this.documents, this.clock).bind(
       stage.operationId,
       bound.inputTokenUpperBound,
-      prepared.request.max_output_tokens,
+      request.max_output_tokens,
       stage.tokenEvidenceId,
     );
     const result = await new AdapterPipeline(
@@ -352,7 +396,7 @@ export class AdapterCoordinator {
       this.apiKey,
       this.transport,
       this.clock,
-    ).run(stage.operationId, prepared.request, signal);
+    ).run(stage.operationId, request, signal);
     const published = await this.documents.get(
       `${base}/adapterProposals/current`,
     );

@@ -7,9 +7,20 @@ import { NonRetryableError } from 'cloudflare:workflows';
 export class FreeFeasibility extends WorkflowEntrypoint {
   async run(event: WorkflowEvent<{ mode: string }>, step: WorkflowStep) {
     const mode = event.payload.mode;
-    if (!['split', 'single', 'yield'].includes(mode))
+    if (
+      !['split', 'single', 'single-50', 'separate-instance', 'yield'].includes(
+        mode,
+      )
+    )
       throw new NonRetryableError('Invalid authored probe mode');
-    const groups = mode === 'single' ? [51] : [30, 30];
+    const groups =
+      mode === 'single'
+        ? [51]
+        : mode === 'single-50'
+          ? [50]
+          : mode === 'separate-instance'
+            ? [30]
+            : [30, 30];
     const results = [];
     for (let stage = 0; stage < groups.length; stage++) {
       if (mode === 'yield' && stage === 1)

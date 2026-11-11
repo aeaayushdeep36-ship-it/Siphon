@@ -63,6 +63,24 @@ describe('bounded Workflow phase messages', () => {
     expect(instance.get).not.toHaveBeenCalled();
   });
 
+  it('separates an explicit scientific resume attempt from a completed child', async () => {
+    const instance = binding();
+    const first = await dispatchWorkflowPhase(instance, phase.jobId, {
+      ...phase,
+      phase: 'scientific_evaluate',
+      phaseKey: 'c'.repeat(64),
+    });
+    const retry = await dispatchWorkflowPhase(instance, phase.jobId, {
+      ...phase,
+      phase: 'scientific_evaluate',
+      phaseKey: 'd'.repeat(64),
+    });
+    expect(first.id).not.toBe(retry.id);
+    expect(first.id).toMatch(/^phase-[a-f0-9]{64}$/);
+    expect(retry.id).toMatch(/^phase-[a-f0-9]{64}$/);
+    expect(instance.create).toHaveBeenCalledTimes(2);
+  });
+
   it('treats an immediate queued status as accepted, not completed', async () => {
     const instance = binding({ status: 'queued' });
     instance.create.mockRejectedValue(new Error('duplicate ID'));

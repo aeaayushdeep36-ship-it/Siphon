@@ -115,6 +115,7 @@ export class SiphonInspectionWorkflow extends WorkflowEntrypoint<InspectionWorkf
           schemaVersion: z.literal('1.0'),
           jobId: z.string().regex(/^[a-f0-9]{64}$/),
           resumeScientific: z.literal(true),
+          phaseKey: z.string().regex(/^[a-f0-9]{64}$/),
           fence: DispatchFence,
         })
         .safeParse(event.payload);
@@ -123,7 +124,7 @@ export class SiphonInspectionWorkflow extends WorkflowEntrypoint<InspectionWorkf
           schemaVersion: '1.0',
           jobId: scientific.data.jobId,
           phase: 'scientific_evaluate',
-          phaseKey: scientific.data.fence.revisionId,
+          phaseKey: scientific.data.phaseKey,
           fence: scientific.data.fence,
         });
         return {

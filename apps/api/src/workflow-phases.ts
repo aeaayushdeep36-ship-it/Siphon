@@ -35,7 +35,7 @@ export const InspectionPhasePayload = z.strictObject({
   schemaVersion: z.literal('1.0'),
   jobId: Digest,
   phase: InspectionPhase,
-  phaseKey: Id,
+  phaseKey: z.union([Id, Digest]),
   fence: DispatchFence.optional(),
   operationId: Id.optional(),
   evaluationId: Id.optional(),

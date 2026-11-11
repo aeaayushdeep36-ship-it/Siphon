@@ -19,6 +19,7 @@ export interface InspectionWorkflowBinding {
       jobId: string;
       resumeContext?: true;
       resumeScientific?: true;
+      phaseKey?: string;
       fence?: {
         auditId: string;
         revisionId: string;
@@ -156,7 +157,13 @@ export class ResumeService {
       this.binding,
       {
         id,
-        params: { schemaVersion: '1.0', jobId, resumeScientific: true, fence },
+        params: {
+          schemaVersion: '1.0',
+          jobId,
+          resumeScientific: true,
+          phaseKey: requestId,
+          fence,
+        },
       },
       'Continuation outcome is unknown; retry with the same Idempotency-Key.',
     );

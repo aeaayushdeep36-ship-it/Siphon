@@ -1,5 +1,9 @@
 # Siphon architecture
 
+## Cloudflare Free invocation boundary evidence (2026-11-11)
+
+An actual Workers Free account probe executed two `step.do` callbacks with 30 fixed external HEAD fetches each. The first succeeded; the second exceeded the provider subrequest limit. A one-second `step.sleep` did not reset the budget. A single callback attempting 51 sequential fixed HEAD fetches also failed with the same invocation-limit error. Therefore the earlier per-phase 44-call inspection target is insufficient: the full 115/117-call instance exceeds the observed boundary even though each phase individually fits. A measured 74-Firestore-call investigation phase also requires decomposition. Use durable metadata and explicitly verified fresh invocation boundaries; never assume a step or sleep resets allowance, remove accounting checks, reconnect untrusted sessions or upgrade the plan to bypass the constraint. The probe establishes external-request behavior only, not complete workload CPU/storage/step feasibility.
+
 ## E2B endpoint consistency (2026-11-11)
 
 The server-owned `E2B_API_URL` is a clean HTTPS origin; credentials, paths, queries and fragments are rejected before provider I/O. Runtime verification before/after creation and the read-only template audit use the same bounded verifier. Creation receives that origin; termination uses an endpoint-bound `E2B` SDK client because the pinned SDK's static kill options omit `apiUrl`. No provider retry, admission rule or publication authority is added. Changing the endpoint with unresolved handles requires reconciliation against the original provider first.

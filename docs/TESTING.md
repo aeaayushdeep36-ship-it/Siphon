@@ -1,5 +1,17 @@
 # Siphon testing and scientific validation
 
+## Hosted Free-plan diagnostic (2026-11-11)
+
+The signed-in account's Workers plans screen shows Free, $0, Current plan. A dedicated `siphon-free-feasibility-20261111` Worker deployed version `f9160fc8-2310-456c-a9c3-d734366e27a0` with only an authored Workflow binding, no public routes, no application credentials/storage, zero retries and fixed external `HEAD https://example.com/` requests. Terminal provider instances were inspected through `wrangler workflows instances describe --json`:
+
+- `split-20261111-a` (13:33:46 UTC): first 30-request step succeeded with 30 HTTP 200s; second consecutive 30-request step errored with a subrequest-limit failure.
+- `yield-20261111-a` (13:34:04-05 UTC): first 30-request step succeeded with 30 HTTP 200s; one-second sleep completed; second 30-request step errored with the same failure.
+- `single-20261111-a` (13:40:29-31 UTC): one step attempting 51 sequential requests errored with the same failure.
+
+This proves that these step boundaries and a one-second sleep do not reset the external-request allowance on the tested runtime/account; 51 requests in one callback also fail. It does not prove behavior after longer sleeps, a fresh Workflow instance, RPC/service boundaries, exact successful maximum below 51, actual Siphon CPU use or complete workload feasibility. All three instances are terminal; no simulation, model request, credit-consuming sandbox, Firestore write or application deployment occurred. The typed reproducible diagnostic lives at `infra/cloudflare/free-probe/index.ts`, with its own non-public Wrangler configuration; it is not part of production Siphon bindings. After confirming Workers Free, an operator may explicitly deploy that config and trigger only its fixed authored modes. It must never receive secrets, private inputs or caller-selected URLs/counts. Default builds/tests do not deploy or trigger it.
+
+Cloudflare's current [limits](https://developers.cloudflare.com/workflows/reference/limits/) and [pricing](https://developers.cloudflare.com/workflows/reference/pricing/) pages list 10 ms compute/step, 100 MB persisted state/instance, 1,024 steps/Workflow, 3,000 steps/day, 100,000 executions/day, 100 concurrent instances/account, 50 subrequests/Workflow instance, and 1 GB-month storage on Free. These are provider limits, not measurements of Siphon's CPU, state size/retention, steps per completed run, or sustainable daily workload. Those measurements remain required before production enablement.
+
 ## E2B endpoint regression checks (2026-11-11)
 
 Verification: full suite passed 859 tests/93 files with `SIPHON_PYTHON` pointing explicitly at the existing science virtual environment; the first isolated-worktree run failed four authored conservation fixtures because that interpreter was absent locally. After the final four additional URL-syntax rejection cases, the two endpoint/control-plane suites passed 34 tests and ordinary TypeScript passed. Lint, full build and the disabled Worker runtime probe also passed. No enabled hosted Workflow, CPU or billing result follows from these checks.

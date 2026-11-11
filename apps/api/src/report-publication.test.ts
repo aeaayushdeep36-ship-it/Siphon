@@ -16,6 +16,7 @@ import { SandboxJobs } from './sandbox-jobs.js';
 import { AdmissionRepository } from './admission.js';
 import * as investigationReview from './investigation-review.js';
 import { buildPdfDocument } from './report-layout.js';
+import { MetricEvidence } from '@siphon/contracts';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -753,7 +754,10 @@ describe('authoritative report assembly', () => {
         operationId: crypto.randomUUID(),
         draftDigest: await sha256(canonicalJson(draft)),
         draft,
-        status,
+        evidence: f.savedEvidence.report.evidence.map((item) =>
+          MetricEvidence.parse(item),
+        ),
+        status: status as 'accepted' | 'omitted' | 'awaiting_review',
         expiresAt: f.report.expiresAt,
       });
       if (status === 'awaiting_review') {

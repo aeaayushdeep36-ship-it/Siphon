@@ -219,20 +219,37 @@ describe('owned investigation evidence preparation', () => {
     f.docs.documents.get(f.base)!.stage = 'evaluating';
     const rest = useRest ? firestoreTransport(f.docs) : null;
     const store = rest?.client ?? f.docs;
+    const modelJobs = new GroqModelJobs(
+      store,
+      groqFixtureConfig.apiKey,
+      groqFixtureConfig,
+      transport,
+      clock,
+    );
+    const stageStart = rest?.calls.length ?? 0;
+    let modelCalls = 0;
     const stage = new ScientificInvestigationStage(
       store,
       groqFixtureConfig,
-      new GroqModelJobs(
-        store,
-        groqFixtureConfig.apiKey,
-        groqFixtureConfig,
-        transport,
-        clock,
-      ),
+      {
+        run: async (...args) => {
+          const before = rest?.calls.length ?? 0;
+          const result = await modelJobs.run(...args);
+          modelCalls = (rest?.calls.length ?? before) - before;
+          return result;
+        },
+      },
       clock,
     );
     const result = await stage.run('alice', f.fence, f.operationId);
     const stageRequests = rest?.calls.length ?? null;
+    if (process.env.SIPHON_TRACE_REST === '1')
+      console.log('Investigation REST segments', {
+        preparation:
+          (rest?.calls.length ?? stageStart) - stageStart - modelCalls,
+        model: modelCalls,
+        total: stageRequests,
+      });
     if (result.status !== 'awaiting_review')
       throw new Error('Expected authored draft');
     const read = () =>

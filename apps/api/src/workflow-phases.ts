@@ -10,6 +10,7 @@ export const InspectionPhase = z.enum([
   'inspection',
   'inspection_begin',
   'inspection_reserve',
+  'inspection_create',
   'inspection_execute',
   'inspection_cleanup',
   'inspection_finish',
@@ -60,6 +61,7 @@ export function isInspectionWorkflowPhase(
   return (
     value === 'inspection_begin' ||
     value === 'inspection_reserve' ||
+    value === 'inspection_create' ||
     value === 'inspection_execute' ||
     value === 'inspection_cleanup' ||
     value === 'inspection_finish'

@@ -211,6 +211,9 @@ async function setup(
       sandboxId: session.sandboxId,
       inspectionSession: session,
     })),
+    connectInspection: vi.fn<
+      NonNullable<SandboxControlPlane['connectInspection']>
+    >(async () => session),
     kill: vi.fn<SandboxControlPlane['kill']>(async () => true),
   };
   const jobs = new SandboxJobs(store, clock),
@@ -781,7 +784,9 @@ describe('durable audit queue and concrete inspection coordination (offline)', (
     const begin = await run(phase);
     expect(begin).toMatchObject({ phase: 'inspection_reserve' });
     const reserve = await run(dispatched.pop());
-    expect(reserve).toMatchObject({ phase: 'inspection_execute' });
+    expect(reserve).toMatchObject({ phase: 'inspection_create' });
+    const create = await run(dispatched.pop());
+    expect(create).toMatchObject({ phase: 'inspection_execute' });
     const execute = await run(dispatched.pop());
     expect(execute).toMatchObject({ phase: 'inspection_cleanup' });
     const cleanup = await run(dispatched.pop());
@@ -792,6 +797,47 @@ describe('durable audit queue and concrete inspection coordination (offline)', (
     expect(JSON.stringify(phase)).not.toMatch(
       /sourceText|requestBody|sandboxId/,
     );
+  });
+  it('sends an ambiguous create directly to cleanup without retrying or loading sources', async () => {
+    const f = await setup();
+    const { receipt } = await f.enqueue();
+    const job = InspectionStageJob.parse(
+      f.docs.documents.get(`stageJobs/${receipt.jobId}`),
+    );
+    const phase = (name: InspectionPhasePayload['phase']) =>
+      InspectionPhasePayload.parse({
+        schemaVersion: '1.0',
+        jobId: receipt.jobId,
+        phase: name,
+        phaseKey: job.operationId,
+      });
+    const dispatched: InspectionPhasePayload[] = [];
+    const run = (value: unknown) =>
+      runInspectionPhase(
+        value,
+        {
+          run: async <T>(_name: string, callback: () => Promise<T>) =>
+            callback(),
+        },
+        f.coordinator,
+        async (jobId) =>
+          InspectionStageJob.parse(f.docs.documents.get(`stageJobs/${jobId}`)),
+        async (payload) => void dispatched.push(payload),
+      );
+    f.provider.create.mockRejectedValueOnce(
+      new Error('unknown provider result'),
+    );
+    await run(phase('inspection_begin'));
+    await run(dispatched.pop());
+    const create = await run(dispatched.pop());
+    expect(create).toMatchObject({ phase: 'inspection_cleanup' });
+    expect(f.provider.create).toHaveBeenCalledOnce();
+    const cleanup = await run(dispatched.pop());
+    expect(cleanup).toMatchObject({ phase: 'inspection_finish' });
+    const finish = await run(dispatched.pop());
+    expect(finish).toMatchObject({ status: 'awaiting_reconciliation' });
+    expect(dispatched).toHaveLength(0);
+    expect(JSON.stringify(dispatched)).not.toMatch(/sourceText|requestBody/);
   });
   it.each([
     [1, false],
@@ -838,23 +884,39 @@ describe('durable audit queue and concrete inspection coordination (offline)', (
         throw new Error('Missing preparation phase');
       const reserved = await f.coordinator.reserve(initial.job);
       measure('reserve');
+      const createStart = counted!.calls.length;
+      const created = await f.coordinator.createSandbox(reserved);
+      expect(created).toMatchObject({
+        status: 'creation_finished',
+        receipt: { status: 'created', sandboxId: f.session.sandboxId },
+      });
+      const createCalls = counted!.calls.length - createStart;
+      measure('create');
       const executeStart = counted!.calls.length;
-      expect((await f.coordinator.execute(reserved)).status).toBe(
+      const dispatchedJob = InspectionStageJob.parse(
+        f.docs.documents.get(`stageJobs/${receipt.jobId}`),
+      );
+      expect((await f.coordinator.executeConnected(dispatchedJob)).status).toBe(
         'execution_finished',
       );
-      const pipelineSegments = f.pipelineBoundaries.map(
-        (boundary, index) =>
-          boundary.requestCount -
-          (index === 0
-            ? executeStart
-            : f.pipelineBoundaries[index - 1]!.requestCount),
+      const byName = Object.fromEntries(
+        f.pipelineBoundaries.map((boundary) => [
+          boundary.name,
+          boundary.requestCount,
+        ]),
       );
+      const pipelineSegments = [
+        byName.source_loaded! - executeStart,
+        byName.sandbox_connected! - byName.source_loaded!,
+        byName.inspection_ran! - byName.sandbox_connected!,
+        byName.result_published! - byName.inspection_ran!,
+      ];
       expect(pipelineSegments).toEqual(
-        originalRevisions ? [18, 12, 9, 4] : [16, 12, 9, 4],
+        originalRevisions ? [16, 4, 9, 4] : [14, 4, 9, 4],
       );
       if (process.env.SIPHON_TRACE_REST === '1')
-        console.log('Inspection execute REST boundaries', {
-          start: executeStart,
+        console.log('Inspection child REST boundaries', {
+          createCalls,
           boundaries: f.pipelineBoundaries,
           segments: pipelineSegments,
         });
@@ -869,7 +931,14 @@ describe('durable audit queue and concrete inspection coordination (offline)', (
       measure('finish');
       // Leave headroom for authentication and scheduler calls. These are metadata
       // phase regression bounds, not a claim that hosted CPU/provider I/O fits Free.
-      for (const name of ['begin', 'reserve', 'execute', 'cleanup', 'finish'])
+      for (const name of [
+        'begin',
+        'reserve',
+        'create',
+        'execute',
+        'cleanup',
+        'finish',
+      ])
         expect(counts[name]).toBeLessThanOrEqual(44);
       if (process.env.SIPHON_TRACE_REST === '1')
         console.log(

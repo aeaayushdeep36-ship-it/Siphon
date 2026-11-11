@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   dispatchWorkflowPhase,
   InspectionPhasePayload,
+  isInspectionWorkflowPhase,
   isScientificWorkflowPhase,
   WorkflowDispatchError,
 } from './workflow-phases.js';
@@ -28,6 +29,20 @@ function binding(status: unknown = { status: 'queued' }) {
 }
 
 describe('bounded Workflow phase messages', () => {
+  it.each([
+    'inspection_begin',
+    'inspection_reserve',
+    'inspection_create',
+    'inspection_execute',
+    'inspection_cleanup',
+    'inspection_finish',
+  ] as const)(
+    'routes the %s child to the inspection phase handler',
+    (phase) => {
+      expect(isInspectionWorkflowPhase(phase)).toBe(true);
+    },
+  );
+
   it.each([
     'scientific_evaluate',
     'scientific_investigate',

@@ -2,7 +2,10 @@ import { z } from 'zod';
 import { Digest, Id, InspectionGate } from '@siphon/contracts';
 import { type InspectionCoordinator } from './inspection-coordinator.js';
 import { InspectionStageJob } from './run-queue.js';
-import { InspectionExecutionReceipt } from './inspection-pipeline.js';
+import {
+  InspectionCreationReceipt,
+  InspectionExecutionReceipt,
+} from './inspection-pipeline.js';
 import {
   type InspectionPhasePayload,
   InspectionPhasePayload as PhasePayload,
@@ -65,7 +68,13 @@ export async function runInspectionPhase(
   steps: InspectionPhaseSteps,
   coordinator: Pick<
     InspectionCoordinator,
-    'begin' | 'reserve' | 'execute' | 'cleanup' | 'finish'
+    | 'begin'
+    | 'reserve'
+    | 'createSandbox'
+    | 'executeConnected'
+    | 'execute'
+    | 'cleanup'
+    | 'finish'
   >,
   readJob: (jobId: string) => Promise<InspectionStageJob>,
   dispatch: (payload: InspectionPhasePayload) => Promise<unknown>,
@@ -75,6 +84,7 @@ export async function runInspectionPhase(
     ![
       'inspection_begin',
       'inspection_reserve',
+      'inspection_create',
       'inspection_execute',
       'inspection_cleanup',
       'inspection_finish',
@@ -129,8 +139,24 @@ export async function runInspectionPhase(
     if (job.operationId !== phase.phaseKey)
       throw new Error('Inspection reservation phase changed');
     await steps.run('inspection.reserve', () => coordinator.reserve(job));
-    await next('inspection_execute');
-    return { status: 'phase_dispatched' as const, phase: 'inspection_execute' };
+    await next('inspection_create');
+    return { status: 'phase_dispatched' as const, phase: 'inspection_create' };
+  }
+  if (phase.phase === 'inspection_create') {
+    const job = await readJob(phase.jobId);
+    if (job.operationId !== phase.phaseKey)
+      throw new Error('Inspection create phase changed');
+    const created = await steps.run('inspection.create', () =>
+      coordinator.createSandbox(job),
+    );
+    if (created.status === 'already_claimed') return created;
+    const receipt = InspectionCreationReceipt.parse(created.receipt);
+    const followingPhase =
+      receipt.status === 'created'
+        ? 'inspection_execute'
+        : 'inspection_cleanup';
+    await next(followingPhase);
+    return { status: 'phase_dispatched' as const, phase: followingPhase };
   }
   if (phase.phase === 'inspection_execute') {
     const job = await readJob(phase.jobId);
@@ -139,7 +165,9 @@ export async function runInspectionPhase(
     // A missing/failed execution receipt is not permission to execute again.
     // Journal-based cleanup and finish are still allowed to reconcile it.
     try {
-      await steps.run('inspection.execute', () => coordinator.execute(job));
+      await steps.run('inspection.execute', () =>
+        coordinator.executeConnected(job),
+      );
     } catch {
       // Preserve the failure by relying on the operation/sandbox journals below.
     }

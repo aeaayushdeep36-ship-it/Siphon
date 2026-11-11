@@ -1,4 +1,10 @@
-import { Sandbox, Template, type SandboxOpts, type SandboxApiOpts } from 'e2b';
+import {
+  E2B,
+  Sandbox,
+  Template,
+  type SandboxOpts,
+  type SandboxApiOpts,
+} from 'e2b';
 import { z } from 'zod';
 import { DEFAULT_POLICY, Digest, Id } from '@siphon/contracts';
 import { canonicalJson, sha256 } from './hashing.js';
@@ -19,6 +25,7 @@ import {
   type FidelitySession,
 } from './fidelity-session.js';
 import { readJsonBounded } from './http.js';
+import { e2bApiUrl } from './e2b-endpoint.js';
 
 export type TemplateVerification = {
   buildId: string;
@@ -46,13 +53,14 @@ function matchesSinglePrivateBuild(
   );
 }
 
-async function verifyE2bTemplate(
+export async function verifyE2bTemplate(
   apiKey: string,
   templateId: string,
   tag: string,
   signal: AbortSignal,
   apiUrl: string,
 ): Promise<TemplateVerification | null> {
+  apiUrl = e2bApiUrl(apiUrl);
   const endpoint = new URL(
     `/templates/${encodeURIComponent(templateId)}`,
     apiUrl,
@@ -144,7 +152,10 @@ export interface SandboxControlPlane {
     conservationSession?: ValidationSession;
     fidelitySession?: FidelitySession;
   }>;
-  kill(sandboxId: string, options: SandboxApiOpts): Promise<boolean>;
+  kill(
+    sandboxId: string,
+    options: SandboxApiOpts & { apiUrl: string },
+  ): Promise<boolean>;
 }
 const sdk: SandboxControlPlane = {
   verifyTemplate: verifyE2bTemplate,
@@ -161,7 +172,10 @@ const sdk: SandboxControlPlane = {
       fidelitySession: new E2bFidelitySession(sandbox),
     };
   },
-  kill: (id, options) => Sandbox.kill(id, options),
+  // The pinned SDK's static kill options omit apiUrl. Bind it through the
+  // SDK client so cleanup keeps the configured control-plane endpoint.
+  kill: (id, options) =>
+    new E2B({ apiUrl: options.apiUrl }).Sandbox.kill(id, options),
 };
 
 export class SandboxControlFailure extends Error {
@@ -188,16 +202,7 @@ export class E2bClient {
     apiUrl = 'https://api.e2b.app',
   ) {
     if (!apiKey.trim()) throw new Error('E2B credentials are not configured');
-    const endpoint = new URL(apiUrl);
-    if (
-      endpoint.protocol !== 'https:' ||
-      endpoint.username ||
-      endpoint.password ||
-      endpoint.search ||
-      endpoint.hash
-    )
-      throw new Error('E2B API endpoint must be a clean HTTPS URL');
-    this.apiUrl = endpoint.toString();
+    this.apiUrl = e2bApiUrl(apiUrl);
   }
 
   async create(
@@ -460,6 +465,7 @@ export class E2bClient {
     try {
       const killed = await this.provider.kill(sandboxId, {
         apiKey: this.apiKey,
+        apiUrl: this.apiUrl,
         retries: 0,
         requestTimeoutMs: 30_000,
         signal: signal

@@ -12,6 +12,10 @@ Free-plan feasibility remains open: the new investigation stage measured 74 Fire
 
 Scientific finalization now commits a durable receipt together with the terminal progress transition. If the Workflow loses its checkpoint after that commit, the same finishing operation can return the saved partial result after reauthorizing the exact terminal successor. Concurrent duplicate finishes cannot advance the generation twice. Attached capacity or an active operation blocks finalization; unknown execution and accounting still require reconciliation. The workflow still lacks extended experiments; owner-reviewed AI advisory text cannot promote limited scientific coverage to completion or establish a hosted audit.
 
+## E2B endpoint consistency (2026-11-11)
+
+The server-owned `E2B_API_URL` is a clean HTTPS origin; credentials, paths, queries and fragments are rejected before provider I/O. Runtime verification before/after creation and the read-only template audit use the same bounded verifier. Creation receives that origin; termination uses an endpoint-bound `E2B` SDK client because the pinned SDK's static kill options omit `apiUrl`. No provider retry, admission rule or publication authority is added. Changing the endpoint with unresolved handles requires reconciliation against the original provider first.
+
 ## Current Groq integration (2026-11-08)
 
 This section supersedes conflicting Meta-specific architecture below. The production inspection continuation uses validated `AiConfiguration` and Groq Chat Completions; absent or invalid settings block AI work. `SIPHON_AI_MODEL` selects the model (`qwen/qwen3.8-27b` in the example), and `GROQ_API_KEY` stays server-side. Meta transport/counting/pricing modules remain legacy compatibility/history/tests, never a production fallback. No Meta credit or counting attestation is produced for Groq.

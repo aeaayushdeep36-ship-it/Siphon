@@ -2,6 +2,10 @@
 
 # Current handoff — 2026-11-11
 
+Active coordinated completion: the user resumed and authorized safe baseline publication and per-chat draft PRs/commits. Shared branch `coordination/shared-baseline-2026-11-11`, commit `01fbbfa`, [draft PR #1](https://github.com/aeaayushdeep36-ship-it/Siphon/pull/1). Service work is isolated on `foundation/service-configuration-2026-11-11`; frontend/backend chats use their own branches. See [HANDOFF](HANDOFF.md) for current ownership, account observations and prerequisite gaps. This supersedes historical paused/no-push status. Production execution stays disabled.
+
+The E2B endpoint fix now routes runtime verification, creation, SDK-bound termination and the read-only audit consistently through one validated HTTPS origin. Source/evaluation live metadata/tag checks pass; inspection/PDF are not configured locally. The signed-in dashboard currently shows Hobby Free/no card, a $100 grant expiring November 1, 2027, and $0.01 pending usage. This is not a reconciled available balance. A fresh Firestore read found no credits, global E2B budget, role dispatch configuration or template approval documents. The synthetic history query and Groq model-list read succeeded; signed-in history UI and complete hosted audit remain unverified. No sandboxes or deployment were performed for this checkpoint.
+
 This section supersedes older deployment and provider status below. Keep later dated history for context, but use the live repository and service state when making changes.
 
 ## Hosted Firebase history integration checkpoint

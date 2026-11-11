@@ -49,6 +49,8 @@ import { parseAiConfiguration, type AiEnvironment } from './ai-config.js';
 import { ScientificInvestigationStage } from './scientific-investigation-stage.js';
 import { GroqModelJobs } from './groq-model-jobs.js';
 
+import { E2bApiUrl } from './e2b-endpoint.js';
+
 export interface InspectionWorkflowEnvironment extends AiEnvironment {
   SIPHON_INSPECTION_WORKFLOW_ENABLED: string;
   FIREBASE_PROJECT_ID: string;
@@ -67,11 +69,7 @@ const Configuration = FirebaseServiceConfiguration.safeExtend({
     .min(1)
     .max(512)
     .regex(/^[\x21-\x7e]+$/),
-  E2B_API_URL: z
-    .string()
-    .url()
-    .refine((value) => new URL(value).protocol === 'https:')
-    .optional(),
+  E2B_API_URL: E2bApiUrl.optional(),
 });
 
 function aiIssueMessage(code: string): string {

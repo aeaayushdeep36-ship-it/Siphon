@@ -171,6 +171,7 @@ export async function readInvestigationReview(
     operationId: stage.operationId,
     draftDigest,
     draft,
+    evidence: result.evidence,
     status:
       Date.parse(Timestamp.parse(rawDraft.expiresAt)) <= clock().getTime()
         ? 'expired'

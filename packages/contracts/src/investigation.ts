@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Count, Digest, Id, SchemaVersion, Timestamp } from './common.js';
 import { reportText } from './reports.js';
+import { MetricEvidence } from './evidence.js';
 
 const evidenceReferences = z
   .array(Id)
@@ -42,15 +43,36 @@ export const InvestigationDraft = z.strictObject({
     .max(20),
 });
 
-export const InvestigationReviewSnapshot = z.strictObject({
-  provider: z.literal('groq'),
-  model: z.string().min(1).max(200),
-  operationId: Id,
-  draftDigest: Digest,
-  draft: InvestigationDraft,
-  status: z.enum(['awaiting_review', 'accepted', 'omitted', 'expired']),
-  expiresAt: Timestamp,
-});
+export const InvestigationReviewSnapshot = z
+  .strictObject({
+    provider: z.literal('groq'),
+    model: z.string().min(1).max(200),
+    operationId: Id,
+    draftDigest: Digest,
+    draft: InvestigationDraft,
+    evidence: z.array(MetricEvidence).min(1).max(3),
+    status: z.enum(['awaiting_review', 'accepted', 'omitted', 'expired']),
+    expiresAt: Timestamp,
+  })
+  .superRefine((value, ctx) => {
+    const ids = new Set(value.evidence.map((item) => item.id));
+    if (
+      ids.size !== value.evidence.length ||
+      value.evidence.some(
+        (item) =>
+          item.auditId !== value.draft.auditId ||
+          item.revisionId !== value.draft.revisionId ||
+          item.inputDigest !== value.draft.inputDigest,
+      ) ||
+      [...value.draft.hypotheses, ...value.draft.recommendations].some((item) =>
+        item.evidenceIds.some((id) => !ids.has(id)),
+      )
+    )
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Investigation review evidence snapshot mismatch',
+      });
+  });
 export const SubmitInvestigationReview = z.strictObject({
   schemaVersion: SchemaVersion,
   expectedGeneration: Count,

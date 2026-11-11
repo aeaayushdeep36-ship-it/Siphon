@@ -1,5 +1,9 @@
 # Siphon testing and scientific validation
 
+## Frontend investigation contract integration (2026-11-11)
+
+The frontend branch merges backend investigation commit `0af58dc` and its finalization prerequisite. Five React cases verify accept/omit submission against the exact shared review digest/fence, matching receipt validation, no automatic scientific-run/report mutation, and disabled/absent controls for expired, historical or mismatched-revision drafts. The console renders provider/model, advisory text, verification/validation suggestions, evidence IDs and recorded expiry, and blocks report resumption pending review. Frontend tests pass 36 cases across six files; frontend typecheck/build and focused lint pass. These authored fixtures do not establish hosted investigation, model quality, report publication or a completed audit. Explicit owner disclosure consent and deterministic metrics visible before advisory acceptance remain integration work with Chat 3.
+
 ## Hosted frontend checkpoint (2026-11-11)
 
 Manual Google sign-in now displayed the authenticated hosted workspace. Owner-history Refresh returned an empty list without the former index error. A synthetic heat draft created through the actual UI subsequently appeared in history. The progress read returned `storage_unavailable`, and another read-only Refresh audit returned audit GET 200 but workspace GET 503. Chat 1 has the reproduction identifiers recorded in [Handoff](HANDOFF.md); the draft is retained. No source upload, simulation, model call, evidence, report, PDF or cleanup proof is established by draft creation. A temporary 360×800 viewport check of the authenticated history/draft page found document client/scroll widths both 345 pixels (scrollbar excluded); no tested content element extended horizontally beyond the viewport. The viewport was reset. Complete keyboard/screen-reader and whole-journey responsive acceptance remain pending.

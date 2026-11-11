@@ -17,6 +17,7 @@ import {
   Digest,
   Domain,
   EvidenceReportResponse,
+  InvestigationReviewReceipt,
   ProgressSnapshot,
   QuestionSet,
   QueuedAuditReceipt,
@@ -32,6 +33,7 @@ import { auth, signIn, signInErrorMessage } from './auth.js';
 import { label } from './labels.js';
 import { ReportBoundary } from './ReportBoundary.js';
 import { startReadPolling } from './read-polling.js';
+import { InvestigationReview } from './InvestigationReview.js';
 
 const Report = lazy(() =>
   import('./Report.js').then((module) => ({ default: module.Report })),
@@ -1997,6 +1999,46 @@ function Console({
                 )}
               </section>
             )}
+            {workspace?.investigation && (
+              <InvestigationReview
+                snapshot={workspace.investigation}
+                disabled={
+                  !!busy ||
+                  !!readIssue ||
+                  !progress?.isCurrentRevision ||
+                  workspace.stage !== 'investigating' ||
+                  workspace.status !== 'running'
+                }
+                onReview={(decision) =>
+                  void act('Saving advisory review', async () => {
+                    const snapshot = workspace.investigation;
+                    if (!snapshot) return;
+                    const receipt = await api.mutate(
+                      `${path}/investigation-review`,
+                      'POST',
+                      {
+                        schemaVersion: '1.0',
+                        expectedGeneration: workspace.generation,
+                        expectedInputDigest: workspace.inputDigest,
+                        draftDigest: snapshot.draftDigest,
+                        decision,
+                      },
+                      InvestigationReviewReceipt.refine(
+                        (value) =>
+                          value.operationId === snapshot.operationId &&
+                          value.draftDigest === snapshot.draftDigest &&
+                          value.status ===
+                            (decision === 'accept' ? 'accepted' : 'omitted'),
+                      ),
+                    );
+                    await refresh(audit);
+                    setNotice(
+                      `Advisory text ${receipt.status}. Numerical verdicts are unchanged. Resume report preparation when ready.`,
+                    );
+                  })
+                }
+              />
+            )}
             <section className="panel plan-panel" id="testplan">
               <h2>Deterministic test plan</h2>
               {workspace?.plan ? (
@@ -2153,6 +2195,9 @@ function Console({
                         disabled={
                           !!busy ||
                           !progress?.isCurrentRevision ||
+                          ['awaiting_review', 'expired'].includes(
+                            workspace.investigation?.status ?? '',
+                          ) ||
                           workspace.status !== 'running'
                         }
                         onClick={() =>

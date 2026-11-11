@@ -5,7 +5,10 @@ import { createRoot, type Root } from 'react-dom/client';
 import { webcrypto } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App.js';
-import type { UploadEntry } from '@siphon/contracts';
+import type {
+  InvestigationReviewSnapshot,
+  UploadEntry,
+} from '@siphon/contracts';
 
 const session = vi.hoisted(() => ({
   notify: (value: unknown): void => {
@@ -70,6 +73,35 @@ const progress = {
   progress: null,
   isCurrentRevision: true,
   pollAfterSeconds: 5,
+};
+const investigation: InvestigationReviewSnapshot = {
+  provider: 'groq',
+  model: 'authored-model',
+  operationId: questionId,
+  draftDigest: 'b'.repeat(64),
+  status: 'awaiting_review',
+  expiresAt: '2026-11-18T12:00:00Z',
+  draft: {
+    schemaVersion: '1.0',
+    auditId,
+    revisionId,
+    inputDigest: digest,
+    evidenceDigest: 'c'.repeat(64),
+    hypotheses: [
+      {
+        text: 'A possible sampling effect.',
+        evidenceIds: [oldRevisionId],
+        verification: 'Compare the recorded samples.',
+      },
+    ],
+    recommendations: [
+      {
+        text: 'Inspect output sampling.',
+        evidenceIds: [oldRevisionId],
+        validation: 'Verify with independent observations.',
+      },
+    ],
+  },
 };
 let root: Root;
 let host: HTMLDivElement;
@@ -361,6 +393,119 @@ describe('authored frontend journey through real browser API contracts', () => {
     expect(host.textContent).not.toContain('Private history');
     expect(host.textContent).toContain('Sign in to view audit history');
   });
+
+  it.each(['accept', 'omit'] as const)(
+    'saves owner investigation decision %s against the displayed draft without dispatching report work',
+    async (decision) => {
+      let status: InvestigationReviewSnapshot['status'] = 'awaiting_review';
+      respond = (path, init) => {
+        if (path === `${base}/workspace`)
+          return Response.json({
+            ...workspace,
+            stage: 'investigating',
+            status: 'running',
+            investigation: { ...investigation, status },
+          });
+        if (path === `${base}/progress`)
+          return Response.json({
+            ...progress,
+            stage: 'investigating',
+            status: 'running',
+          });
+        if (path === `${base}/investigation-review` && init.method === 'POST') {
+          status = decision === 'accept' ? 'accepted' : 'omitted';
+          return Response.json({
+            schemaVersion: '1.0',
+            operationId: investigation.operationId,
+            draftDigest: investigation.draftDigest,
+            status,
+            replayed: false,
+          });
+        }
+        return defaults(path);
+      };
+      await mount();
+      await act(async () =>
+        host.querySelector<HTMLButtonElement>('.history-item')!.click(),
+      );
+      expect(host.textContent).toContain('A possible sampling effect.');
+      expect(host.textContent).toContain(
+        'Verify with independent observations.',
+      );
+      expect(host.textContent).toContain('not established findings');
+      await click(
+        decision === 'accept' ? 'Include advisory text' : 'Omit advisory text',
+      );
+      const mutations = requests.filter((item) => item.method !== 'GET');
+      expect(mutations).toHaveLength(1);
+      expect(mutations[0]).toMatchObject({
+        path: `${base}/investigation-review`,
+        body: {
+          schemaVersion: '1.0',
+          expectedGeneration: 0,
+          expectedInputDigest: digest,
+          draftDigest: investigation.draftDigest,
+          decision,
+        },
+      });
+      expect(host.textContent).toContain(
+        `Advisory text ${status}. Numerical verdicts are unchanged.`,
+      );
+      expect(host.querySelector('[role="alert"]')).toBeNull();
+      expect(
+        [...host.querySelectorAll('button')].some(
+          (item) => item.textContent === 'Include advisory text',
+        ),
+      ).toBe(false);
+    },
+  );
+
+  it.each(['expired', 'historical', 'changed_revision'] as const)(
+    'prevents advisory review for %s evidence',
+    async (condition) => {
+      respond = (path) => {
+        if (path === `${base}/workspace`)
+          return Response.json({
+            ...workspace,
+            stage: 'investigating',
+            status: 'running',
+            investigation: {
+              ...investigation,
+              status: condition === 'expired' ? 'expired' : 'awaiting_review',
+              draft: {
+                ...investigation.draft,
+                revisionId:
+                  condition === 'changed_revision' ? oldRevisionId : revisionId,
+              },
+            },
+          });
+        if (path === `${base}/progress`)
+          return Response.json({
+            ...progress,
+            stage: 'investigating',
+            status: 'running',
+            isCurrentRevision: condition !== 'historical',
+            pollAfterSeconds: condition === 'historical' ? null : 5,
+          });
+        return defaults(path);
+      };
+      await mount();
+      await act(async () =>
+        host.querySelector<HTMLButtonElement>('.history-item')!.click(),
+      );
+      const include = [...host.querySelectorAll('button')].find(
+        (item) => item.textContent === 'Include advisory text',
+      );
+      expect(!include || include.disabled).toBe(true);
+      if (condition === 'expired')
+        expect(host.textContent).toContain('This draft has expired');
+      if (condition === 'changed_revision')
+        expect(host.textContent).toContain(
+          'Saved state could not be refreshed',
+        );
+      expect(requests.every((item) => item.method === 'GET')).toBe(true);
+    },
+  );
 
   it('distinguishes failed report reads from an unpublished report and retries without dispatch', async () => {
     let reportReads = 0;

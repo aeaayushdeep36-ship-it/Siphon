@@ -1,5 +1,9 @@
 # Siphon design system and interaction specification
 
+## Advisory investigation review (2026-11-11)
+
+The workspace displays the server-validated investigation snapshot with configured provider/model, expiry, hypotheses, suggested investigations and their evidence IDs. Include advisory text and Omit advisory text save an immutable decision for that draft; they never alter deterministic metrics/verdicts or dispatch report work. Owner review is followed by a separate Resume report preparation action. Historical, expired, stale/unavailable or mismatched revision snapshots cannot be reviewed. Report resumption is disabled while review is pending or expired. Showing actual deterministic metrics before this review is a remaining contract improvement being coordinated with Chat 3; advisory text alone is not evidence.
+
 ## Saved-state recovery (2026-11-11)
 
 Report loading, read failure and confirmed unpublished state are distinct. A failed read offers Retry report read, which performs no mutation; an existing report may remain visible with an explicit stale-availability warning. The run action explains source/evidence disclosure to the configured Groq service and isolated E2B execution before dispatch. This notice does not imply the narrow source scanner guarantees privacy or that server-side owner consent is already implemented.

@@ -46,6 +46,7 @@ import { ScientificFinishStage } from './scientific-finish-stage.js';
 import { ReportPdfPublications } from './report-publication.js';
 import { PdfPipeline } from './pdf-pipeline.js';
 import { parseAiConfiguration, type AiEnvironment } from './ai-config.js';
+import { E2bApiUrl } from './e2b-endpoint.js';
 
 export interface InspectionWorkflowEnvironment extends AiEnvironment {
   SIPHON_INSPECTION_WORKFLOW_ENABLED: string;
@@ -65,11 +66,7 @@ const Configuration = FirebaseServiceConfiguration.safeExtend({
     .min(1)
     .max(512)
     .regex(/^[\x21-\x7e]+$/),
-  E2B_API_URL: z
-    .string()
-    .url()
-    .refine((value) => new URL(value).protocol === 'https:')
-    .optional(),
+  E2B_API_URL: E2bApiUrl.optional(),
 });
 
 function aiIssueMessage(code: string): string {

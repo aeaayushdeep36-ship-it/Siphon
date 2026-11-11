@@ -1,5 +1,9 @@
 # Siphon database and artifact storage
 
+## Endpoint and account evidence checkpoint (2026-11-11)
+
+The E2B endpoint consistency fix changes no persisted schemas and grants no new dispatch authority. Operator-selected endpoints must stay fixed while sandbox handles remain unresolved; existing handle/termination and financial journals retain their separate meanings. A dashboard grant balance that has not deducted pending metered usage must not be copied into `configuration/e2b_credits` as an exact reconciled available balance. The current dashboard displays $100.00 grant and $0.01 unbilled usage; current application spend/reservations and provider billing precision still require reconciliation.
+
 ## Current Groq records and database selection (2026-11-08)
 
 Groq free-tier quotas replace the active Meta credit/count evidence requirements below; old Meta record/code descriptions remain legacy compatibility/history, not a production fallback. `FIRESTORE_DATABASE_ID` configures a named database or preserves the compatible `(default)` when omitted. IDs are validated before REST/document-path construction; the selected database separately needs its intended rules, indexes and IAM setup.

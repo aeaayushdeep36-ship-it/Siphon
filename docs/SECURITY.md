@@ -1,5 +1,9 @@
 # Siphon security specification
 
+## E2B endpoint consistency (2026-11-11)
+
+Only trusted server/operator configuration may select the clean HTTPS control-plane origin. User/model/upload content cannot select it. Reject embedded credentials, paths, queries and fragments before I/O; do not echo malformed endpoints or provider exceptions. Shared runtime/audit template verification bounds metadata and disables redirects/retries. Cleanup binds the SDK client to the same origin, retains kill authorization, and records termination only from a known boolean outcome. Configuration changes cannot serve as evidence that an old provider handle terminated.
+
 ## Current AI provider boundary (2026-11-08)
 
 Groq free-tier inference supersedes the Meta selection, Standard-mode rule and USD 150 assumption below. Old Meta code is legacy compatibility/history, never a production fallback. Invalid or absent explicit Groq settings block dispatch; a key does not authorize a paid upgrade, provider change or uncertain-operation retry.

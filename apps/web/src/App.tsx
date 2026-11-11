@@ -41,6 +41,13 @@ const Report = lazy(() =>
   import('./Report.js').then((module) => ({ default: module.Report })),
 );
 
+export function resumeNeedsAiDisclosure(
+  workspace: Pick<AuditWorkspace, 'stage' | 'investigation'>,
+) {
+  // Saved investigation and report stages resume without another AI dispatch.
+  return workspace.stage !== 'reporting' && workspace.investigation === null;
+}
+
 const AuditResponse = z.object({
   schemaVersion: z.literal('1.0'),
   audit: Audit,
@@ -2249,7 +2256,8 @@ function Console({
                         className="secondary"
                         disabled={
                           !!busy ||
-                          workspace.aiDisclosure?.status !== 'accepted' ||
+                          (resumeNeedsAiDisclosure(workspace) &&
+                            workspace.aiDisclosure?.status !== 'accepted') ||
                           !progress?.isCurrentRevision ||
                           ['awaiting_review', 'expired'].includes(
                             workspace.investigation?.status ?? '',

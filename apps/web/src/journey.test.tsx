@@ -4,7 +4,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { webcrypto } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { App } from './App.js';
+import { App, resumeNeedsAiDisclosure } from './App.js';
 import type {
   InvestigationReviewSnapshot,
   UploadEntry,
@@ -222,6 +222,21 @@ afterEach(async () => {
 });
 
 describe('authored frontend journey through real browser API contracts', () => {
+  it('requires consent only when a continuation can dispatch new AI work', () => {
+    expect(
+      resumeNeedsAiDisclosure({ stage: 'investigating', investigation: null }),
+    ).toBe(true);
+    expect(
+      resumeNeedsAiDisclosure({
+        stage: 'investigating',
+        investigation,
+      }),
+    ).toBe(false);
+    expect(
+      resumeNeedsAiDisclosure({ stage: 'reporting', investigation: null }),
+    ).toBe(false);
+  });
+
   it.each(['heat_diffusion', 'orbital_dynamics'])(
     'creates an audit with explicit %s selection',
     async (domain) => {

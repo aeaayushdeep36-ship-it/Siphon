@@ -6,6 +6,10 @@ import { type DocumentStore } from './firestore.js';
 import { requireActiveRevision, receiptKey } from './audit-commands.js';
 import { canonicalJson, sha256 } from './hashing.js';
 import { InspectionStageJob } from './run-queue.js';
+import {
+  createOrReconcileWorkflow,
+  WorkflowDispatchError,
+} from './workflow-phases.js';
 
 export interface InspectionWorkflowBinding {
   create(options: {
@@ -32,39 +36,26 @@ async function dispatchWorkflow(
   unknownMessage: string,
 ) {
   try {
-    await binding.create(options);
-    return;
-  } catch {
-    // The create response may be lost after the instance is created.
-  }
-  let observed: unknown;
-  try {
-    observed = await (await binding.get(options.id)).status();
-  } catch {
-    throw new ApiError(503, 'workflow_dispatch_unknown', unknownMessage, true);
-  }
-  const status =
-    observed && typeof observed === 'object' && 'status' in observed
-      ? observed.status
-      : undefined;
-  if (status === 'errored' || status === 'terminated')
-    throw new ApiError(
-      409,
-      'workflow_stopped',
-      'The previous workflow stopped. Review the audit status, then retry the continuation if appropriate.',
+    await createOrReconcileWorkflow(binding, options.id, () =>
+      binding.create(options),
     );
-  if (
-    ![
-      'queued',
-      'running',
-      'paused',
-      'waiting',
-      'waitingForPause',
-      'rollingBack',
-      'complete',
-    ].includes(typeof status === 'string' ? status : '')
-  )
-    throw new ApiError(503, 'workflow_dispatch_unknown', unknownMessage, true);
+    return;
+  } catch (error) {
+    if (error instanceof WorkflowDispatchError && error.code === 'stopped')
+      throw new ApiError(
+        409,
+        'workflow_stopped',
+        'The previous workflow stopped. Review the audit status, then retry the continuation if appropriate.',
+      );
+    if (error instanceof WorkflowDispatchError)
+      throw new ApiError(
+        503,
+        'workflow_dispatch_unknown',
+        unknownMessage,
+        true,
+      );
+    throw error;
+  }
 }
 
 /** Explicit continuation after setup blockers; never repeats source inspection. */

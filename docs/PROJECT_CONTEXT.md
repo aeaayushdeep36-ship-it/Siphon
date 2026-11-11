@@ -10,7 +10,7 @@ Frontend branch `frontend/integration-2026-11-11` is tracked in draft PR [#3](ht
 
 A fresh public read-only probe returned Pages 200, production-origin API preflight 204, and unauthenticated audit history 401. These checks confirm public endpoint and CORS behavior only. The user later enabled local browser access and confirmed sign-in in “🔎 Siphon frontend,” but that original tab is not exposed in the current computer-use session; a newly opened Chrome tab showed “Continue with Google.” The authenticated history session was not rechecked. Workspace/progress 503s (`storage_unavailable`) remain unresolved. No real source upload, heat/orbital run, evidence, report, PDF, or cleanup was verified.
 
-The backend working tree now contains partial Workflow phase wiring. Its Worker dispatch branch still accepts only `scientific_*`, so child payloads for `report`, `pdf`, and `finish` do not reach the phase handler. This integration finding was posted to PR #2. The change is uncommitted and does not establish a complete or limit-compliant workflow.
+Backend PR #2 now publishes deterministic child Workflow phases for scientific evaluation, investigation, report, PDF and finalization. Its Worker dispatch branch still accepts only `scientific_*`, so child payloads for `report`, `pdf`, and `finish` do not reach the phase handler; current phase tests do not exercise Worker-entry routing. This integration finding, and the fact that `scientific_investigate` still measures 54 REST requests against the observed 50-request boundary, were posted to PR #2. The phase chain is not yet verified end to end or within Cloudflare limits.
 
 ## Hosted Firebase history integration checkpoint
 

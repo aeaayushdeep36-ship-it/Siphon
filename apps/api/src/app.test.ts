@@ -17,6 +17,7 @@ import { WorkspaceRepository } from './workspace.js';
 import { HistoryRepository } from './history.js';
 import { RunService, ResumeService } from './runs.js';
 import { RunQueue } from './run-queue.js';
+import { FirestoreFailure } from './firestore.js';
 
 const requestBody = {
   schemaVersion: '1.0',
@@ -560,6 +561,63 @@ describe('private audit HTTP integration (local ports)', () => {
 });
 
 describe('distributed rolling rate accounting', () => {
+  it('routes explicit AI disclosure decisions with the revision fence and idempotency key', async () => {
+    const f = setup();
+    const created = (await (await f.create()).json()) as {
+      audit: { id: string; currentRevisionId: string };
+    };
+    const body = {
+      schemaVersion: '1.0',
+      expectedGeneration: 0,
+      expectedInputDigest: 'a'.repeat(64),
+      disclosureDigest: 'b'.repeat(64),
+      decision: 'accept',
+    };
+    const submit = vi
+      .spyOn(WorkspaceRepository.prototype, 'submitAiDisclosure')
+      .mockResolvedValue({
+        schemaVersion: '1.0',
+        auditId: created.audit.id,
+        revisionId: created.audit.currentRevisionId,
+        disclosureDigest: body.disclosureDigest,
+        decision: 'accept',
+        replayed: false,
+      });
+    try {
+      const path = `/api/v1/audits/${created.audit.id}/revisions/${created.audit.currentRevisionId}/ai-disclosure`;
+      const response = await f.app.request(path, {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer alice',
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'disclosure-once',
+        },
+        body: JSON.stringify(body),
+      });
+      expect(response.status).toBe(201);
+      expect(submit).toHaveBeenCalledWith(
+        'alice',
+        created.audit.id,
+        created.audit.currentRevisionId,
+        body,
+        'disclosure-once',
+      );
+      const invalid = await f.app.request(path, {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer alice',
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'disclosure-invalid',
+        },
+        body: JSON.stringify({ ...body, decision: 'always' }),
+      });
+      expect(invalid.status).toBe(422);
+      expect(submit).toHaveBeenCalledOnce();
+    } finally {
+      submit.mockRestore();
+    }
+  });
+
   it('routes authenticated advisory review with its original idempotency key', async () => {
     const f = setup();
     const created = (await (await f.create()).json()) as {
@@ -638,5 +696,45 @@ describe('distributed rolling rate accounting', () => {
     await expect(gate.consume('alice', false)).rejects.toThrow('limit');
     now = 119000;
     await expect(gate.consume('alice', false)).resolves.toBeUndefined();
+  });
+});
+
+describe('sanitized Firestore request diagnostics', () => {
+  it('logs classified storage failures with a route template, not owner identifiers', async () => {
+    const f = setup();
+    const auditId = crypto.randomUUID();
+    const revisionId = crypto.randomUUID();
+    const workspace = vi
+      .spyOn(WorkspaceRepository.prototype, 'get')
+      .mockRejectedValue(
+        new FirestoreFailure(503, false, 'http', 'other', 'UNAVAILABLE'),
+      );
+    const logger = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await f.app.request(
+        `/api/v1/audits/${auditId}/revisions/${revisionId}/workspace`,
+        { headers: { Authorization: 'Bearer alice' } },
+      );
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({
+        error: { code: 'storage_unavailable' },
+      });
+      expect(logger).toHaveBeenCalledWith('siphon_firestore_failure', {
+        requestId: expect.any(String),
+        method: 'GET',
+        route: '/api/v1/audits/:auditId/revisions/:revisionId/workspace',
+        firestoreStatus: 503,
+        source: 'http',
+        reason: 'other',
+        apiStatus: 'UNAVAILABLE',
+        ambiguousCommit: false,
+      });
+      expect(JSON.stringify(logger.mock.calls)).not.toContain(auditId);
+      expect(JSON.stringify(logger.mock.calls)).not.toContain(revisionId);
+      expect(JSON.stringify(logger.mock.calls)).not.toContain('alice');
+    } finally {
+      logger.mockRestore();
+      workspace.mockRestore();
+    }
   });
 });

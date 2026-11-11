@@ -55,6 +55,51 @@ function quotaEntry(f: Fixture, tokens = 1, offsetMs = 0) {
 }
 
 describe('Groq quota reservations and reconciliation', () => {
+  it('requires current owner AI disclosure before reserving or dispatching a provider call', async () => {
+    const f = await groqContextFixture();
+    const prepared = await prepare(f);
+    const consentPath = `${f.base}/aiDisclosure/current`;
+    f.docs.documents.delete(consentPath);
+    const runner = new GroqModelJobs(
+      f.docs,
+      groqFixtureConfig.apiKey,
+      groqFixtureConfig,
+      f.transport,
+      f.clock,
+    );
+
+    await expect(
+      runner.run('alice', f.fence, f.ids.operationId, prepared, 'context'),
+    ).rejects.toMatchObject({ code: 'ai_disclosure_required' });
+    expect(f.transport).not.toHaveBeenCalled();
+    expect(
+      f.docs.documents.get(`operations/${f.ids.operationId}`),
+    ).toBeUndefined();
+    expect(f.docs.documents.get(f.base)?.slotLeaseId ?? null).toBeNull();
+  });
+
+  it('blocks dispatch when consent was revoked for the current model configuration', async () => {
+    const f = await groqContextFixture();
+    const prepared = await prepare(f);
+    f.docs.documents.get(`${f.base}/aiDisclosure/current`)!.decision =
+      'revoked';
+    const runner = new GroqModelJobs(
+      f.docs,
+      groqFixtureConfig.apiKey,
+      groqFixtureConfig,
+      f.transport,
+      f.clock,
+    );
+
+    await expect(
+      runner.run('alice', f.fence, f.ids.operationId, prepared, 'context'),
+    ).rejects.toMatchObject({ code: 'ai_disclosure_required' });
+    expect(f.transport).not.toHaveBeenCalled();
+    expect(
+      f.docs.documents.get(`operations/${f.ids.operationId}`),
+    ).toBeUndefined();
+  });
+
   it('releases capacity during a quota wait while preserving the operation reservation for a later authorized retry', async () => {
     const f = await groqContextFixture();
     const prepared = await prepare(f);

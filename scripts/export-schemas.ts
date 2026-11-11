@@ -51,6 +51,10 @@ import {
   InvestigationReviewSnapshot,
   SubmitInvestigationReview,
   InvestigationReviewReceipt,
+  AiDisclosureConfiguration,
+  AiDisclosureSnapshot,
+  SubmitAiDisclosure,
+  AiDisclosureReceipt,
 } from '../packages/contracts/src/index.js';
 
 const directory = new URL('../packages/contracts/schemas/', import.meta.url);
@@ -106,6 +110,10 @@ for (const [name, schema] of Object.entries({
   InvestigationReviewSnapshot,
   SubmitInvestigationReview,
   InvestigationReviewReceipt,
+  AiDisclosureConfiguration,
+  AiDisclosureSnapshot,
+  SubmitAiDisclosure,
+  AiDisclosureReceipt,
 })) {
   // JSON Schema represents structural constraints. Python refinement parity remains a release gate.
   await writeFile(

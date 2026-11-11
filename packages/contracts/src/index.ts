@@ -24,3 +24,4 @@ export * from './plans.js';
 export * from './workspace.js';
 export * from './conservation.js';
 export * from './investigation.js';
+export * from './ai-disclosure.js';

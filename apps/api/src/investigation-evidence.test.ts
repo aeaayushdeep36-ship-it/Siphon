@@ -7,7 +7,10 @@ import {
 } from '@siphon/contracts';
 import { sciencePython } from '../../../scripts/science-python.js';
 import { TestDocuments } from '../test/document-store.js';
-import { groqFixtureConfig } from '../test/groq-stage-fixture.js';
+import {
+  grantGroqFixtureConsent,
+  groqFixtureConfig,
+} from '../test/groq-stage-fixture.js';
 import { FirestoreAuditRepository } from './audit-repository.js';
 import { canonicalJson, sha256 } from './hashing.js';
 import { prepareOwnedInvestigation } from './investigation-evidence.js';
@@ -91,6 +94,12 @@ async function fixture() {
     generation: 2,
     stage: 'investigating',
     status: 'running',
+  });
+  await grantGroqFixtureConsent(docs, base, {
+    ownerUid: 'alice',
+    auditId: fence.auditId,
+    revisionId: fence.revisionId,
+    inputDigest: fence.inputDigest,
   });
   const common = {
     ownerUid: 'alice',

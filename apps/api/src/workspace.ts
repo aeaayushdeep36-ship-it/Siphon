@@ -11,6 +11,11 @@ import {
   QuestionSet,
 } from '@siphon/contracts';
 import { z } from 'zod';
+import type { AiDisclosureOptions } from './ai-disclosure.js';
+import {
+  AiDisclosureConsents,
+  readAiDisclosureSnapshot,
+} from './ai-disclosure.js';
 import { type DocumentStore } from './firestore.js';
 import {
   authorize,
@@ -62,7 +67,27 @@ export class WorkspaceRepository {
   constructor(
     private readonly documents: DocumentStore,
     private readonly clock: () => Date = () => new Date(),
+    private readonly aiDisclosureConfiguration: AiDisclosureOptions | null = null,
   ) {}
+  submitAiDisclosure(
+    uid: string,
+    auditId: string,
+    revisionId: string,
+    value: unknown,
+    key: string,
+  ) {
+    if (!this.aiDisclosureConfiguration)
+      throw new ApiError(
+        503,
+        'ai_disclosure_unavailable',
+        'AI disclosure is unavailable because no provider is configured.',
+      );
+    return new AiDisclosureConsents(
+      this.documents,
+      this.aiDisclosureConfiguration,
+      this.clock,
+    ).submit(uid, auditId, revisionId, value, key);
+  }
   submitInvestigationReview(
     uid: string,
     auditId: string,
@@ -525,6 +550,14 @@ export class WorkspaceRepository {
           },
           this.clock,
           true,
+        ),
+        aiDisclosure: await readAiDisclosureSnapshot(
+          tx,
+          uid,
+          auditId,
+          revisionId,
+          state.inputDigest,
+          this.aiDisclosureConfiguration,
         ),
         plan,
         planDigest: savedPlan ? Digest.parse(savedPlan.planDigest) : null,

@@ -10,6 +10,7 @@ import {
 } from '../src/context-questions.js';
 import { canonicalJson, sha256 } from '../src/hashing.js';
 import { AdapterProposal, ContextProposal } from '@siphon/contracts';
+import { grantGroqFixtureConsent } from './groq-stage-fixture.js';
 
 // Authored prior-stage/provider data only, shared by actual repository integration tests.
 export async function adapterStageFixture() {
@@ -69,6 +70,12 @@ export async function adapterStageFixture() {
     inputDigest,
     stage: 'clarifying',
     status: 'running',
+  });
+  await grantGroqFixtureConsent(docs, base, {
+    ownerUid: 'alice',
+    auditId: fence.auditId,
+    revisionId: fence.revisionId,
+    inputDigest: fence.inputDigest,
   });
   docs.documents.set(`audits/${audit.id}/artifacts/${artifactId}`, {
     ...file,

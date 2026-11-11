@@ -52,6 +52,10 @@ import {
   InvestigationTasks,
   requireInvestigationTask,
 } from './investigation-tasks.js';
+import {
+  aiDisclosureOptions,
+  hasCurrentAiDisclosure,
+} from './ai-disclosure.js';
 export { groqConfigurationDigest } from './groq-configuration-digest.js';
 
 const QuotaWindow = z.strictObject({
@@ -74,6 +78,7 @@ export class GroqAdmissionBlocked extends Error {
   constructor(
     public readonly code:
       | 'ai_request_too_large'
+      | 'ai_disclosure_required'
       | 'ai_quota_unavailable'
       | 'ai_operation_requires_reconciliation',
     public readonly retryAt: string | null = null,
@@ -171,6 +176,7 @@ export class GroqModelJobs {
         'Published investigation evidence is required for binding',
       );
     const now = this.clock();
+    const disclosureConfiguration = aiDisclosureOptions(this.config);
     const revision = await this.documents.get(
       `audits/${fence.auditId}/revisions/${fence.revisionId}`,
     );
@@ -218,6 +224,17 @@ export class GroqModelJobs {
     // Configure only these provider counters; never create fake monetary balances.
     await this.documents.transaction(async (tx) => {
       await requireActiveRevision(tx, uid, fence);
+      if (
+        !(await hasCurrentAiDisclosure(
+          tx,
+          uid,
+          fence.auditId,
+          fence.revisionId,
+          fence.inputDigest,
+          disclosureConfiguration,
+        ))
+      )
+        throw new GroqAdmissionBlocked('ai_disclosure_required');
       const priorJob = await tx.get(`modelJobs/${operationId}`);
       const priorOperation = await tx.get(`operations/${operationId}`);
       const counters = await tx.getMany(
@@ -372,6 +389,17 @@ export class GroqModelJobs {
           async (tx, actual) => {
             const time = this.clock();
             await requireActiveRevision(tx, uid, fence);
+            if (
+              !(await hasCurrentAiDisclosure(
+                tx,
+                uid,
+                fence.auditId,
+                fence.revisionId,
+                fence.inputDigest,
+                disclosureConfiguration,
+              ))
+            )
+              throw new GroqAdmissionBlocked('ai_disclosure_required');
             const [rawTask, rawJob, rawWindow] = await tx.getMany([
               `${purpose === 'context' ? 'contextTasks' : purpose === 'adapter' ? 'adapterTasks' : 'investigationTasks'}/${operationId}`,
               `modelJobs/${operationId}`,
@@ -535,6 +563,16 @@ export class GroqModelJobs {
     } catch (error) {
       if (error instanceof GroqFailure)
         await this.settle(operation, error.usage, false, error);
+      else if (
+        error instanceof GroqAdmissionBlocked &&
+        error.code === 'ai_disclosure_required'
+      )
+        await releaseUndispatched(
+          store,
+          operationId,
+          fence.generation,
+          this.clock().toISOString(),
+        );
       throw error;
     }
     await this.settle(

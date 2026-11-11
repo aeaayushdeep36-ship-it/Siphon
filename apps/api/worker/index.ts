@@ -17,6 +17,7 @@ import { DispatchFence } from '../src/audit-commands.js';
 import { runScientificPhase } from '../src/scientific-workflow.js';
 import {
   dispatchWorkflowPhase,
+  isScientificWorkflowPhase,
   InspectionPhasePayload,
 } from '../src/workflow-phases.js';
 export { default } from '../src/worker.js';
@@ -130,7 +131,7 @@ export class SiphonInspectionWorkflow extends WorkflowEntrypoint<InspectionWorkf
         };
       }
       const phase = InspectionPhasePayload.safeParse(event.payload);
-      if (phase.success && phase.data.phase.startsWith('scientific_')) {
+      if (phase.success && isScientificWorkflowPhase(phase.data.phase)) {
         return await runScientificPhase(
           phase.data,
           {

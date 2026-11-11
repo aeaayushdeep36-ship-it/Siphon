@@ -219,12 +219,18 @@ describe('owned investigation evidence preparation', () => {
     f.docs.documents.get(f.base)!.stage = 'evaluating';
     const rest = useRest ? firestoreTransport(f.docs) : null;
     const store = rest?.client ?? f.docs;
+    const modelBoundaries: { name: string; requestCount: number }[] = [];
     const modelJobs = new GroqModelJobs(
       store,
       groqFixtureConfig.apiKey,
       groqFixtureConfig,
       transport,
       clock,
+      (name) =>
+        modelBoundaries.push({
+          name,
+          requestCount: rest?.calls.length ?? 0,
+        }),
     );
     const stageStart = rest?.calls.length ?? 0;
     let modelCalls = 0;
@@ -249,6 +255,12 @@ describe('owned investigation evidence preparation', () => {
           (rest?.calls.length ?? stageStart) - stageStart - modelCalls,
         model: modelCalls,
         total: stageRequests,
+        modelSegments: modelBoundaries.slice(1).map((boundary, index) => ({
+          from: modelBoundaries[index]!.name,
+          to: boundary.name,
+          requests:
+            boundary.requestCount - modelBoundaries[index]!.requestCount,
+        })),
       });
     if (result.status !== 'awaiting_review')
       throw new Error('Expected authored draft');
@@ -284,11 +296,20 @@ describe('owned investigation evidence preparation', () => {
       rest,
       store,
       stageRequests,
+      modelBoundaries,
     };
   }
   it('measures the real Firestore REST path without claiming hosted Free feasibility', async () => {
     const f = await staged(true);
     expect(f.stageRequests).toBeGreaterThan(0);
+    expect(
+      f.modelBoundaries
+        .slice(1)
+        .map(
+          (boundary, index) =>
+            boundary.requestCount - f.modelBoundaries[index]!.requestCount,
+        ),
+    ).toEqual([8, 5, 5, 5, 4, 10, 11, 6]);
     const before = f.rest!.calls.length;
     await f.review('accept');
     const reviewRequests = f.rest!.calls.length - before;

@@ -99,6 +99,7 @@ export class GroqModelJobs {
     private readonly config: AiConfiguration,
     private readonly fetcher: typeof fetch = fetch,
     private readonly clock: () => Date = () => new Date(),
+    private readonly traceBoundary?: (name: string) => void,
   ) {}
 
   async run(
@@ -109,6 +110,7 @@ export class GroqModelJobs {
     purpose: Purpose,
     signal?: AbortSignal,
   ) {
+    this.traceBoundary?.('runner_started');
     const fence = DispatchFence.parse(expected);
     try {
       return await this.runOnce(
@@ -273,10 +275,12 @@ export class GroqModelJobs {
           );
       }
     });
+    this.traceBoundary?.('quota_checked');
     await new AdmissionRepository(this.documents, this.clock).acquire(
       uid,
       fence,
     );
+    this.traceBoundary?.('slot_acquired');
     const operation = Operation.parse({
       schemaVersion: '1.0',
       id: operationId,
@@ -309,6 +313,7 @@ export class GroqModelJobs {
         throw new GroqAdmissionBlocked('ai_operation_requires_reconciliation');
       throw error;
     }
+    this.traceBoundary?.('operation_reserved');
     // Rebuild and bind the request from its reviewed source or published evidence.
     try {
       if (purpose === 'investigation')
@@ -354,6 +359,7 @@ export class GroqModelJobs {
       }
       throw error;
     }
+    this.traceBoundary?.('task_bound');
     const job = FreeModelJob.parse({
       schemaVersion: '1.0',
       operationId,
@@ -379,6 +385,7 @@ export class GroqModelJobs {
         throw new Error('AI job is immutable');
       if (!existing) tx.set(`modelJobs/${operationId}`, nativeTimestamps(job));
     });
+    this.traceBoundary?.('job_persisted');
     const gate = {
       authorize: async (value: GroqRequest, digest: string) => {
         if (digest !== requestDigest || canonicalJson(value) !== body)
@@ -575,6 +582,7 @@ export class GroqModelJobs {
         );
       throw error;
     }
+    this.traceBoundary?.('provider_returned');
     await this.settle(
       operation,
       completed.usage,
@@ -582,6 +590,7 @@ export class GroqModelJobs {
       undefined,
       completed.providerId,
     );
+    this.traceBoundary?.('operation_settled');
     if (purpose === 'investigation')
       await new InvestigationTasks(
         this.documents,
@@ -600,6 +609,7 @@ export class GroqModelJobs {
         operationId,
         completed.output,
       );
+    this.traceBoundary?.('candidate_published');
     return { providerId: completed.providerId };
   }
 

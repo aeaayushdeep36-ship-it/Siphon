@@ -37,6 +37,18 @@ export const InspectionPhasePayload = z.strictObject({
 });
 export type InspectionPhasePayload = z.infer<typeof InspectionPhasePayload>;
 
+export function isScientificWorkflowPhase(
+  value: InspectionPhasePayload['phase'],
+) {
+  return (
+    value === 'scientific_evaluate' ||
+    value === 'scientific_investigate' ||
+    value === 'report' ||
+    value === 'pdf' ||
+    value === 'finish'
+  );
+}
+
 export interface WorkflowPhaseBinding {
   create(options: {
     id: string;

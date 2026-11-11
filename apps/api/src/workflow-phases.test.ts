@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   dispatchWorkflowPhase,
   InspectionPhasePayload,
+  isScientificWorkflowPhase,
   WorkflowDispatchError,
 } from './workflow-phases.js';
 
@@ -27,6 +28,19 @@ function binding(status: unknown = { status: 'queued' }) {
 }
 
 describe('bounded Workflow phase messages', () => {
+  it.each([
+    'scientific_evaluate',
+    'scientific_investigate',
+    'report',
+    'pdf',
+    'finish',
+  ] as const)(
+    'routes the %s child to the scientific phase handler',
+    (phase) => {
+      expect(isScientificWorkflowPhase(phase)).toBe(true);
+    },
+  );
+
   it('accepts only bounded identity and fencing metadata', () => {
     expect(InspectionPhasePayload.parse(phase)).toEqual(phase);
     expect(() =>

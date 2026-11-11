@@ -1,5 +1,9 @@
 # Siphon testing and scientific validation
 
+## Hosted frontend checkpoint (2026-11-11)
+
+Manual Google sign-in now displayed the authenticated hosted workspace. Owner-history Refresh returned an empty list without the former index error. A synthetic heat draft created through the actual UI subsequently appeared in history. The progress read returned `storage_unavailable`, and another read-only Refresh audit returned audit GET 200 but workspace GET 503. Chat 1 has the reproduction identifiers recorded in [Handoff](HANDOFF.md); the draft is retained. No source upload, simulation, model call, evidence, report, PDF or cleanup proof is established by draft creation. A temporary 360×800 viewport check of the authenticated history/draft page found document client/scroll widths both 345 pixels (scrollbar excluded); no tested content element extended horizontally beyond the viewport. The viewport was reset. Complete keyboard/screen-reader and whole-journey responsive acceptance remain pending.
+
 ## Frontend read recovery checkpoint (2026-11-11)
 
 Frontend journey regression checkpoint: 30 tests across six frontend files pass, including eleven React DOM journey cases against authored HTTP responses through the real `AuditApi` and Zod schemas. They exercise explicit heat/orbital creation, initial-read recovery without mutations, historical revision navigation and disabled uploads, unknown-option plus custom-text preservation in a successor, stale history after sign-out, source/supporting-file reservations and hash-bound transfers with relative paths, both-domain evidence rendering with expired evidence/unavailable PDF, and successful/corrupt PDF hash checks. JSDOM is a pinned frontend development dependency; these tests do not execute simulation source, authenticate a real identity, render a real PDF, or establish hosted acceptance. Frontend typing/build and focused lint pass. Historical drafts now disable source selection as well as run submission.

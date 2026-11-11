@@ -1,5 +1,13 @@
 # Siphon handoff — 11 November 2026
 
+## Frontend integration checkpoint — 2026-11-11
+
+Chat 2 works in `D:\Freelance\Siphon-frontend-integration`, branch `frontend/integration-2026-11-11`, draft PR [#3](https://github.com/aeaayushdeep36-ship-it/Siphon/pull/3), based on the shared baseline. Polling recovery and historical upload controls are committed; 30 local frontend tests cover authored user journeys and PDF integrity. These changes have not been deployed.
+
+The hosted Google sign-in and authenticated owner-history refresh after the Firestore index fix were browser-verified. A clearly labelled synthetic heat draft was created through the actual frontend and appeared in private history: audit `8c6cbd1e-0927-4fd2-9191-d0ad585e75c3`, revision `b86f8458-3b53-4ebf-9dd5-cd7dfb81a3b5`. Progress initially returned `storage_unavailable` (request `2c970385-ee8b-4042-9e60-7fc4816951c3`), and a subsequent Refresh audit returned audit GET 200 but workspace GET 503. Keep this draft for service investigation. No source was uploaded and no run, sandbox, model call, report or PDF was produced. Temporary 360×800 browser testing found no page-wide horizontal overflow in the authenticated history/draft surface; the viewport was restored. This is limited layout evidence, not complete accessibility acceptance.
+
+Chat 1 has the reproduction IDs and owns the storage/service failure. Chat 3 is preparing an advisory investigation review contract and explicit provider-disclosure consent; Chat 2 will connect those UI gates once published. Full hosted heat/orbital execution, report/PDF and lifecycle verification remain open.
+
 ## Active three-chat coordination — 2026-11-11
 
 The user has resumed work and explicitly authorized a secret-checked shared GitHub baseline, draft PRs, and subsequent commits/pushes on separate branches. This supersedes the paused/no-push instruction below. No force push, discarded user work, paid upgrade, overage, or unverified credit-consuming execution is authorized.

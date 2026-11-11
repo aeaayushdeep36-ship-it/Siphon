@@ -1143,7 +1143,9 @@ function Console({
                 </strong>
                 <p>
                   {progress?.progress?.message ??
-                    'No activity message has been recorded.'}
+                    (readIssue
+                      ? 'Saved activity is temporarily unavailable.'
+                      : 'No activity message has been recorded.')}
                 </p>
                 {progress?.progress?.experiments && (
                   <p>

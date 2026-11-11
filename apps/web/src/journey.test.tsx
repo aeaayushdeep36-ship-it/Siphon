@@ -286,6 +286,12 @@ describe('authored frontend journey through real browser API contracts', () => {
       host.querySelector<HTMLButtonElement>('.history-item')!.click(),
     );
     expect(host.textContent).toContain('Saved state could not be refreshed');
+    expect(host.textContent).toContain(
+      'Saved activity is temporarily unavailable.',
+    );
+    expect(host.textContent).not.toContain(
+      'No activity message has been recorded.',
+    );
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);
     });

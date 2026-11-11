@@ -1,5 +1,11 @@
 # Siphon handoff — 11 November 2026
 
+## Backend branch checkpoint — 2026-11-11
+
+Chat 3 works in `D:\Freelance\Siphon-backend`, branch `backend/audit-completion-2026-11-11`, draft PR #2 based on shared baseline `01fbbfa`. Finalization now has an atomic replay receipt. Investigation is connected through existing accounted Groq jobs to an owner accept/omit review before immutable report/PDF publication; shared schemas expose the advisory snapshot and review route to Chat 2. Missing or uncertain settled output is never redispatched. Numerical verdicts stay deterministic and the report remains limited/partial because required extended check families are unreleased. Owner source/evidence disclosure consent is still an integration gap, distinct from the narrow source scanner.
+
+Local verification: 872 tests/92 files, lint and full build passed after normalizing the fresh Windows checkout's line endings to committed LF without content changes. The connected investigation stage measured 74 Firestore REST calls and owner review seven through the real client with an authored transport; OAuth and real Groq network/hosted CPU are excluded. Chat 1 is investigating actual Cloudflare Workflow invocation boundaries and service configuration. This branch has not been deployed and neither required hosted audit has run. Keep workflow disabled pending actual financial/runtime/Free-plan gates and a compatible orchestration design. Chat 2 owns the review panel and frontend integration; fetch their branch before integration.
+
 ## Active three-chat coordination — 2026-11-11
 
 The user has resumed work and explicitly authorized a secret-checked shared GitHub baseline, draft PRs, and subsequent commits/pushes on separate branches. This supersedes the paused/no-push instruction below. No force push, discarded user work, paid upgrade, overage, or unverified credit-consuming execution is authorized.

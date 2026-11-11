@@ -5,6 +5,7 @@ import type { z } from 'zod';
 type Services = Pick<
   ReturnType<typeof createInspectionServices>,
   | 'scientificEvaluateForJob'
+  | 'scientificInvestigateForJob'
   | 'scientificReportForJob'
   | 'scientificPdfForJob'
   | 'scientificFinishForJob'
@@ -25,10 +26,22 @@ export async function runScientificWorkflow(
     services.scientificEvaluateForJob(jobId, fence),
   );
   if (evaluation.status !== 'published') return evaluation;
+  const investigation = await steps.run('scientific.investigate', () =>
+    services.scientificInvestigateForJob(
+      jobId,
+      evaluation.fence,
+      evaluation.operationId,
+    ),
+  );
+  if (
+    investigation.status === 'blocked' ||
+    investigation.status === 'awaiting_review'
+  )
+    return investigation;
   const report = await steps.run('scientific.report', () =>
     services.scientificReportForJob(
       jobId,
-      evaluation.fence,
+      investigation.fence,
       evaluation.operationId,
     ),
   );

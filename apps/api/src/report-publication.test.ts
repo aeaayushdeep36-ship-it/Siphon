@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TestDocuments } from '../test/document-store.js';
 import { authoredReport } from '../test/report-fixture.js';
 import { FirestoreAuditRepository } from './audit-repository.js';
@@ -14,6 +14,10 @@ import { ScientificFinishStage } from './scientific-finish-stage.js';
 import { ScientificPdfStage } from './scientific-pdf-stage.js';
 import { SandboxJobs } from './sandbox-jobs.js';
 import { AdmissionRepository } from './admission.js';
+import * as investigationReview from './investigation-review.js';
+import { buildPdfDocument } from './report-layout.js';
+
+afterEach(() => vi.restoreAllMocks());
 
 async function setup() {
   const docs = new TestDocuments(),
@@ -714,6 +718,75 @@ async function assemblyFixture() {
 }
 
 describe('authoritative report assembly', () => {
+  it.each(['accepted', 'omitted', 'awaiting_review'] as const)(
+    'projects only %s advisory text into the single screen/PDF report',
+    async (status) => {
+      const f = await assemblyFixture();
+      const evidenceId = f.savedEvidence.report.evidence[0]!.id;
+      const draft = {
+        schemaVersion: '1.0' as const,
+        auditId: f.report.auditId,
+        revisionId: f.report.revisionId,
+        inputDigest: f.report.inputDigest,
+        evidenceDigest: f.savedEvidence.reportDigest,
+        hypotheses: [
+          {
+            text: 'Possible resolution sensitivity.',
+            evidenceIds: [evidenceId],
+            verification: 'Compare independent refinements.',
+          },
+        ],
+        recommendations: [
+          {
+            text: 'Inspect recorded power sampling.',
+            evidenceIds: [evidenceId],
+            validation: 'Repeat on the same physical horizon.',
+          },
+        ],
+      };
+      vi.spyOn(
+        investigationReview,
+        'readInvestigationReview',
+      ).mockResolvedValue({
+        provider: 'groq',
+        model: 'authored/model',
+        operationId: crypto.randomUUID(),
+        draftDigest: await sha256(canonicalJson(draft)),
+        draft,
+        status,
+        expiresAt: f.report.expiresAt,
+      });
+      if (status === 'awaiting_review') {
+        await expect(f.publish()).rejects.toThrow('requires owner review');
+        expect(f.docs.documents.get(f.base)?.reportId).toBeNull();
+        return;
+      }
+      const result = await f.publish();
+      expect(result.report.metrics).toEqual(f.savedEvidence.report.evidence);
+      const layout = canonicalJson(await buildPdfDocument(result.report));
+      if (status === 'accepted') {
+        expect(result.report.narrative.hypotheses).toEqual(draft.hypotheses);
+        expect(result.report.narrative.recommendations).toEqual(
+          draft.recommendations,
+        );
+        expect(layout).toContain('Possible resolution sensitivity.');
+        expect(layout).toContain('Inspect recorded power sampling.');
+        expect(
+          result.report.evidenceCatalog.some(
+            (item) => item.kind === 'investigation',
+          ),
+        ).toBe(true);
+      } else {
+        expect(result.report.narrative.hypotheses).toEqual([]);
+        expect(result.report.incompleteReasons.join(' ')).toContain(
+          'owner omitted',
+        );
+        expect(layout).toContain('owner omitted');
+        expect(layout).not.toContain('Possible resolution sensitivity.');
+      }
+      expect(result.report.coverage).toBe('limited');
+    },
+  );
   it('publishes only actual stored numerical evidence, retains inconclusive status and retries immutably', async () => {
     const f = await assemblyFixture();
     const result = await f.publish();

@@ -1,8 +1,16 @@
 # Siphon architecture
 
+## Accounted advisory investigation and owner review — 2026-11-11
+
+The scientific driver now checkpoints evaluation, data-only Groq investigation, report, PDF and finish separately. `ScientificInvestigationStage` verifies published conservation provenance before advancing to investigating, freezes one operation/request/config/evidence identity, then uses the existing model admission, attempt/quota reservation, one-shot dispatch and usage settlement. Duplicate delivery reads the saved draft; dispatched/unknown/succeeded operations without recoverable output require reconciliation, never another call. Only metadata is returned to Workflow checkpoints. Reconciled capacity is released while text awaits owner review.
+
+Workspace exposes a bounded `investigation` snapshot. POST `investigation-review` accepts an owner decision to accept or omit the exact draft digest under a current revision fence and idempotency key. Acceptance reviews advisory text and never establishes physical facts or changes metrics/verdicts. The user explicitly resumes through `scientific-run` afterward. Pending review blocks immutable report/PDF publication. Accepted hypotheses/recommendations and their metric references enter the single structured report; omission remains an incomplete reason in both screen and PDF. Coverage remains limited and terminal status partial because the six unreleased scientific method families remain required.
+
+Free-plan feasibility remains open: the new investigation stage measured 74 Firestore REST calls through the real client and an authored transport, excluding OAuth and the injected Groq HTTP response; review measured seven. A Workflow step must not be assumed to create an invocation or reset subrequest limits. Before hosted execution, decompose model work into durable prepare/reserve, one-shot dispatch, settlement and candidate-publication boundaries, preserve unknown-call fencing, and measure the selected runtime's actual CPU/subrequest boundaries. Splitting must not put source/request bodies, credentials or live sessions in checkpoints or silently enable provider retries.
+
 ## Scientific finalization recovery — 2026-11-11
 
-Scientific finalization now commits a durable receipt together with the terminal progress transition. If the Workflow loses its checkpoint after that commit, the same finishing operation can return the saved partial result after reauthorizing the exact terminal successor. Concurrent duplicate finishes cannot advance the generation twice. Attached capacity or an active operation blocks finalization; unknown execution and accounting still require reconciliation. The workflow still lacks integrated AI investigation and extended experiments, so this change does not promote partial audits to complete or establish a hosted audit.
+Scientific finalization now commits a durable receipt together with the terminal progress transition. If the Workflow loses its checkpoint after that commit, the same finishing operation can return the saved partial result after reauthorizing the exact terminal successor. Concurrent duplicate finishes cannot advance the generation twice. Attached capacity or an active operation blocks finalization; unknown execution and accounting still require reconciliation. The workflow still lacks extended experiments; owner-reviewed AI advisory text cannot promote limited scientific coverage to completion or establish a hosted audit.
 
 ## Current Groq integration (2026-11-08)
 

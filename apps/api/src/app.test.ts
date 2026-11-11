@@ -560,6 +560,60 @@ describe('private audit HTTP integration (local ports)', () => {
 });
 
 describe('distributed rolling rate accounting', () => {
+  it('routes authenticated advisory review with its original idempotency key', async () => {
+    const f = setup();
+    const created = (await (await f.create()).json()) as {
+      audit: { id: string; currentRevisionId: string };
+    };
+    const body = {
+      schemaVersion: '1.0',
+      expectedGeneration: 2,
+      expectedInputDigest: 'a'.repeat(64),
+      draftDigest: 'b'.repeat(64),
+      decision: 'omit',
+    };
+    const submit = vi
+      .spyOn(WorkspaceRepository.prototype, 'submitInvestigationReview')
+      .mockResolvedValue({
+        schemaVersion: '1.0',
+        operationId: crypto.randomUUID(),
+        draftDigest: body.draftDigest,
+        status: 'omitted',
+        replayed: false,
+      });
+    try {
+      const path = `/api/v1/audits/${created.audit.id}/revisions/${created.audit.currentRevisionId}/investigation-review`;
+      const response = await f.app.request(path, {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer alice',
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'review-once',
+        },
+        body: JSON.stringify(body),
+      });
+      expect(response.status).toBe(201);
+      expect(submit).toHaveBeenCalledWith(
+        'alice',
+        created.audit.id,
+        created.audit.currentRevisionId,
+        body,
+        'review-once',
+      );
+      const invalid = await f.app.request(path, {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer alice',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ...body, decision: 'replace_verdict' }),
+      });
+      expect(invalid.status).toBe(422);
+      expect(submit).toHaveBeenCalledOnce();
+    } finally {
+      submit.mockRestore();
+    }
+  });
   it('enforces mutation cap atomically across separate gate instances', async () => {
     const documents = new TestDocuments();
     const first = new FirestoreUserRateGate(documents);

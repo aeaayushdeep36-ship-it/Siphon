@@ -1091,7 +1091,8 @@
                   "target",
                   "uncertainty",
                   "metric",
-                  "diagnostic"
+                  "diagnostic",
+                  "investigation"
                 ]
               },
               "digest": {

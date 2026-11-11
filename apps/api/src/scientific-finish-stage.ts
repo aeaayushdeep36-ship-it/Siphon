@@ -30,8 +30,8 @@ const FinishReceipt = DispatchFence.extend({
   finishedAt: Timestamp,
 });
 
-/** The report is intentionally partial while the requested AI investigation
- * remains unavailable, even if its PDF has been published. */
+/** Reported-sample conservation is limited coverage of the required scientific
+ * methods. Owner-reviewed advisory text cannot promote that coverage. */
 export class ScientificFinishStage {
   constructor(
     private readonly store: DocumentStore,
@@ -205,7 +205,9 @@ export class ScientificFinishStage {
         kind: 'finish' as const,
         status: 'partial' as const,
         hasEvidence: true,
-        narrativeComplete: false,
+        narrativeComplete: report.evidenceCatalog.some(
+          (item) => item.kind === 'investigation',
+        ),
         pdfComplete: true,
       };
       await persistProgress(

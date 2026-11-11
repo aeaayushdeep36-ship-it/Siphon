@@ -31,6 +31,10 @@ import {
   HeatParameterValues,
   ScientificParameters,
 } from './scientific-parameters.js';
+import {
+  InvestigationReviews,
+  readInvestigationReview,
+} from './investigation-review.js';
 
 export const SubmitAdapterReview = z.strictObject({
   schemaVersion: z.literal('1.0'),
@@ -59,6 +63,21 @@ export class WorkspaceRepository {
     private readonly documents: DocumentStore,
     private readonly clock: () => Date = () => new Date(),
   ) {}
+  submitInvestigationReview(
+    uid: string,
+    auditId: string,
+    revisionId: string,
+    value: unknown,
+    key: string,
+  ) {
+    return new InvestigationReviews(this.documents, this.clock).submit(
+      uid,
+      auditId,
+      revisionId,
+      value,
+      key,
+    );
+  }
   submitHeatParameters(
     uid: string,
     auditId: string,
@@ -495,6 +514,18 @@ export class WorkspaceRepository {
         adapterReview,
         scientificQuestions,
         heatParameters,
+        investigation: await readInvestigationReview(
+          tx,
+          uid,
+          {
+            auditId,
+            revisionId,
+            generation: state.generation,
+            inputDigest: state.inputDigest,
+          },
+          this.clock,
+          true,
+        ),
         plan,
         planDigest: savedPlan ? Digest.parse(savedPlan.planDigest) : null,
         operationalIssues: revision.operationalIssues ?? [],

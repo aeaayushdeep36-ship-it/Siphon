@@ -22,6 +22,10 @@ function fixture() {
       fence,
       operationId: crypto.randomUUID(),
     })),
+    scientificInvestigateForJob: vi.fn(async () => ({
+      status: 'reviewed',
+      fence,
+    })),
     scientificReportForJob: vi.fn(async () => ({
       status: 'report_published',
       fence: reportFence,
@@ -48,6 +52,7 @@ describe('scientific workflow checkpoints', () => {
     expect(await f.run()).toEqual({ status: 'partial' });
     expect(f.calls).toEqual([
       'scientific.evaluate',
+      'scientific.investigate',
       'scientific.report',
       'scientific.pdf',
       'scientific.finish',
@@ -71,6 +76,23 @@ describe('scientific workflow checkpoints', () => {
     expect(await f.run()).toMatchObject({ status: 'blocked' });
     expect(f.calls).toEqual(['scientific.evaluate']);
   });
+  it.each(['awaiting_review', 'blocked'])(
+    'stops for investigation %s without publishing a report',
+    async (status) => {
+      const f = fixture();
+      f.services.scientificInvestigateForJob.mockResolvedValueOnce({
+        status,
+        fence: f.fence,
+      });
+      expect(await f.run()).toMatchObject({ status });
+      expect(f.calls).toEqual([
+        'scientific.evaluate',
+        'scientific.investigate',
+      ]);
+      expect(f.services.scientificReportForJob).not.toHaveBeenCalled();
+      expect(f.services.scientificPdfForJob).not.toHaveBeenCalled();
+    },
+  );
   it('preserves the report and stops before finalization when PDF is unresolved', async () => {
     const f = fixture();
     f.services.scientificPdfForJob.mockResolvedValueOnce({

@@ -6,6 +6,8 @@ Active coordinated completion: the user resumed and authorized safe baseline pub
 
 The E2B endpoint fix now routes runtime verification, creation, SDK-bound termination and the read-only audit consistently through one validated HTTPS origin. Source/evaluation live metadata/tag checks pass; inspection/PDF are not configured locally. The signed-in dashboard currently shows Hobby Free/no card, a $100 grant expiring November 1, 2027, and $0.01 pending usage. This is not a reconciled available balance. A fresh Firestore read found no credits, global E2B budget, role dispatch configuration or template approval documents. The synthetic history query and Groq model-list read succeeded; signed-in history UI and complete hosted audit remain unverified. No sandboxes or deployment were performed for this checkpoint.
 
+Backend PR #2 now includes metadata-only Workflow phase payloads and deterministic child create/reconciliation (`a45450c`), but the runtime pipeline is not split yet. A queued/running child status confirms dispatch acceptance only; parent progression must reconcile terminal completion, and must preserve unknown state when status is unavailable. Full phase-chain subrequest, CPU, persisted-state, step and storage measurements remain release gates.
+
 This section supersedes older deployment and provider status below. Keep later dated history for context, but use the live repository and service state when making changes.
 
 ## Frontend consent integration checkpoint — 2026-11-11

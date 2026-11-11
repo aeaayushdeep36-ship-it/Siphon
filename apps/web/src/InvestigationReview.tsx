@@ -28,6 +28,48 @@ export function InvestigationReview({
       <p className="muted">
         Recorded draft expiry: {new Date(snapshot.expiresAt).toLocaleString()}
       </p>
+      <h3>Deterministic evidence behind this advisory</h3>
+      <p>
+        These validated metric records are the numerical evidence supplied to
+        the advisory step. The values and verdicts come from deterministic
+        checks; advisory text cannot change them.
+      </p>
+      {snapshot.evidence.map((item) => (
+        <article className="metric" key={item.id}>
+          <strong>
+            {label(item.status)} · {item.checkId} {item.checkVersion}
+          </strong>
+          <p>
+            {label(item.metric.name)}: {item.metric.value.toString()}{' '}
+            {item.metric.unit} · {item.metric.normalization} normalization
+          </p>
+          <p>
+            Target:{' '}
+            {item.target
+              ? `${item.target.value} ${item.target.unit} — ${item.target.justification}`
+              : 'not established'}
+          </p>
+          <p>
+            Uncertainty:{' '}
+            {item.uncertainty
+              ? `${item.uncertainty.value} ${item.uncertainty.unit} — ${item.uncertainty.justification}`
+              : 'not established'}
+          </p>
+          <p>
+            Interval:{' '}
+            {item.interval
+              ? `[${item.interval.lower}, ${item.interval.upper}] ${item.metric.unit}`
+              : 'unavailable'}{' '}
+            · {label(item.reason)}
+          </p>
+          <ul>
+            {item.limitations.map((limitation, index) => (
+              <li key={index}>{limitation}</li>
+            ))}
+          </ul>
+          <small>Metric evidence: {item.id}</small>
+        </article>
+      ))}
       <h3>Possible explanations</h3>
       {snapshot.draft.hypotheses.length ? (
         snapshot.draft.hypotheses.map((item, index) => (

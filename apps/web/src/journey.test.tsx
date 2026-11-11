@@ -9,6 +9,7 @@ import type {
   InvestigationReviewSnapshot,
   UploadEntry,
 } from '@siphon/contracts';
+import { authoredReport } from '../../api/test/report-fixture.js';
 
 const session = vi.hoisted(() => ({
   notify: (value: unknown): void => {
@@ -36,6 +37,13 @@ const oldRevisionId = '33333333-3333-4333-8333-333333333333';
 const questionId = '44444444-4444-4444-8444-444444444444';
 const digest = 'a'.repeat(64);
 const now = '2026-11-11T12:00:00.000Z';
+const metricEvidence = {
+  ...authoredReport().metrics[0]!,
+  id: oldRevisionId,
+  auditId,
+  revisionId,
+  inputDigest: digest,
+};
 const audit = {
   schemaVersion: '1.0',
   id: auditId,
@@ -79,6 +87,7 @@ const investigation: InvestigationReviewSnapshot = {
   model: 'authored-model',
   operationId: questionId,
   draftDigest: 'b'.repeat(64),
+  evidence: [metricEvidence],
   status: 'awaiting_review',
   expiresAt: '2026-11-18T12:00:00Z',
   draft: {
@@ -433,6 +442,19 @@ describe('authored frontend journey through real browser API contracts', () => {
         'Verify with independent observations.',
       );
       expect(host.textContent).toContain('not established findings');
+      expect(host.textContent).toContain(
+        'Deterministic evidence behind this advisory',
+      );
+      expect(host.textContent).toContain('energy drift: 0.5 J');
+      expect(host.textContent).toContain(
+        'Target: 1 J — Authored policy fixture only.',
+      );
+      expect(host.textContent).toContain(
+        'Uncertainty: 0 J — Authored policy fixture only.',
+      );
+      expect(host.textContent).toContain('Interval: [0.5, 0.5] J');
+      expect(host.textContent).toContain('passed within tolerance');
+      expect(host.textContent).not.toContain('score');
       await click(
         decision === 'accept' ? 'Include advisory text' : 'Omit advisory text',
       );

@@ -2,7 +2,7 @@
 
 ## Advisory investigation review (2026-11-11)
 
-The workspace displays the server-validated investigation snapshot with configured provider/model, expiry, hypotheses, suggested investigations and their evidence IDs. Include advisory text and Omit advisory text save an immutable decision for that draft; they never alter deterministic metrics/verdicts or dispatch report work. Owner review is followed by a separate Resume report preparation action. Historical, expired, stale/unavailable or mismatched revision snapshots cannot be reviewed. Report resumption is disabled while review is pending or expired. Showing actual deterministic metrics before this review is a remaining contract improvement being coordinated with Chat 3; advisory text alone is not evidence.
+The workspace displays the server-validated investigation snapshot with configured provider/model, expiry, hypotheses, suggested investigations and their evidence IDs. Before owner review it shows the exact validated metric records grounding the advisory, including values, units, target, uncertainty, interval, deterministic verdict, check version, limitations and metric IDs. Include advisory text and Omit advisory text save an immutable decision for that draft; they never alter deterministic metrics/verdicts or dispatch report work. Owner review is followed by a separate Resume report preparation action. Historical, expired, stale/unavailable or mismatched revision snapshots cannot be reviewed. Report resumption is disabled while review is pending or expired. Server-enforced source/evidence disclosure consent remains a separate integration requirement; advisory text alone is not evidence.
 
 ## Saved-state recovery (2026-11-11)
 

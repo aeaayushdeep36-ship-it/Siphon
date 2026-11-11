@@ -25,9 +25,9 @@ Baseline checks rerun on 2026-11-11: 846 Vitest tests/92 files; lint; full build
 
 ## Objective and current status
 
-Complete the frontend/backend integration and run real heat and orbital audits, including reports, PDFs, accounting and sandbox cleanup. The goal is paused at the user's request. The project is not yet complete: the hosted inspection workflow is disabled and no full hosted audit has been verified.
+Complete the frontend/backend integration and run real heat and orbital audits, including reports, PDFs, accounting and sandbox cleanup. The goal is active. The project is not yet complete: the hosted inspection workflow is disabled and no full hosted audit has been verified.
 
-The repository is `D:\Freelance\Siphon`. Read `AGENTS.md`, this file, the current handoff at the top of `docs/PROJECT_CONTEXT.md`, and the relevant product, architecture, security and testing documents before changing behavior. The working tree contains extensive uncommitted work; preserve it. Do not reset or push it.
+The repository is `D:\Freelance\Siphon`. Read `AGENTS.md`, this file, the current handoff at the top of `docs/PROJECT_CONTEXT.md`, and the relevant product, architecture, security and testing documents before changing behavior. Preserve user changes. Keep implementation in the coordinated worktrees and push only the authorized topic branches; never reset or discard the shared working tree.
 
 The user selected Groq with the configured Qwen model, E2B for isolated execution, Firebase authentication/Firestore, and Cloudflare hosting. Keep credentials server-side and deployment settings configurable. The user requires zero out-of-pocket spending and no paid upgrades. Do not invent credit balances, security approvals, scientific findings or completed audits.
 

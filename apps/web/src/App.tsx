@@ -490,6 +490,10 @@ function Console({
   const [progress, setProgress] = useState<ProgressSnapshot | null>(null);
   const [questions, setQuestions] = useState<Questions | null>(null);
   const [report, setReport] = useState<ResponseReport | null>(null);
+  const [reportRead, setReportRead] = useState<
+    'idle' | 'loading' | 'missing' | 'failed'
+  >('idle');
+  const [reportError, setReportError] = useState('');
   const [refreshCount, setRefreshCount] = useState(0);
   const [answers, setAnswers] = useState<
     Record<string, { option: string | null; text: string }>
@@ -650,6 +654,8 @@ function Console({
     setProgress(null);
     setQuestions(null);
     setReport(null);
+    setReportRead('idle');
+    setReportError('');
     setAnswers({});
     setError('');
     setNotice('');
@@ -690,11 +696,15 @@ function Console({
         progress.status,
       )
     ) {
+      setReportRead('loading');
+      setReportError('');
       void api
         .get(`${base}/report`, EvidenceReportResponse)
         .then((value) => {
-          if (active && alive.current && token === selection.current)
+          if (active && alive.current && token === selection.current) {
             setReport(value);
+            setReportRead('idle');
+          }
         })
         .catch((reason) => {
           if (!active || !alive.current || token !== selection.current) return;
@@ -703,9 +713,11 @@ function Console({
             ['not_found', 'report_not_ready'].includes(reason.code)
           ) {
             setReport(null);
+            setReportRead('missing');
             return;
           }
-          showError(reason);
+          setReportRead('failed');
+          setReportError(errorText(reason));
         });
     }
     return () => {
@@ -1107,7 +1119,9 @@ function Console({
                 <strong>
                   {progress
                     ? `${label(progress.stage)} · ${label(progress.status)}`
-                    : 'Loading persisted state…'}
+                    : readIssue
+                      ? 'Saved progress unavailable'
+                      : 'Loading persisted state…'}
                 </strong>
                 <p>
                   {progress?.progress?.message ??
@@ -1135,8 +1149,18 @@ function Console({
                   new work.
                 </p>
               )}
+              <p className="muted" id="run-disclosure">
+                Starting a review sends reviewed Python source to the configured
+                Groq model for context and mappings. Validated numerical
+                evidence may also be sent for advisory investigation. Uploads
+                execute only in isolated E2B environments. Remove secrets and
+                private information before uploading; source scanning cannot
+                guarantee their absence. Siphon recommends investigations and
+                does not apply repairs.
+              </p>
               <div className="actions">
                 <button
+                  aria-describedby="run-disclosure"
                   disabled={
                     locked ||
                     !workspace?.uploads.length ||
@@ -2261,6 +2285,25 @@ function Console({
       </div>
       {audit && (
         <div className="console-report">
+          {reportRead === 'failed' && (
+            <section className="panel warning" role="alert">
+              <h2>Report could not be refreshed</h2>
+              <p>{reportError}</p>
+              {report && (
+                <p>
+                  The report below is the last saved view. Export availability
+                  may be out of date.
+                </p>
+              )}
+              <button
+                className="secondary"
+                disabled={!!busy}
+                onClick={() => setRefreshCount((count) => count + 1)}
+              >
+                Retry report read
+              </button>
+            </section>
+          )}
           {report ? (
             <ReportBoundary key={report.report.reportId}>
               <Suspense
@@ -2277,7 +2320,13 @@ function Console({
             <section className="panel report-empty" id="evidence">
               <h2>Evidence report</h2>
               <p>
-                No structured report has been published for this revision.
+                {reportRead === 'loading'
+                  ? 'Checking report availability…'
+                  : reportRead === 'failed'
+                    ? 'Report availability could not be checked.'
+                    : reportRead === 'missing'
+                      ? 'No structured report has been published for this revision.'
+                      : 'A report can become available after evidence is evaluated.'}{' '}
                 Refreshing reads saved results; it does not start experiments or
                 render a PDF.
               </p>

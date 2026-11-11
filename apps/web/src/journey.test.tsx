@@ -362,6 +362,58 @@ describe('authored frontend journey through real browser API contracts', () => {
     expect(host.textContent).toContain('Sign in to view audit history');
   });
 
+  it('distinguishes failed report reads from an unpublished report and retries without dispatch', async () => {
+    let reportReads = 0;
+    respond = (path) => {
+      if (path === `${base}/workspace`)
+        return Response.json({
+          ...workspace,
+          stage: 'finished',
+          status: 'partial',
+        });
+      if (path === `${base}/progress`)
+        return Response.json({
+          ...progress,
+          stage: 'finished',
+          status: 'partial',
+          pollAfterSeconds: null,
+        });
+      if (path === `${base}/report`)
+        return ++reportReads === 1
+          ? Response.json(
+              {
+                error: {
+                  code: 'unavailable',
+                  message: 'Report read unavailable.',
+                },
+              },
+              { status: 503 },
+            )
+          : Response.json(
+              {
+                error: { code: 'report_not_ready', message: 'No report yet.' },
+              },
+              { status: 404 },
+            );
+      return defaults(path);
+    };
+    await mount();
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('.history-item')!.click(),
+    );
+    expect(host.textContent).toContain('Report could not be refreshed');
+    expect(host.textContent).not.toContain(
+      'No structured report has been published',
+    );
+    await click('Retry report read');
+    expect(host.textContent).not.toContain('Report could not be refreshed');
+    expect(host.textContent).toContain(
+      'No structured report has been published',
+    );
+    expect(reportReads).toBe(2);
+    expect(requests.every((item) => item.method === 'GET')).toBe(true);
+  });
+
   it('uploads source and supporting data with verified metadata and preserved relative paths', async () => {
     const uploads: UploadEntry[] = [];
     const ready = new Set<string>();

@@ -302,6 +302,31 @@ describe('authored frontend journey through real browser API contracts', () => {
     expect(requests.every((item) => item.method === 'GET')).toBe(true);
   });
 
+  it('keeps loaded progress distinct from a failed workspace read', async () => {
+    respond = (path) =>
+      path === `${base}/workspace`
+        ? Response.json(
+            {
+              error: {
+                code: 'unavailable',
+                message: 'Saved workspace unavailable.',
+              },
+            },
+            { status: 503 },
+          )
+        : defaults(path);
+    await mount();
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('.history-item')!.click(),
+    );
+    expect(host.textContent).toContain('Saved state could not be refreshed');
+    expect(host.textContent).toContain('draft · idle');
+    expect(host.textContent).toContain('No activity message has been recorded.');
+    expect(host.textContent).not.toContain(
+      'Saved activity is temporarily unavailable.',
+    );
+  });
+
   it('shows a historical revision without enabling new work or repeatedly polling it', async () => {
     vi.useFakeTimers();
     respond = (path) => {

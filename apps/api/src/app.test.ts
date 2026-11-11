@@ -17,6 +17,7 @@ import { WorkspaceRepository } from './workspace.js';
 import { HistoryRepository } from './history.js';
 import { RunService, ResumeService } from './runs.js';
 import { RunQueue } from './run-queue.js';
+import { FirestoreFailure } from './firestore.js';
 
 const requestBody = {
   schemaVersion: '1.0',
@@ -584,5 +585,45 @@ describe('distributed rolling rate accounting', () => {
     await expect(gate.consume('alice', false)).rejects.toThrow('limit');
     now = 119000;
     await expect(gate.consume('alice', false)).resolves.toBeUndefined();
+  });
+});
+
+describe('sanitized Firestore request diagnostics', () => {
+  it('logs classified storage failures with a route template, not owner identifiers', async () => {
+    const f = setup();
+    const auditId = crypto.randomUUID();
+    const revisionId = crypto.randomUUID();
+    const workspace = vi
+      .spyOn(WorkspaceRepository.prototype, 'get')
+      .mockRejectedValue(
+        new FirestoreFailure(503, false, 'http', 'other', 'UNAVAILABLE'),
+      );
+    const logger = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await f.app.request(
+        `/api/v1/audits/${auditId}/revisions/${revisionId}/workspace`,
+        { headers: { Authorization: 'Bearer alice' } },
+      );
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({
+        error: { code: 'storage_unavailable' },
+      });
+      expect(logger).toHaveBeenCalledWith('siphon_firestore_failure', {
+        requestId: expect.any(String),
+        method: 'GET',
+        route: '/api/v1/audits/:auditId/revisions/:revisionId/workspace',
+        firestoreStatus: 503,
+        source: 'http',
+        reason: 'other',
+        apiStatus: 'UNAVAILABLE',
+        ambiguousCommit: false,
+      });
+      expect(JSON.stringify(logger.mock.calls)).not.toContain(auditId);
+      expect(JSON.stringify(logger.mock.calls)).not.toContain(revisionId);
+      expect(JSON.stringify(logger.mock.calls)).not.toContain('alice');
+    } finally {
+      logger.mockRestore();
+      workspace.mockRestore();
+    }
   });
 });

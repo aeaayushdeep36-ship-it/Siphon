@@ -674,10 +674,23 @@ export function createApp(deps: ApiDependencies) {
     throw new ApiError(404, 'not_found', 'Resource was not found.');
   });
   app.onError((error, c) => {
-    if (
+    if (error instanceof FirestoreFailure) {
+      // Firestore REST errors are normalized for callers. Log only bounded
+      // classifications and the route template so operators can diagnose
+      // intermittent storage failures without recording user or provider data.
+      console.error('siphon_firestore_failure', {
+        requestId: c.get('requestId'),
+        method: c.req.method,
+        route: c.req.routePath,
+        firestoreStatus: error.status,
+        source: error.source,
+        reason: error.reason,
+        apiStatus: error.apiStatus,
+        ambiguousCommit: error.ambiguousCommit,
+      });
+    } else if (
       !(error instanceof ApiError) &&
-      !(error instanceof IdentityError) &&
-      !(error instanceof FirestoreFailure)
+      !(error instanceof IdentityError)
     ) {
       // Correlate unexpected server failures without logging request bodies,
       // provider responses, credentials, error messages, or stack contents.

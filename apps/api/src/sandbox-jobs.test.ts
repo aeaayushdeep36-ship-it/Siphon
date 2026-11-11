@@ -545,4 +545,33 @@ describe('durable sandbox bindings', () => {
       f.jobs.authorizeKill(f.operation.id, 'sandbox-b'),
     ).rejects.toThrow('authorized');
   });
+  it('authorizes reconnect only for the active inspection operation and journaled handle', async () => {
+    const f = await setup('inspection');
+    await f.jobs.bind(f.request);
+    await markDispatching(f.accounting, f.operation.id, 0, f.now);
+    await f.jobs.recordCreated(f.operation.id, 'sandbox-inspection');
+    await f.jobs.authorizeConnect(f.operation.id, 'sandbox-inspection');
+    await expect(
+      f.jobs.authorizeConnect(f.operation.id, 'sandbox-other'),
+    ).rejects.toThrow('connection handle is not authorized');
+    f.docs.documents.set(`sandboxTerminations/${f.operation.id}`, {
+      sandboxId: 'sandbox-inspection',
+    });
+    await expect(
+      f.jobs.authorizeConnect(f.operation.id, 'sandbox-inspection'),
+    ).rejects.toThrow('connection handle is not authorized');
+
+    const source = await setup('source');
+    await source.jobs.bind(source.request);
+    await markDispatching(
+      source.accounting,
+      source.operation.id,
+      0,
+      source.now,
+    );
+    await source.jobs.recordCreated(source.operation.id, 'sandbox-source');
+    await expect(
+      source.jobs.authorizeConnect(source.operation.id, 'sandbox-source'),
+    ).rejects.toThrow('connection handle is not authorized');
+  });
 });

@@ -124,6 +124,8 @@ export interface SandboxDispatchGate {
   recordCreated(operationId: string, sandboxId: string): Promise<void>;
   /** Resolve handle ownership from durable server records, including cancelled/deleted jobs. */
   authorizeKill(operationId: string, sandboxId: string): Promise<void>;
+  /** Reconnect only through the durable operation-to-handle linkage. */
+  authorizeConnect?(operationId: string, sandboxId: string): Promise<void>;
   recordTermination(
     operationId: string,
     sandboxId: string,
@@ -152,6 +154,10 @@ export interface SandboxControlPlane {
     conservationSession?: ValidationSession;
     fidelitySession?: FidelitySession;
   }>;
+  connectInspection?(
+    sandboxId: string,
+    options: SandboxApiOpts & { apiUrl: string },
+  ): Promise<InspectionSession>;
   kill(
     sandboxId: string,
     options: SandboxApiOpts & { apiUrl: string },
@@ -172,6 +178,8 @@ const sdk: SandboxControlPlane = {
       fidelitySession: new E2bFidelitySession(sandbox),
     };
   },
+  connectInspection: async (sandboxId, options) =>
+    new E2bInspectionSession(await Sandbox.connect(sandboxId, options)),
   // The pinned SDK's static kill options omit apiUrl. Bind it through the
   // SDK client so cleanup keeps the configured control-plane endpoint.
   kill: (id, options) =>
@@ -182,6 +190,7 @@ export class SandboxControlFailure extends Error {
   constructor(
     public readonly code:
       | 'create_unknown'
+      | 'connect_unknown'
       | 'handle_unrecorded'
       | 'template_verification_failed'
       | 'kill_unknown'
@@ -226,6 +235,41 @@ export class E2bClient {
     )
       throw new SandboxControlFailure('handle_unrecorded', result.sandboxId);
     return { sandboxId: result.sandboxId, session: result.inspectionSession };
+  }
+
+  /** Reconstructs a short-lived SDK session in a later Workflow instance.
+   * Callers must pass only a journaled handle; authorization is rechecked here
+   * immediately before E2B I/O. No timeout extension or create retry is allowed.
+   */
+  async connectInspection(
+    operationId: string,
+    sandboxId: string,
+    signal?: AbortSignal,
+  ): Promise<InspectionSession> {
+    Id.parse(operationId);
+    ProviderId.parse(sandboxId);
+    if (!this.gate.authorizeConnect || !this.provider.connectInspection)
+      throw new SandboxControlFailure('connect_unknown');
+    signal?.throwIfAborted();
+    try {
+      await this.gate.authorizeConnect(operationId, sandboxId);
+      signal?.throwIfAborted();
+      const session = await this.provider.connectInspection(sandboxId, {
+        apiKey: this.apiKey,
+        apiUrl: this.apiUrl,
+        retries: 0,
+        requestTimeoutMs: 30_000,
+        signal: signal
+          ? AbortSignal.any([signal, AbortSignal.timeout(30_000)])
+          : AbortSignal.timeout(30_000),
+      });
+      if (session.sandboxId !== sandboxId)
+        throw new SandboxControlFailure('handle_unrecorded', sandboxId);
+      return session;
+    } catch (error) {
+      if (error instanceof SandboxControlFailure) throw error;
+      throw new SandboxControlFailure('connect_unknown', sandboxId);
+    }
   }
 
   private async createSandbox(

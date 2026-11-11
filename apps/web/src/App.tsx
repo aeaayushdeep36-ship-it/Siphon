@@ -20,6 +20,7 @@ import {
   InvestigationReviewReceipt,
   ProgressSnapshot,
   QuestionSet,
+  AiDisclosureReceipt,
   QueuedAuditReceipt,
   ResumedAuditReceipt,
   RevisionReceipt,
@@ -34,6 +35,7 @@ import { label } from './labels.js';
 import { ReportBoundary } from './ReportBoundary.js';
 import { startReadPolling } from './read-polling.js';
 import { InvestigationReview } from './InvestigationReview.js';
+import { AiDisclosurePanel } from './AiDisclosurePanel.js';
 
 const Report = lazy(() =>
   import('./Report.js').then((module) => ({ default: module.Report })),
@@ -877,6 +879,13 @@ function Console({
     !progress?.isCurrentRevision ||
     workspace.stage !== 'draft' ||
     workspace.status !== 'idle';
+  const disclosureMutationDisabled =
+    !!busy ||
+    !workspace ||
+    !progress?.isCurrentRevision ||
+    !audit ||
+    workspace.stage !== 'draft' ||
+    workspace.status !== 'idle';
   return (
     <div className="console-layout">
       <aside className="panel history">
@@ -1151,6 +1160,51 @@ function Console({
                   new work.
                 </p>
               )}
+              {workspace && (
+                <AiDisclosurePanel
+                  disclosure={workspace.aiDisclosure}
+                  disabled={disclosureMutationDisabled}
+                  onDecision={(decision) =>
+                    void act(
+                      decision === 'accept'
+                        ? 'Recording AI data sharing permission'
+                        : 'Revoking AI data sharing permission',
+                      async () => {
+                        if (!workspace) return;
+                        const receipt = await api.mutate(
+                          `${path}/ai-disclosure`,
+                          'POST',
+                          {
+                            schemaVersion: '1.0',
+                            expectedGeneration: workspace.generation,
+                            expectedInputDigest: workspace.inputDigest,
+                            disclosureDigest:
+                              workspace.aiDisclosure!.disclosureDigest,
+                            decision,
+                          },
+                          AiDisclosureReceipt,
+                        );
+                        if (
+                          receipt.auditId !== audit?.id ||
+                          receipt.revisionId !== audit.currentRevisionId ||
+                          receipt.disclosureDigest !==
+                            workspace.aiDisclosure!.disclosureDigest ||
+                          receipt.decision !== decision
+                        )
+                          throw new Error(
+                            'The AI permission response did not match this audit revision.',
+                          );
+                        await refresh(audit);
+                        setNotice(
+                          decision === 'accept'
+                            ? 'AI data sharing permission is recorded for this revision.'
+                            : 'Permission revoked for future authorized AI dispatches. Data already sent cannot be recalled.',
+                        );
+                      },
+                    )
+                  }
+                />
+              )}
               <p className="muted" id="run-disclosure">
                 Starting a review sends reviewed Python source to the configured
                 Groq model for context and mappings. Validated numerical
@@ -1165,6 +1219,7 @@ function Console({
                   aria-describedby="run-disclosure"
                   disabled={
                     locked ||
+                    workspace?.aiDisclosure?.status !== 'accepted' ||
                     !workspace?.uploads.length ||
                     workspace?.uploadStates.some(
                       (upload) => upload.lifecycle !== 'ready',
@@ -2194,6 +2249,7 @@ function Console({
                         className="secondary"
                         disabled={
                           !!busy ||
+                          workspace.aiDisclosure?.status !== 'accepted' ||
                           !progress?.isCurrentRevision ||
                           ['awaiting_review', 'expired'].includes(
                             workspace.investigation?.status ?? '',

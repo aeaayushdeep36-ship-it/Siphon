@@ -56,12 +56,25 @@ const audit = {
   deletionRequestedAt: null,
 };
 const base = `/audits/${auditId}/revisions/${revisionId}`;
+const acceptedDisclosure = {
+  configuration: {
+    provider: 'groq',
+    model: 'authored-model',
+    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+    noticeVersion: 'groq_audit_disclosure.v1',
+    scopes: ['source_context', 'source_adapter', 'numeric_investigation'],
+  },
+  disclosureDigest: 'd'.repeat(64),
+  status: 'accepted',
+  acceptedAt: now,
+} as const;
 const workspace = {
   schemaVersion: '1.0',
   auditId,
   revisionId,
   generation: 0,
   inputDigest: digest,
+  aiDisclosure: acceptedDisclosure,
   stage: 'draft',
   status: 'idle',
   uploads: [],
@@ -655,6 +668,78 @@ describe('authored frontend journey through real browser API contracts', () => {
     expect(ready.size).toBe(2);
     expect(host.textContent).toContain('Upload bytes stored.');
     expect(button('Start readiness and audit').disabled).toBe(false);
+    expect(requests.some((item) => item.path.endsWith('/run'))).toBe(false);
+  });
+
+  it('requires and records explicit AI data sharing permission before starting an audit', async () => {
+    const upload: UploadEntry = {
+      schemaVersion: '1.0',
+      artifactId: '55555555-5555-4555-8555-555555555555',
+      path: 'simulation.py',
+      bytes: 16,
+      sha256: 'e'.repeat(64),
+    };
+    let status: 'required' | 'accepted' | 'revoked' = 'required';
+    respond = (path, init) => {
+      if (path === `${base}/workspace`)
+        return Response.json({
+          ...workspace,
+          uploads: [upload],
+          uploadStates: [
+            {
+              artifactId: upload.artifactId,
+              lifecycle: 'ready',
+              expiresAt: now,
+            },
+          ],
+          aiDisclosure: {
+            ...acceptedDisclosure,
+            status,
+            acceptedAt: status === 'accepted' ? now : null,
+          },
+        });
+      if (path === `${base}/ai-disclosure` && init.method === 'POST') {
+        const body = JSON.parse(String(init.body));
+        expect(body).toEqual({
+          schemaVersion: '1.0',
+          expectedGeneration: 0,
+          expectedInputDigest: digest,
+          disclosureDigest: acceptedDisclosure.disclosureDigest,
+          decision: status === 'accepted' ? 'revoke' : 'accept',
+        });
+        expect(new Headers(init.headers).get('Idempotency-Key')).toBeTruthy();
+        const decision = status === 'accepted' ? 'revoke' : 'accept';
+        status = decision === 'accept' ? 'accepted' : 'revoked';
+        return Response.json({
+          schemaVersion: '1.0',
+          auditId,
+          revisionId,
+          disclosureDigest: acceptedDisclosure.disclosureDigest,
+          decision,
+          replayed: false,
+        });
+      }
+      return defaults(path);
+    };
+    await mount();
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('.history-item')!.click(),
+    );
+    expect(button('Start readiness and audit').disabled).toBe(true);
+    expect(button('Allow AI data sharing').disabled).toBe(true);
+    await act(async () => {
+      host.querySelector<HTMLInputElement>('[type="checkbox"]')!.click();
+    });
+    expect(button('Allow AI data sharing').disabled).toBe(false);
+    await click('Allow AI data sharing');
+    expect(button('Start readiness and audit').disabled).toBe(false);
+    expect(requests.some((item) => item.path.endsWith('/run'))).toBe(false);
+    expect(host.textContent).toContain('permission is recorded');
+    await click('Revoke permission');
+    expect(button('Start readiness and audit').disabled).toBe(true);
+    expect(host.textContent).toContain(
+      'Permission revoked for future authorized AI dispatches.',
+    );
     expect(requests.some((item) => item.path.endsWith('/run'))).toBe(false);
   });
 });

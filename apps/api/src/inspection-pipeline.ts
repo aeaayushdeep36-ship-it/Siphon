@@ -47,6 +47,7 @@ export class InspectionPipeline {
       InspectionJobs,
       'claim' | 'authorizeResult' | 'publish'
     >,
+    private readonly traceBoundary?: (name: string) => void,
   ) {}
   private async perform(
     uid: string,
@@ -71,13 +72,17 @@ export class InspectionPipeline {
         fence,
         signal,
       );
+      this.traceBoundary?.('source_loaded');
       const created = await this.sandboxes.createInspection(request, signal);
       sandboxId = created.sandboxId;
+      this.traceBoundary?.('sandbox_created');
       const result = await new InspectionRunner(created.session, this.jobs).run(
         payload,
         signal,
       );
+      this.traceBoundary?.('inspection_ran');
       const publication = await this.jobs.publish(payload, result);
+      this.traceBoundary?.('result_published');
       return {
         status: 'published' as const,
         operationId: request.operationId,

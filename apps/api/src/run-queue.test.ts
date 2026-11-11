@@ -52,6 +52,7 @@ function workflowSteps(
 async function setup(
   decorate?: (documents: TestDocuments) => DocumentStore,
   sourceCount = 1,
+  requestCount: () => number = () => 0,
 ) {
   const docs = new TestDocuments();
   const store = decorate?.(docs) ?? docs;
@@ -232,10 +233,16 @@ async function setup(
     },
     clock,
   );
+  const pipelineBoundaries: { name: string; requestCount: number }[] = [];
   const pipeline = new InspectionPipeline(
     new InspectionSourceLoader(store, downloads),
     client,
     new InspectionJobs(store, clock),
+    (name) =>
+      pipelineBoundaries.push({
+        name,
+        requestCount: requestCount(),
+      }),
   );
   const coordinator = new InspectionCoordinator(store, jobs, pipeline, clock);
   return {
@@ -256,6 +263,7 @@ async function setup(
     client,
     coordinator,
     pipeline,
+    pipelineBoundaries,
     store,
   };
 }
@@ -750,10 +758,14 @@ describe('durable audit queue and concrete inspection coordination (offline)', (
     'bounds separate phase REST calls for %i sources (distinct original revisions: %s)',
     async (sourceCount, originalRevisions) => {
       let counted: ReturnType<typeof firestoreTransport>;
-      const f = await setup((documents) => {
-        counted = firestoreTransport(documents);
-        return counted.client;
-      }, sourceCount);
+      const f = await setup(
+        (documents) => {
+          counted = firestoreTransport(documents);
+          return counted.client;
+        },
+        sourceCount,
+        () => counted.calls.length,
+      );
       if (originalRevisions) {
         const current = structuredClone(f.docs.documents.get(f.path)!);
         const uploads = [...f.docs.documents.values()].filter(
@@ -783,9 +795,26 @@ describe('durable audit queue and concrete inspection coordination (offline)', (
         throw new Error('Missing preparation phase');
       const reserved = await f.coordinator.reserve(initial.job);
       measure('reserve');
+      const executeStart = counted!.calls.length;
       expect((await f.coordinator.execute(reserved)).status).toBe(
         'execution_finished',
       );
+      const pipelineSegments = f.pipelineBoundaries.map(
+        (boundary, index) =>
+          boundary.requestCount -
+          (index === 0
+            ? executeStart
+            : f.pipelineBoundaries[index - 1]!.requestCount),
+      );
+      expect(pipelineSegments).toEqual(
+        originalRevisions ? [18, 12, 9, 4] : [16, 12, 9, 4],
+      );
+      if (process.env.SIPHON_TRACE_REST === '1')
+        console.log('Inspection execute REST boundaries', {
+          start: executeStart,
+          boundaries: f.pipelineBoundaries,
+          segments: pipelineSegments,
+        });
       measure('execute');
       expect((await f.coordinator.cleanup(receipt.jobId)).cleanup).toBe(
         'confirmed',

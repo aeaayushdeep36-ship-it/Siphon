@@ -657,6 +657,8 @@ export function createInspectionServices(
   };
   return {
     coordinator,
+    inspectionJobForJob: async (jobId: string) =>
+      InspectionStageJob.parse(await store.get(`stageJobs/${jobId}`)),
     continueContext,
     adapterForJob,
     baselineForJob,

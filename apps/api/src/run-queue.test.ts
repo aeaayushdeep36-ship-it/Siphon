@@ -15,9 +15,11 @@ import { type InspectionJobRequest } from '@siphon/contracts';
 import { type DocumentStore } from './firestore.js';
 import { firestoreTransport } from '../test/firestore-transport.js';
 import {
+  runInspectionPhase,
   runInspectionWorkflow,
   type InspectionWorkflowSteps,
 } from './inspection-workflow.js';
+import { InspectionPhasePayload } from './workflow-phases.js';
 import {
   createInspectionRuntime,
   type InspectionWorkflowEnvironment,
@@ -748,6 +750,47 @@ describe('durable audit queue and concrete inspection coordination (offline)', (
     ).toBe(0);
     expect((await f.coordinator.finish(receipt.jobId)).status).toBe(
       'inspection_complete',
+    );
+  });
+  it('chains begin, reserve, execute, cleanup and finish as metadata-only child phases', async () => {
+    const f = await setup();
+    const { receipt } = await f.enqueue();
+    const job = InspectionStageJob.parse(
+      f.docs.documents.get(`stageJobs/${receipt.jobId}`),
+    );
+    const phase = InspectionPhasePayload.parse({
+      schemaVersion: '1.0',
+      jobId: receipt.jobId,
+      phase: 'inspection_begin',
+      phaseKey: job.operationId,
+    });
+    const dispatched: InspectionPhasePayload[] = [];
+    const steps = {
+      run: async <T>(_name: string, callback: () => Promise<T>) => callback(),
+    };
+    const run = (value: unknown) =>
+      runInspectionPhase(
+        value,
+        steps,
+        f.coordinator,
+        async (jobId) =>
+          InspectionStageJob.parse(f.docs.documents.get(`stageJobs/${jobId}`)),
+        async (payload) => void dispatched.push(payload),
+      );
+
+    const begin = await run(phase);
+    expect(begin).toMatchObject({ phase: 'inspection_reserve' });
+    const reserve = await run(dispatched.pop());
+    expect(reserve).toMatchObject({ phase: 'inspection_execute' });
+    const execute = await run(dispatched.pop());
+    expect(execute).toMatchObject({ phase: 'inspection_cleanup' });
+    const cleanup = await run(dispatched.pop());
+    expect(cleanup).toMatchObject({ phase: 'inspection_finish' });
+    const finish = await run(dispatched.pop());
+    expect(finish).toMatchObject({ status: 'inspection_complete' });
+    expect(dispatched).toHaveLength(0);
+    expect(JSON.stringify(phase)).not.toMatch(
+      /sourceText|requestBody|sandboxId/,
     );
   });
   it.each([

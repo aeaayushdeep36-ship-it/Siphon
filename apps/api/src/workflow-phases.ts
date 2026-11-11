@@ -8,6 +8,11 @@ import { DispatchFence } from './audit-commands.js';
  * Workflow event payloads and checkpoints. */
 export const InspectionPhase = z.enum([
   'inspection',
+  'inspection_begin',
+  'inspection_reserve',
+  'inspection_execute',
+  'inspection_cleanup',
+  'inspection_finish',
   'context',
   'adapter',
   'baseline_original',
@@ -46,6 +51,18 @@ export function isScientificWorkflowPhase(
     value === 'report' ||
     value === 'pdf' ||
     value === 'finish'
+  );
+}
+
+export function isInspectionWorkflowPhase(
+  value: InspectionPhasePayload['phase'],
+) {
+  return (
+    value === 'inspection_begin' ||
+    value === 'inspection_reserve' ||
+    value === 'inspection_execute' ||
+    value === 'inspection_cleanup' ||
+    value === 'inspection_finish'
   );
 }
 

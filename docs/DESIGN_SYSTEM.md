@@ -2,6 +2,8 @@
 
 ## Saved-state recovery (2026-11-11)
 
+Historical draft revisions disable source selection/upload even when their saved state is `draft`/`idle`. New inputs belong in a current successor revision. Local React journey tests cover both domain choices, owner-history navigation, uploads, unknown/custom clarification answers, sign-out and report/PDF availability/integrity; hosted execution and browser layout/accessibility acceptance remain open.
+
 Connection failures during workspace/progress reads retain the last saved snapshots and display an explicit warning that they may be out of date. Read-only polling resumes automatically with bounded backoff; Refresh audit requests an immediate read. Navigation and sign-out stop the old poller, and terminal/historical server snapshots stop repeated polling. Reconnection never starts or repeats experiments. This change preserves the supplied console design; local polling tests do not establish a completed hosted journey.
 
 ## Frontend design integration (2026-11-09)

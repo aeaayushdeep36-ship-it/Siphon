@@ -860,6 +860,7 @@ function Console({
   const locked =
     !!busy ||
     !workspace ||
+    !progress?.isCurrentRevision ||
     workspace.stage !== 'draft' ||
     workspace.status !== 'idle';
   return (

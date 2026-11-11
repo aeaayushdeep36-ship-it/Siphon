@@ -50,9 +50,11 @@ import { ScientificInvestigationStage } from './scientific-investigation-stage.j
 import { GroqModelJobs } from './groq-model-jobs.js';
 
 import { E2bApiUrl } from './e2b-endpoint.js';
+import type { WorkflowPhaseBinding } from './workflow-phases.js';
 
 export interface InspectionWorkflowEnvironment extends AiEnvironment {
   SIPHON_INSPECTION_WORKFLOW_ENABLED: string;
+  SIPHON_INSPECTION?: WorkflowPhaseBinding;
   FIREBASE_PROJECT_ID: string;
   FIRESTORE_DATABASE_ID?: string;
   GOOGLE_SERVICE_ACCOUNT_EMAIL: string;

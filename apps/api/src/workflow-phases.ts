@@ -16,6 +16,7 @@ export const InspectionPhase = z.enum([
   'validate_adapted',
   'compare',
   'scientific_evaluate',
+  'scientific_investigate',
   'investigation_prepare',
   'investigation_dispatch',
   'investigation_settle',

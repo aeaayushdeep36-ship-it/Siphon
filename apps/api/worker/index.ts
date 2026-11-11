@@ -14,7 +14,11 @@ import {
   type InspectionWorkflowSteps,
 } from '../src/inspection-workflow.js';
 import { DispatchFence } from '../src/audit-commands.js';
-import { runScientificWorkflow } from '../src/scientific-workflow.js';
+import { runScientificPhase } from '../src/scientific-workflow.js';
+import {
+  dispatchWorkflowPhase,
+  InspectionPhasePayload,
+} from '../src/workflow-phases.js';
 export { default } from '../src/worker.js';
 
 /** Native runtime boundary. No public HTTP trigger; the disabled-by-default
@@ -25,6 +29,15 @@ export class SiphonInspectionWorkflow extends WorkflowEntrypoint<InspectionWorkf
     try {
       const services = createInspectionServices(this.env),
         coordinator = services.coordinator;
+      const dispatchPhase = (chainId: string, payload: unknown) => {
+        if (!this.env.SIPHON_INSPECTION)
+          throw new Error('Workflow binding is unavailable');
+        return dispatchWorkflowPhase(
+          this.env.SIPHON_INSPECTION,
+          chainId,
+          payload,
+        );
+      };
       const adapterAndBaselines = async (jobId: string, fence: unknown) => {
         const adapter = await step.do(
           'adapter.propose',
@@ -104,9 +117,22 @@ export class SiphonInspectionWorkflow extends WorkflowEntrypoint<InspectionWorkf
         })
         .safeParse(event.payload);
       if (scientific.success) {
-        return await runScientificWorkflow(
-          scientific.data.jobId,
-          scientific.data.fence,
+        await dispatchPhase(scientific.data.jobId, {
+          schemaVersion: '1.0',
+          jobId: scientific.data.jobId,
+          phase: 'scientific_evaluate',
+          phaseKey: scientific.data.fence.revisionId,
+          fence: scientific.data.fence,
+        });
+        return {
+          status: 'phase_dispatched' as const,
+          phase: 'scientific_evaluate',
+        };
+      }
+      const phase = InspectionPhasePayload.safeParse(event.payload);
+      if (phase.success && phase.data.phase.startsWith('scientific_')) {
+        return await runScientificPhase(
+          phase.data,
           {
             run: async <T>(name: string, callback: () => Promise<T>) => {
               const checkpoint = await step.do(
@@ -130,6 +156,7 @@ export class SiphonInspectionWorkflow extends WorkflowEntrypoint<InspectionWorkf
             },
           },
           services,
+          (payload) => dispatchPhase(phase.data.jobId, payload),
         );
       }
       const resume = z

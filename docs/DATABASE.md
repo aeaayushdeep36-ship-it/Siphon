@@ -1,5 +1,15 @@
 # Siphon database and artifact storage
 
+## Investigation stage and review records — 2026-11-11
+
+`scientificInvestigationStages/{revisionId}` freezes owner/audit/revision/input, source and investigation generations, evaluation/AI operation IDs, evidence/request/configuration digests and native creation time. Existing `investigationTasks`, `modelJobs`, sanitized `modelReceipts` and revision `investigationDrafts/{operationId}` bind the settled draft to deterministic metric IDs. Raw provider bodies and credentials are absent. Drafts remain `awaiting_review`; immutable owner decisions live separately at revision `investigationReviews/current`, with exact operation/draft/evidence identity, accepted/omitted status and native review time. Server-only `requests` receipts fence POST replay and reject key reuse with different input. Deletion/retention must include these new records; a scheduler sweep is still unverified.
+
+Workspace returns only the shared advisory snapshot, including provider/model, IDs/digests, bounded hypothesis/recommendation text, review state and expiry. It rechecks draft hashes, owned evidence and settled provider usage; expired text is labelled expired and cannot be accepted. The report assembler rechecks the same proof, refuses pending review and catalogs accepted advisory provenance separately from numerical evidence. A report never becomes full coverage because its owner accepted text.
+
+## Scientific completion receipt — 2026-11-11
+
+`scientificFinishStages/{revisionId}` is server-only immutable completion metadata. It records the owner, original audit/revision/input/generation fence, PDF operation, report ID/digest, PDF hash, partial status and native finish timestamp. The receipt commits atomically with terminal progress, after matching report/PDF/termination proof and reconciled capacity release. A lost Workflow checkpoint may replay only the same operation and fence against its exact terminal successor; current invitation, owner, nondeleted audit and current revision remain mandatory. Replay performs no provider call, capacity release or new progress write. A missing receipt never authorizes reconstruction from terminal status alone. No populated receipt or hosted completion is established by the implementation.
+
 ## Current Groq records and database selection (2026-11-08)
 
 Groq free-tier quotas replace the active Meta credit/count evidence requirements below; old Meta record/code descriptions remain legacy compatibility/history, not a production fallback. `FIRESTORE_DATABASE_ID` configures a named database or preserves the compatible `(default)` when omitted. IDs are validated before REST/document-path construction; the selected database separately needs its intended rules, indexes and IAM setup.

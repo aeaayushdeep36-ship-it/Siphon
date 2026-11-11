@@ -46,6 +46,8 @@ import { ScientificFinishStage } from './scientific-finish-stage.js';
 import { ReportPdfPublications } from './report-publication.js';
 import { PdfPipeline } from './pdf-pipeline.js';
 import { parseAiConfiguration, type AiEnvironment } from './ai-config.js';
+import { ScientificInvestigationStage } from './scientific-investigation-stage.js';
+import { GroqModelJobs } from './groq-model-jobs.js';
 
 export interface InspectionWorkflowEnvironment extends AiEnvironment {
   SIPHON_INSPECTION_WORKFLOW_ENABLED: string;
@@ -551,6 +553,34 @@ export function createInspectionServices(
     ).run(job.ownerUid, fence);
     return result;
   };
+  const scientificInvestigateForJob = async (
+    jobId: string,
+    expected: unknown,
+    operationId: unknown,
+  ) => {
+    const { job, fence } = await scientificJob(jobId, expected);
+    const revision = await store.get(
+      `audits/${fence.auditId}/revisions/${fence.revisionId}`,
+    );
+    // Reporting is already immutable. A later resume must not generate a draft.
+    if (revision?.stage === 'reporting')
+      return { status: 'reviewed' as const, fence };
+    if (!ai) return { status: 'unavailable' as const, fence };
+    const result = await new ScientificInvestigationStage(
+      store,
+      ai,
+      new GroqModelJobs(store, ai.apiKey, ai, transport, clock),
+      clock,
+    ).run(job.ownerUid, fence, operationId);
+    if (result.status === 'blocked')
+      await stageIssue(
+        job.ownerUid,
+        result.fence,
+        result.code,
+        aiIssueMessage(result.code),
+      );
+    return result;
+  };
   const scientificReportForJob = async (
     jobId: string,
     expected: unknown,
@@ -633,6 +663,7 @@ export function createInspectionServices(
     validateBaselineForJob,
     compareBaselinesForJob,
     scientificEvaluateForJob,
+    scientificInvestigateForJob,
     scientificReportForJob,
     scientificPdfForJob,
     scientificFinishForJob,

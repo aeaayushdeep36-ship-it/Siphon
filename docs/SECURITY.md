@@ -1,5 +1,15 @@
 # Siphon security specification
 
+## Advisory publication boundary — 2026-11-11
+
+Investigation consumes only the owned published conservation snapshot, not uploaded modules or numeric array payloads. The Groq dispatch revalidates the live revision, evidence provenance/expiry, task/request/configuration identity and reserved quotas. Sanitized usage must be settled before a draft can be displayed for review. Evidence-ID and identity checks, plain bounded text and rejection of fenced code blocks do not prove scientific truth or detect every executable instruction. The owner must review the advisory text before accepting it; omit is available without changing the numerical evidence. Acceptance is never execution approval, a scientific verdict or an automatic repair action.
+
+The review route inherits invitation/authentication/rate/origin guards, requires a current owned investigating revision and exact draft digest, and journals an immutable decision with an idempotency receipt. Publication revalidates settled accounting and the same evidence snapshot. Pending review blocks report/PDF assembly, while accepted text stays explicitly hypothetical/advisory. No model call, approval record or hosted audit is established by local fixtures. Explicit owner disclosure consent remains a separate integration gap; server source scanning alone is not that consent.
+
+## Terminal replay authorization — 2026-11-11
+
+A scientific finish receipt permits replay of the original finishing operation only after rechecking an active invitation, live owned audit, unchanged current revision/input, exact successor generation, matching report ID, partial terminal state and absence of attached capacity/operations. A different operation, deletion, ownership change or superseding revision denies replay. Server-held completion metadata never grants new execution or artifact access, and terminal status without the receipt is insufficient.
+
 ## Current AI provider boundary (2026-11-08)
 
 Groq free-tier inference supersedes the Meta selection, Standard-mode rule and USD 150 assumption below. Old Meta code is legacy compatibility/history, never a production fallback. Invalid or absent explicit Groq settings block dispatch; a key does not authorize a paid upgrade, provider change or uncertain-operation retry.

@@ -12,6 +12,13 @@ import { FirestoreAuditRepository } from './audit-repository.js';
 import { canonicalJson, sha256 } from './hashing.js';
 import { prepareOwnedInvestigation } from './investigation-evidence.js';
 import { GroqModelJobs } from './groq-model-jobs.js';
+import { ScientificInvestigationStage } from './scientific-investigation-stage.js';
+import {
+  InvestigationReviews,
+  readInvestigationReview,
+} from './investigation-review.js';
+import { WorkspaceRepository } from './workspace.js';
+import { firestoreTransport } from '../test/firestore-transport.js';
 import {
   InvestigationTasks,
   requireInvestigationTask,
@@ -158,6 +165,208 @@ async function fixture() {
 }
 
 describe('owned investigation evidence preparation', () => {
+  async function staged(useRest = false) {
+    const f = await fixture();
+    const prepared = await f.run();
+    const { evidenceIds, ...identity } = prepared.expected;
+    const draft = {
+      schemaVersion: '1.0',
+      ...identity,
+      hypotheses: [
+        {
+          text: 'The drift may depend on resolution.',
+          evidenceIds,
+          verification: 'Compare independently refined runs.',
+        },
+      ],
+      recommendations: [
+        {
+          text: 'Review sampled conservation.',
+          evidenceIds,
+          validation: 'Compare the same physical interval.',
+        },
+      ],
+    };
+    const transport = vi.fn<typeof fetch>(async () =>
+      Response.json({
+        id: 'fixture-response',
+        object: 'chat.completion',
+        model: groqFixtureConfig.model,
+        choices: [
+          {
+            index: 0,
+            finish_reason: 'stop',
+            message: { role: 'assistant', content: JSON.stringify(draft) },
+          },
+        ],
+        usage: {
+          prompt_tokens: 500,
+          completion_tokens: 100,
+          total_tokens: 600,
+        },
+      }),
+    );
+    const clock = () => new Date('2026-11-10T18:00:00.000Z');
+    f.docs.documents.get(f.base)!.stage = 'evaluating';
+    const rest = useRest ? firestoreTransport(f.docs) : null;
+    const store = rest?.client ?? f.docs;
+    const stage = new ScientificInvestigationStage(
+      store,
+      groqFixtureConfig,
+      new GroqModelJobs(
+        store,
+        groqFixtureConfig.apiKey,
+        groqFixtureConfig,
+        transport,
+        clock,
+      ),
+      clock,
+    );
+    const result = await stage.run('alice', f.fence, f.operationId);
+    const stageRequests = rest?.calls.length ?? null;
+    if (result.status !== 'awaiting_review')
+      throw new Error('Expected authored draft');
+    const read = () =>
+      store.transaction((tx) =>
+        readInvestigationReview(tx, 'alice', result.fence, clock),
+      );
+    const snapshot = (await read())!;
+    const review = (decision: 'accept' | 'omit', key = 'review') =>
+      new InvestigationReviews(store, clock).submit(
+        'alice',
+        f.fence.auditId,
+        f.fence.revisionId,
+        {
+          schemaVersion: '1.0',
+          expectedGeneration: result.fence.generation,
+          expectedInputDigest: f.fence.inputDigest,
+          draftDigest: snapshot.draftDigest,
+          decision,
+        },
+        key,
+      );
+    return {
+      ...f,
+      draft,
+      transport,
+      clock,
+      stage,
+      result,
+      snapshot,
+      read,
+      review,
+      rest,
+      store,
+      stageRequests,
+    };
+  }
+  it('measures the real Firestore REST path without claiming hosted Free feasibility', async () => {
+    const f = await staged(true);
+    expect(f.stageRequests).toBeGreaterThan(0);
+    const before = f.rest!.calls.length;
+    await f.review('accept');
+    const reviewRequests = f.rest!.calls.length - before;
+    if (process.env.SIPHON_TRACE_REST === '1')
+      console.log('Investigation REST requests', {
+        draft: f.stageRequests,
+        review: reviewRequests,
+      });
+    expect(f.transport).toHaveBeenCalledOnce();
+    expect(f.rest!.batches.every((paths) => paths.length <= 40)).toBe(true);
+  });
+  it.each(['accept', 'omit'] as const)(
+    'runs one accounted investigation and preserves an immutable %s review',
+    async (decision) => {
+      const f = await staged();
+      expect(f.result.fence.generation).toBe(3);
+      expect(f.docs.documents.get(f.base)).toMatchObject({
+        stage: 'investigating',
+        slotLeaseId: null,
+      });
+      expect(await f.stage.run('alice', f.fence, f.operationId)).toMatchObject({
+        status: 'awaiting_review',
+      });
+      expect(f.transport).toHaveBeenCalledOnce();
+      const workspace = await new WorkspaceRepository(f.docs, f.clock).get(
+        'alice',
+        f.fence.auditId,
+        f.fence.revisionId,
+      );
+      expect(workspace.investigation).toMatchObject({
+        draft: f.draft,
+        status: 'awaiting_review',
+      });
+      const saved = await f.review(decision);
+      expect(saved.status).toBe(decision === 'accept' ? 'accepted' : 'omitted');
+      expect(await f.review(decision)).toMatchObject({
+        ...saved,
+        replayed: true,
+      });
+      await expect(
+        f.review(decision === 'accept' ? 'omit' : 'accept', 'other'),
+      ).rejects.toThrow('immutable');
+      expect(
+        await f.stage.run('alice', f.result.fence, f.operationId),
+      ).toMatchObject({ status: 'reviewed' });
+      expect(f.transport).toHaveBeenCalledOnce();
+      expect(
+        f.docs.documents.get(`${f.base}/evidence/${f.operationId}`)
+          ?.reportDigest,
+      ).toBe(f.snapshot.draft.evidenceDigest);
+    },
+  );
+  it.each(['draft', 'receipt', 'usage', 'evidence', 'owner', 'expiry'])(
+    'denies a changed %s before advisory review',
+    async (change) => {
+      const f = await staged();
+      const operationId = f.result.operationId!;
+      if (change === 'draft')
+        f.docs.documents.get(
+          `${f.base}/investigationDrafts/${operationId}`,
+        )!.draftDigest = '0'.repeat(64);
+      if (change === 'receipt')
+        f.docs.documents.get(`modelReceipts/${operationId}`)!.model =
+          'other-model';
+      if (change === 'usage')
+        f.docs.documents.get(`operations/${operationId}`)!.usage = {};
+      if (change === 'evidence')
+        f.docs.documents.get(
+          `${f.base}/evidence/${f.operationId}`,
+        )!.reportDigest = '0'.repeat(64);
+      if (change === 'owner')
+        f.docs.documents.get(`audits/${f.fence.auditId}`)!.ownerUid = 'bob';
+      if (change === 'expiry')
+        f.docs.documents.get(
+          `${f.base}/investigationDrafts/${operationId}`,
+        )!.expiresAt = f.clock().toISOString();
+      await expect(f.review('accept')).rejects.toThrow();
+      if (change === 'expiry') {
+        const workspace = await new WorkspaceRepository(f.docs, f.clock).get(
+          'alice',
+          f.fence.auditId,
+          f.fence.revisionId,
+        );
+        expect(workspace.investigation?.status).toBe('expired');
+      }
+      expect(
+        f.docs.documents.has(`${f.base}/investigationReviews/current`),
+      ).toBe(false);
+      expect(f.transport).toHaveBeenCalledOnce();
+    },
+  );
+  it('does not redispatch after settled output is lost', async () => {
+    const f = await staged();
+    f.docs.documents.delete(
+      `${f.base}/investigationDrafts/${f.result.operationId}`,
+    );
+    expect(
+      await f.stage.run('alice', f.result.fence, f.operationId),
+    ).toMatchObject({
+      status: 'blocked',
+      code: 'investigation_requires_reconciliation',
+    });
+    expect(f.transport).toHaveBeenCalledOnce();
+  });
   it('dispatches a fixture investigation through quotas and stores only a reviewed-pending draft', async () => {
     const f = await fixture();
     const prepared = await f.run();

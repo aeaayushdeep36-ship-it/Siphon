@@ -321,7 +321,9 @@ describe('authored frontend journey through real browser API contracts', () => {
     );
     expect(host.textContent).toContain('Saved state could not be refreshed');
     expect(host.textContent).toContain('draft · idle');
-    expect(host.textContent).toContain('No activity message has been recorded.');
+    expect(host.textContent).toContain(
+      'No activity message has been recorded.',
+    );
     expect(host.textContent).not.toContain(
       'Saved activity is temporarily unavailable.',
     );

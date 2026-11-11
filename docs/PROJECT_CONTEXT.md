@@ -8,6 +8,8 @@ Backend follow-up: owner AI disclosure is explicit, input/config-bound and reche
 
 The E2B endpoint fix now routes runtime verification, creation, SDK-bound termination and the read-only audit consistently through one validated HTTPS origin. Source/evaluation live metadata/tag checks pass; inspection/PDF are not configured locally. The signed-in dashboard currently shows Hobby Free/no card, a $100 grant expiring November 1, 2027, and $0.01 pending usage. This is not a reconciled available balance. A fresh Firestore read found no credits, global E2B budget, role dispatch configuration or template approval documents. The synthetic history query and Groq model-list read succeeded; signed-in history UI and complete hosted audit remain unverified. No sandboxes or deployment were performed for this checkpoint.
 
+Fresh read-only checks at 2026-11-11 18:47 UTC: production Pages returned 200, the Pages-origin API preflight returned 204, and unauthenticated audit history returned 401. `npm run audit:e2b-templates` (run from the backend worktree with the ignored shared-base local settings) verified source and evaluation templates as private, single-build and tag/build matched. Inspection/PDF were unconfigured. No E2B balance was checked and no sandbox, model request or deployment was performed; these checks do not verify an authenticated audit.
+
 This section supersedes older deployment and provider status below. Keep later dated history for context, but use the live repository and service state when making changes.
 
 ## Hosted Firebase history integration checkpoint

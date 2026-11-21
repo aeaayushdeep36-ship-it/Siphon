@@ -17,8 +17,10 @@ import {
   Digest,
   Domain,
   EvidenceReportResponse,
+  InvestigationReviewReceipt,
   ProgressSnapshot,
   QuestionSet,
+  AiDisclosureReceipt,
   QueuedAuditReceipt,
   ResumedAuditReceipt,
   RevisionReceipt,
@@ -31,10 +33,20 @@ import { AuditApi, digestBytes, RequestFailure } from './api.js';
 import { auth, signIn, signInErrorMessage } from './auth.js';
 import { label } from './labels.js';
 import { ReportBoundary } from './ReportBoundary.js';
+import { startReadPolling } from './read-polling.js';
+import { InvestigationReview } from './InvestigationReview.js';
+import { AiDisclosurePanel } from './AiDisclosurePanel.js';
 
 const Report = lazy(() =>
   import('./Report.js').then((module) => ({ default: module.Report })),
 );
+
+export function resumeNeedsAiDisclosure(
+  workspace: Pick<AuditWorkspace, 'stage' | 'investigation'>,
+) {
+  // Saved investigation and report stages resume without another AI dispatch.
+  return workspace.stage !== 'reporting' && workspace.investigation === null;
+}
 
 const AuditResponse = z.object({
   schemaVersion: z.literal('1.0'),
@@ -159,6 +171,9 @@ export function App() {
 
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main">
+        Skip to main content
+      </a>
       <header className="site-header">
         <a href="#hero" className="brand" aria-label="Siphon home">
           <span className="brand-mark" aria-hidden="true">
@@ -220,7 +235,7 @@ export function App() {
           )}
         </div>
       </header>
-      <main id="main" className="page-content">
+      <main id="main" className="page-content" tabIndex={-1}>
         {error && (
           <div className="error global-error" role="alert">
             {error}
@@ -489,6 +504,10 @@ function Console({
   const [progress, setProgress] = useState<ProgressSnapshot | null>(null);
   const [questions, setQuestions] = useState<Questions | null>(null);
   const [report, setReport] = useState<ResponseReport | null>(null);
+  const [reportRead, setReportRead] = useState<
+    'idle' | 'loading' | 'missing' | 'failed'
+  >('idle');
+  const [reportError, setReportError] = useState('');
   const [refreshCount, setRefreshCount] = useState(0);
   const [answers, setAnswers] = useState<
     Record<string, { option: string | null; text: string }>
@@ -503,8 +522,10 @@ function Console({
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [readIssue, setReadIssue] = useState('');
   const [historyState, setHistoryState] = useState('Loading private history…');
   const selection = useRef(0);
+  const refreshSequence = useRef(0);
   const alive = useRef(true);
   const errorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -606,19 +627,39 @@ function Console({
   }, [audit?.id, audit?.currentRevisionId, loadRevisions]);
   const refresh = useCallback(
     async (selected: Audit, token = selection.current) => {
+      const sequence = ++refreshSequence.current;
       const base = `/audits/${selected.id}/revisions/${selected.currentRevisionId}`;
       const results = await Promise.allSettled([
         api.get(`${base}/workspace`, Workspace),
         api.get(`${base}/progress`, ProgressSnapshot),
       ]);
-      if (!alive.current || token !== selection.current) return;
+      if (
+        !alive.current ||
+        token !== selection.current ||
+        sequence !== refreshSequence.current
+      )
+        return;
       const [details, state] = results;
       if (details.status === 'fulfilled') setWorkspace(details.value);
-      else showError(details.reason);
       if (state.status === 'fulfilled') setProgress(state.value);
-      else showError(state.reason);
+      if (details.status === 'rejected' || state.status === 'rejected') {
+        setReadIssue(
+          errorText(
+            details.status === 'rejected'
+              ? details.reason
+              : state.status === 'rejected'
+                ? state.reason
+                : undefined,
+          ) || 'The saved state could not be read.',
+        );
+        return;
+      }
+      setReadIssue('');
+      return state.status === 'fulfilled'
+        ? state.value.pollAfterSeconds
+        : undefined;
     },
-    [api, showError],
+    [api],
   );
   async function open(selected: Audit) {
     const token = ++selection.current;
@@ -627,25 +668,22 @@ function Console({
     setProgress(null);
     setQuestions(null);
     setReport(null);
+    setReportRead('idle');
+    setReportError('');
     setAnswers({});
     setError('');
     setNotice('');
+    setReadIssue('');
     setFiles([]);
     if (fileInputRef.current) fileInputRef.current.value = '';
     setReuseArtifacts(null);
     await refresh(selected, token);
   }
   useEffect(() => {
-    if (!audit || !progress?.pollAfterSeconds) return;
+    if (!audit) return;
     const token = selection.current;
-    const timer = setTimeout(
-      () => {
-        void refresh(audit, token);
-      },
-      Math.max(10, progress.pollAfterSeconds) * 1000,
-    );
-    return () => clearTimeout(timer);
-  }, [audit, progress, refresh]);
+    return startReadPolling(() => refresh(audit, token));
+  }, [audit, refresh]);
   useEffect(() => {
     if (!audit || !progress) return;
     let active = true;
@@ -672,11 +710,15 @@ function Console({
         progress.status,
       )
     ) {
+      setReportRead('loading');
+      setReportError('');
       void api
         .get(`${base}/report`, EvidenceReportResponse)
         .then((value) => {
-          if (active && alive.current && token === selection.current)
+          if (active && alive.current && token === selection.current) {
             setReport(value);
+            setReportRead('idle');
+          }
         })
         .catch((reason) => {
           if (!active || !alive.current || token !== selection.current) return;
@@ -685,9 +727,11 @@ function Console({
             ['not_found', 'report_not_ready'].includes(reason.code)
           ) {
             setReport(null);
+            setReportRead('missing');
             return;
           }
-          showError(reason);
+          setReportRead('failed');
+          setReportError(errorText(reason));
         });
     }
     return () => {
@@ -842,6 +886,14 @@ function Console({
   const locked =
     !!busy ||
     !workspace ||
+    !progress?.isCurrentRevision ||
+    workspace.stage !== 'draft' ||
+    workspace.status !== 'idle';
+  const disclosureMutationDisabled =
+    !!busy ||
+    !workspace ||
+    !progress?.isCurrentRevision ||
+    !audit ||
     workspace.stage !== 'draft' ||
     workspace.status !== 'idle';
   return (
@@ -968,6 +1020,17 @@ function Console({
         )}
         {audit && (
           <>
+            {readIssue && (
+              <section className="panel warning" role="status">
+                <h2>Saved state could not be refreshed</h2>
+                <p>{readIssue}</p>
+                <p>
+                  Displayed information may be out of date. Siphon will retry
+                  reading saved state automatically. Use Refresh audit to check
+                  now. Reconnecting does not start experiments or repeat work.
+                </p>
+              </section>
+            )}
             {!!workspace?.operationalIssues.length && (
               <section
                 className="panel warning"
@@ -1077,11 +1140,15 @@ function Console({
                 <strong>
                   {progress
                     ? `${label(progress.stage)} · ${label(progress.status)}`
-                    : 'Loading persisted state…'}
+                    : readIssue
+                      ? 'Saved progress unavailable'
+                      : 'Loading persisted state…'}
                 </strong>
                 <p>
                   {progress?.progress?.message ??
-                    'No activity message has been recorded.'}
+                    (readIssue && !progress
+                      ? 'Saved activity is temporarily unavailable.'
+                      : 'No activity message has been recorded.')}
                 </p>
                 {progress?.progress?.experiments && (
                   <p>
@@ -1105,10 +1172,66 @@ function Console({
                   new work.
                 </p>
               )}
+              {workspace && (
+                <AiDisclosurePanel
+                  disclosure={workspace.aiDisclosure}
+                  disabled={disclosureMutationDisabled}
+                  onDecision={(decision) =>
+                    void act(
+                      decision === 'accept'
+                        ? 'Recording AI data sharing permission'
+                        : 'Revoking AI data sharing permission',
+                      async () => {
+                        if (!workspace) return;
+                        const receipt = await api.mutate(
+                          `${path}/ai-disclosure`,
+                          'POST',
+                          {
+                            schemaVersion: '1.0',
+                            expectedGeneration: workspace.generation,
+                            expectedInputDigest: workspace.inputDigest,
+                            disclosureDigest:
+                              workspace.aiDisclosure!.disclosureDigest,
+                            decision,
+                          },
+                          AiDisclosureReceipt,
+                        );
+                        if (
+                          receipt.auditId !== audit?.id ||
+                          receipt.revisionId !== audit.currentRevisionId ||
+                          receipt.disclosureDigest !==
+                            workspace.aiDisclosure!.disclosureDigest ||
+                          receipt.decision !== decision
+                        )
+                          throw new Error(
+                            'The AI permission response did not match this audit revision.',
+                          );
+                        await refresh(audit);
+                        setNotice(
+                          decision === 'accept'
+                            ? 'AI data sharing permission is recorded for this revision.'
+                            : 'Permission revoked for future authorized AI dispatches. Data already sent cannot be recalled.',
+                        );
+                      },
+                    )
+                  }
+                />
+              )}
+              <p className="muted" id="run-disclosure">
+                Starting a review sends reviewed Python source to the configured
+                Groq model for context and mappings. Validated numerical
+                evidence may also be sent for advisory investigation. Uploads
+                execute only in isolated E2B environments. Remove secrets and
+                private information before uploading; source scanning cannot
+                guarantee their absence. Siphon recommends investigations and
+                does not apply repairs.
+              </p>
               <div className="actions">
                 <button
+                  aria-describedby="run-disclosure"
                   disabled={
                     locked ||
+                    workspace?.aiDisclosure?.status !== 'accepted' ||
                     !workspace?.uploads.length ||
                     workspace?.uploadStates.some(
                       (upload) => upload.lifecycle !== 'ready',
@@ -1943,6 +2066,46 @@ function Console({
                 )}
               </section>
             )}
+            {workspace?.investigation && (
+              <InvestigationReview
+                snapshot={workspace.investigation}
+                disabled={
+                  !!busy ||
+                  !!readIssue ||
+                  !progress?.isCurrentRevision ||
+                  workspace.stage !== 'investigating' ||
+                  workspace.status !== 'running'
+                }
+                onReview={(decision) =>
+                  void act('Saving advisory review', async () => {
+                    const snapshot = workspace.investigation;
+                    if (!snapshot) return;
+                    const receipt = await api.mutate(
+                      `${path}/investigation-review`,
+                      'POST',
+                      {
+                        schemaVersion: '1.0',
+                        expectedGeneration: workspace.generation,
+                        expectedInputDigest: workspace.inputDigest,
+                        draftDigest: snapshot.draftDigest,
+                        decision,
+                      },
+                      InvestigationReviewReceipt.refine(
+                        (value) =>
+                          value.operationId === snapshot.operationId &&
+                          value.draftDigest === snapshot.draftDigest &&
+                          value.status ===
+                            (decision === 'accept' ? 'accepted' : 'omitted'),
+                      ),
+                    );
+                    await refresh(audit);
+                    setNotice(
+                      `Advisory text ${receipt.status}. Numerical verdicts are unchanged. Resume report preparation when ready.`,
+                    );
+                  })
+                }
+              />
+            )}
             <section className="panel plan-panel" id="testplan">
               <h2>Deterministic test plan</h2>
               {workspace?.plan ? (
@@ -2098,7 +2261,12 @@ function Console({
                         className="secondary"
                         disabled={
                           !!busy ||
+                          (resumeNeedsAiDisclosure(workspace) &&
+                            workspace.aiDisclosure?.status !== 'accepted') ||
                           !progress?.isCurrentRevision ||
+                          ['awaiting_review', 'expired'].includes(
+                            workspace.investigation?.status ?? '',
+                          ) ||
                           workspace.status !== 'running'
                         }
                         onClick={() =>
@@ -2231,6 +2399,25 @@ function Console({
       </div>
       {audit && (
         <div className="console-report">
+          {reportRead === 'failed' && (
+            <section className="panel warning" role="alert">
+              <h2>Report could not be refreshed</h2>
+              <p>{reportError}</p>
+              {report && (
+                <p>
+                  The report below is the last saved view. Export availability
+                  may be out of date.
+                </p>
+              )}
+              <button
+                className="secondary"
+                disabled={!!busy}
+                onClick={() => setRefreshCount((count) => count + 1)}
+              >
+                Retry report read
+              </button>
+            </section>
+          )}
           {report ? (
             <ReportBoundary key={report.report.reportId}>
               <Suspense
@@ -2247,7 +2434,13 @@ function Console({
             <section className="panel report-empty" id="evidence">
               <h2>Evidence report</h2>
               <p>
-                No structured report has been published for this revision.
+                {reportRead === 'loading'
+                  ? 'Checking report availability…'
+                  : reportRead === 'failed'
+                    ? 'Report availability could not be checked.'
+                    : reportRead === 'missing'
+                      ? 'No structured report has been published for this revision.'
+                      : 'A report can become available after evidence is evaluated.'}{' '}
                 Refreshing reads saved results; it does not start experiments or
                 render a PDF.
               </p>

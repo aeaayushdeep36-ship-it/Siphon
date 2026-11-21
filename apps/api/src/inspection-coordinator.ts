@@ -30,6 +30,7 @@ import {
 import { FirestoreAccountingStore } from './firestore-accounting.js';
 import {
   InspectionPipeline,
+  InspectionCreationReceipt,
   InspectionExecutionReceipt,
 } from './inspection-pipeline.js';
 import { canonicalJson, sha256 } from './hashing.js';
@@ -56,7 +57,12 @@ export class InspectionCoordinator {
     private readonly store: DocumentStore,
     private readonly sandboxes: Pick<SandboxJobs, 'bind'>,
     private readonly pipeline: Pick<InspectionPipeline, 'run'> &
-      Partial<Pick<InspectionPipeline, 'execute' | 'terminate'>>,
+      Partial<
+        Pick<
+          InspectionPipeline,
+          'execute' | 'createSandbox' | 'executeConnected' | 'terminate'
+        >
+      >,
     private readonly clock: () => Date = () => new Date(),
   ) {
     this.queue = new RunQueue(store, clock);
@@ -419,6 +425,99 @@ export class InspectionCoordinator {
     );
     if (receipt.operationId !== job.operationId)
       throw new Error('Inspection receipt identity mismatch');
+    return {
+      status: 'execution_finished' as const,
+      jobId: job.id,
+      operationId: job.operationId,
+      receipt,
+    };
+  }
+
+  /** Hosted creation child: atomically claim the dispatch before one provider
+   * create, then return only a bounded receipt for the next phase.
+   */
+  async createSandbox(value: unknown, signal?: AbortSignal) {
+    if (!this.pipeline.createSandbox || !this.pipeline.terminate)
+      throw new Error('Inspection create phase transport is not configured');
+    const job = InspectionStageJob.parse(value);
+    if (job.status !== 'preparing' || !job.leaseId || !job.sandboxRequest)
+      throw new Error('Inspection create phase has no prepared request');
+    signal?.throwIfAborted();
+    if (!(await this.claim(job)))
+      return {
+        status: 'already_claimed' as const,
+        jobId: job.id,
+        operationId: job.operationId,
+      };
+    const receipt = InspectionCreationReceipt.parse(
+      await this.pipeline.createSandbox(
+        job.sandboxRequest,
+        fenceOf(job),
+        signal,
+      ),
+    );
+    if (receipt.operationId !== job.operationId)
+      throw new Error('Inspection create receipt identity mismatch');
+    return {
+      status: 'creation_finished' as const,
+      jobId: job.id,
+      operationId: job.operationId,
+      receipt,
+    };
+  }
+
+  /** Hosted execution child: reconnects only to the sandbox handle already
+   * journaled by the create phase. Runner claims remain single-use in Firestore.
+   */
+  async executeConnected(value: unknown, signal?: AbortSignal) {
+    if (!this.pipeline.executeConnected || !this.pipeline.terminate)
+      throw new Error('Inspection execution phase transport is not configured');
+    const job = InspectionStageJob.parse(value);
+    if (job.status !== 'dispatching' || !job.leaseId || !job.sandboxRequest)
+      throw new Error('Inspection execution has no dispatched request');
+    signal?.throwIfAborted();
+    const operation = Operation.parse(
+      await this.store.get(`operations/${job.operationId}`),
+    );
+    if (
+      operation.id !== job.operationId ||
+      operation.ownerUid !== job.ownerUid ||
+      operation.auditId !== job.auditId ||
+      operation.revisionId !== job.revisionId ||
+      operation.inputDigest !== job.inputDigest ||
+      operation.fence !== job.generation ||
+      operation.requestDigest !==
+        (await sha256(canonicalJson(job.sandboxRequest))) ||
+      operation.outcome !== 'dispatching'
+    )
+      throw new Error('Inspection execution operation changed');
+    if (!operation.providerHandle)
+      return {
+        status: 'execution_finished' as const,
+        jobId: job.id,
+        operationId: job.operationId,
+        receipt: InspectionExecutionReceipt.parse({
+          schemaVersion: '1.0',
+          status: 'execution_failed',
+          operationId: job.operationId,
+          sandboxId: null,
+          failureCode: 'create_unknown',
+        }),
+      };
+    const receipt = InspectionExecutionReceipt.parse(
+      await this.pipeline.executeConnected(
+        job.ownerUid,
+        job.sandboxRequest,
+        fenceOf(job),
+        operation.providerHandle,
+        signal,
+      ),
+    );
+    if (
+      receipt.operationId !== job.operationId ||
+      receipt.sandboxId !== operation.providerHandle
+    )
+      throw new Error('Inspection execution receipt identity mismatch');
     return {
       status: 'execution_finished' as const,
       jobId: job.id,

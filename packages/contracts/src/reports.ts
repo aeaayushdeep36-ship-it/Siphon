@@ -194,6 +194,7 @@ export const EvidenceReport = z
             'uncertainty',
             'metric',
             'diagnostic',
+            'investigation',
           ]),
           digest: Digest,
           description: text(1000),

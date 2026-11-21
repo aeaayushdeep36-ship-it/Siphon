@@ -1,0 +1,420 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "provider": {
+      "type": "string",
+      "const": "groq"
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "operationId": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "draftDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "draft": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "string",
+          "const": "1.0"
+        },
+        "auditId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "revisionId": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "inputDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "evidenceDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "hypotheses": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "evidenceIds": {
+                "minItems": 1,
+                "maxItems": 20,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                }
+              },
+              "verification": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "text",
+              "evidenceIds",
+              "verification"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "recommendations": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "evidenceIds": {
+                "minItems": 1,
+                "maxItems": 20,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                }
+              },
+              "validation": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "text",
+              "evidenceIds",
+              "validation"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "auditId",
+        "revisionId",
+        "inputDigest",
+        "evidenceDigest",
+        "hypotheses",
+        "recommendations"
+      ],
+      "additionalProperties": false
+    },
+    "evidence": {
+      "minItems": 1,
+      "maxItems": 3,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "string",
+            "const": "1.0"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "auditId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "revisionId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "checkId": {
+            "type": "string",
+            "enum": [
+              "H_ENERGY",
+              "H_BALANCE",
+              "H_TIME_REF",
+              "H_GRID_REF",
+              "H_REFERENCE",
+              "O_ENERGY",
+              "O_ANGULAR",
+              "O_MOMENTUM",
+              "O_REFINE",
+              "O_REFERENCE"
+            ]
+          },
+          "checkVersion": {
+            "type": "string",
+            "pattern": "^\\d+\\.\\d+\\.\\d+$"
+          },
+          "inputDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "contextDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "adapterDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "planDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "experimentIds": {
+            "minItems": 1,
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "metric": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,99}$"
+              },
+              "value": {
+                "type": "number",
+                "minimum": 0
+              },
+              "unit": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "normalization": {
+                "type": "string",
+                "const": "absolute"
+              }
+            },
+            "required": [
+              "name",
+              "value",
+              "unit",
+              "normalization"
+            ],
+            "additionalProperties": false
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "unit": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "justification": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "evidenceIds": {
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  }
+                },
+                "required": [
+                  "value",
+                  "unit",
+                  "justification",
+                  "evidenceIds"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "uncertainty": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "unit": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "justification": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "evidenceIds": {
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    }
+                  }
+                },
+                "required": [
+                  "value",
+                  "unit",
+                  "justification",
+                  "evidenceIds"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "interval": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "lower": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "upper": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "lower",
+                  "upper"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "passed_within_tolerance",
+              "flagged",
+              "inconclusive"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "whole_interval_within_target",
+              "whole_interval_exceeds_target",
+              "interval_overlaps_target",
+              "missing_target",
+              "missing_uncertainty_bound",
+              "unrepresentable_interval"
+            ]
+          },
+          "limitations": {
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "id",
+          "auditId",
+          "revisionId",
+          "checkId",
+          "checkVersion",
+          "inputDigest",
+          "contextDigest",
+          "adapterDigest",
+          "planDigest",
+          "experimentIds",
+          "metric",
+          "target",
+          "uncertainty",
+          "interval",
+          "status",
+          "reason",
+          "limitations"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "awaiting_review",
+        "accepted",
+        "omitted",
+        "expired"
+      ]
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+    }
+  },
+  "required": [
+    "provider",
+    "model",
+    "operationId",
+    "draftDigest",
+    "draft",
+    "evidence",
+    "status",
+    "expiresAt"
+  ],
+  "additionalProperties": false
+}

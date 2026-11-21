@@ -46,9 +46,15 @@ import { ScientificFinishStage } from './scientific-finish-stage.js';
 import { ReportPdfPublications } from './report-publication.js';
 import { PdfPipeline } from './pdf-pipeline.js';
 import { parseAiConfiguration, type AiEnvironment } from './ai-config.js';
+import { ScientificInvestigationStage } from './scientific-investigation-stage.js';
+import { GroqModelJobs } from './groq-model-jobs.js';
+
+import { E2bApiUrl } from './e2b-endpoint.js';
+import type { WorkflowPhaseBinding } from './workflow-phases.js';
 
 export interface InspectionWorkflowEnvironment extends AiEnvironment {
   SIPHON_INSPECTION_WORKFLOW_ENABLED: string;
+  SIPHON_INSPECTION?: WorkflowPhaseBinding;
   FIREBASE_PROJECT_ID: string;
   FIRESTORE_DATABASE_ID?: string;
   GOOGLE_SERVICE_ACCOUNT_EMAIL: string;
@@ -65,11 +71,7 @@ const Configuration = FirebaseServiceConfiguration.safeExtend({
     .min(1)
     .max(512)
     .regex(/^[\x21-\x7e]+$/),
-  E2B_API_URL: z
-    .string()
-    .url()
-    .refine((value) => new URL(value).protocol === 'https:')
-    .optional(),
+  E2B_API_URL: E2bApiUrl.optional(),
 });
 
 function aiIssueMessage(code: string): string {
@@ -551,6 +553,78 @@ export function createInspectionServices(
     ).run(job.ownerUid, fence);
     return result;
   };
+  const scientificInvestigateForJob = async (
+    jobId: string,
+    expected: unknown,
+    operationId: unknown,
+  ) => {
+    const { job, fence } = await scientificJob(jobId, expected);
+    const revision = await store.get(
+      `audits/${fence.auditId}/revisions/${fence.revisionId}`,
+    );
+    // Reporting is already immutable. A later resume must not generate a draft.
+    if (revision?.stage === 'reporting')
+      return { status: 'reviewed' as const, fence };
+    if (!ai) return { status: 'unavailable' as const, fence };
+    const result = await new ScientificInvestigationStage(
+      store,
+      ai,
+      new GroqModelJobs(store, ai.apiKey, ai, transport, clock),
+      clock,
+    ).run(job.ownerUid, fence, operationId);
+    if (result.status === 'blocked')
+      await stageIssue(
+        job.ownerUid,
+        result.fence,
+        result.code,
+        aiIssueMessage(result.code),
+      );
+    return result;
+  };
+  const scientificPrepareInvestigationForJob = async (
+    jobId: string,
+    expected: unknown,
+    evaluationId: unknown,
+  ) => {
+    const { job, fence } = await scientificJob(jobId, expected);
+    if (!ai) return { status: 'unavailable' as const, fence };
+    const result = await new ScientificInvestigationStage(
+      store,
+      ai,
+      new GroqModelJobs(store, ai.apiKey, ai, transport, clock),
+      clock,
+    ).prepare(job.ownerUid, fence, evaluationId);
+    if (result.status === 'blocked')
+      await stageIssue(
+        job.ownerUid,
+        result.fence,
+        result.code,
+        aiIssueMessage(result.code),
+      );
+    return result;
+  };
+  const scientificDispatchInvestigationForJob = async (
+    jobId: string,
+    expected: unknown,
+    operationId: unknown,
+  ) => {
+    const { job, fence } = await scientificJob(jobId, expected);
+    if (!ai) return { status: 'unavailable' as const, fence };
+    const result = await new ScientificInvestigationStage(
+      store,
+      ai,
+      new GroqModelJobs(store, ai.apiKey, ai, transport, clock),
+      clock,
+    ).dispatch(job.ownerUid, fence, operationId);
+    if (result.status === 'blocked')
+      await stageIssue(
+        job.ownerUid,
+        result.fence,
+        result.code,
+        aiIssueMessage(result.code),
+      );
+    return result;
+  };
   const scientificReportForJob = async (
     jobId: string,
     expected: unknown,
@@ -627,12 +701,17 @@ export function createInspectionServices(
   };
   return {
     coordinator,
+    inspectionJobForJob: async (jobId: string) =>
+      InspectionStageJob.parse(await store.get(`stageJobs/${jobId}`)),
     continueContext,
     adapterForJob,
     baselineForJob,
     validateBaselineForJob,
     compareBaselinesForJob,
     scientificEvaluateForJob,
+    scientificInvestigateForJob,
+    scientificPrepareInvestigationForJob,
+    scientificDispatchInvestigationForJob,
     scientificReportForJob,
     scientificPdfForJob,
     scientificFinishForJob,

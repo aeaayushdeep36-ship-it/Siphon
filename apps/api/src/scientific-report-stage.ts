@@ -12,6 +12,7 @@ import { persistProgress } from './progress.js';
 import { transition } from './lifecycle.js';
 import { ReportPublication } from './report-publication.js';
 import { canonicalJson, sha256 } from './hashing.js';
+import { readInvestigationReview } from './investigation-review.js';
 
 /** Publish a limited structured report from a completed data-only evaluation.
  * This does not claim an AI investigation or a PDF export. */
@@ -99,8 +100,16 @@ export class ScientificReportStage {
             stage.evidenceDigest !== resultDigest)
         )
           throw new Error('Scientific report stage changed');
-        if (!stage && state.stage !== 'evaluating')
+        if (!stage && !['evaluating', 'investigating'].includes(state.stage))
           throw new Error('Scientific report stage claim is missing');
+        const investigation = await readInvestigationReview(
+          tx,
+          uid,
+          fence,
+          this.clock,
+        );
+        if (investigation?.status === 'awaiting_review')
+          throw new Error('Investigation text requires owner review');
         const id = stage ? Id.parse(stage.reportId) : crypto.randomUUID();
         if (state.stage === 'reporting')
           return { reportId: id, fence, done: true };

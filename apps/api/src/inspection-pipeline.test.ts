@@ -55,6 +55,7 @@ function setup() {
       sandboxId: session.sandboxId,
       session,
     })),
+    connectInspection: vi.fn(async () => session),
     kill: vi.fn(async () => 'killed' as const),
   };
   const jobs = {
@@ -78,9 +79,41 @@ function setup() {
       },
       signal,
     );
-  return { request, sources, sandboxes, jobs, session, run };
+  return { request, sources, sandboxes, jobs, session, pipeline, run };
 }
 describe('internal inspection stage orchestration (offline)', () => {
+  it('creates in one phase and reconnects from the journaled handle in the next', async () => {
+    const f = setup();
+    const fence = {
+      auditId: f.request.auditId,
+      revisionId: f.request.revisionId,
+      generation: 0,
+      inputDigest: f.request.inputDigest,
+    };
+    const created = await f.pipeline.createSandbox(f.request, fence);
+    expect(created).toMatchObject({
+      status: 'created',
+      operationId: f.request.operationId,
+      sandboxId: f.session.sandboxId,
+    });
+    const execution = await f.pipeline.executeConnected(
+      'alice',
+      f.request,
+      fence,
+      f.session.sandboxId,
+    );
+    expect(execution).toMatchObject({
+      status: 'published',
+      operationId: f.request.operationId,
+      sandboxId: f.session.sandboxId,
+    });
+    expect(f.sources.load.mock.invocationCallOrder[0]).toBeLessThan(
+      f.sandboxes.connectInspection.mock.invocationCallOrder[0]!,
+    );
+    expect(f.jobs.publish.mock.invocationCallOrder[0]).toBeGreaterThan(
+      f.sandboxes.connectInspection.mock.invocationCallOrder[0]!,
+    );
+  });
   it('loads, inspects and publishes before terminating the same fresh session', async () => {
     const f = setup();
     expect(await f.run()).toMatchObject({

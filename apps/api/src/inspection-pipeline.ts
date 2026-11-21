@@ -35,6 +35,29 @@ export const InspectionExecutionReceipt = z.discriminatedUnion('status', [
 export type InspectionExecutionReceipt = z.infer<
   typeof InspectionExecutionReceipt
 >;
+export const InspectionCreationReceipt = z.discriminatedUnion('status', [
+  z.strictObject({
+    schemaVersion: z.literal('1.0'),
+    status: z.literal('created'),
+    operationId: Id,
+    sandboxId: SandboxId,
+  }),
+  z.strictObject({
+    schemaVersion: z.literal('1.0'),
+    status: z.literal('creation_failed'),
+    operationId: Id,
+    sandboxId: SandboxId.nullable(),
+    failureCode: z.enum([
+      'create_unknown',
+      'handle_unrecorded',
+      'template_verification_failed',
+      'inspection_failed',
+    ]),
+  }),
+]);
+export type InspectionCreationReceipt = z.infer<
+  typeof InspectionCreationReceipt
+>;
 
 /** Internal inspection stage. Reservations/job binding precede this call.
  * No HTTP/run route exists until orchestration and release gates are verified.
@@ -42,12 +65,127 @@ export type InspectionExecutionReceipt = z.infer<
 export class InspectionPipeline {
   constructor(
     private readonly sources: Pick<InspectionSourceLoader, 'load'>,
-    private readonly sandboxes: Pick<E2bClient, 'createInspection' | 'kill'>,
+    private readonly sandboxes: Pick<
+      E2bClient,
+      'createInspection' | 'connectInspection' | 'kill'
+    >,
     private readonly jobs: Pick<
       InspectionJobs,
       'claim' | 'authorizeResult' | 'publish'
     >,
+    private readonly traceBoundary?: (name: string) => void,
   ) {}
+  /** Hosted phase: create and journal one sandbox, then discard its live SDK
+   * session. A later Workflow instance reconstructs that session by handle.
+   */
+  async createSandbox(
+    requestValue: SandboxRequest,
+    expected: unknown,
+    signal?: AbortSignal,
+  ): Promise<InspectionCreationReceipt> {
+    const request = SandboxRequest.parse(requestValue);
+    const fence = DispatchFence.parse(expected);
+    if (
+      request.role !== 'inspection' ||
+      request.auditId !== fence.auditId ||
+      request.revisionId !== fence.revisionId ||
+      request.inputDigest !== fence.inputDigest
+    )
+      throw new Error('Inspection pipeline snapshot mismatch');
+    try {
+      const created = await this.sandboxes.createInspection(request, signal);
+      this.traceBoundary?.('sandbox_created');
+      return InspectionCreationReceipt.parse({
+        schemaVersion: '1.0',
+        status: 'created',
+        operationId: request.operationId,
+        sandboxId: created.sandboxId,
+      });
+    } catch (error) {
+      const sandboxId =
+        error instanceof SandboxControlFailure ? error.sandboxId : null;
+      const failureCode =
+        error instanceof SandboxControlFailure &&
+        [
+          'create_unknown',
+          'handle_unrecorded',
+          'template_verification_failed',
+        ].includes(error.code)
+          ? error.code
+          : 'inspection_failed';
+      return InspectionCreationReceipt.parse({
+        schemaVersion: '1.0',
+        status: 'creation_failed',
+        operationId: request.operationId,
+        sandboxId,
+        failureCode,
+      });
+    }
+  }
+
+  /** Hosted phase: load private source bytes and use a fresh SDK session
+   * reconstructed from the already journaled sandbox handle.
+   */
+  async executeConnected(
+    uid: string,
+    requestValue: SandboxRequest,
+    expected: unknown,
+    sandboxId: string,
+    signal?: AbortSignal,
+  ): Promise<InspectionExecutionReceipt> {
+    const request = SandboxRequest.parse(requestValue);
+    const fence = DispatchFence.parse(expected);
+    SandboxId.parse(sandboxId);
+    if (
+      request.role !== 'inspection' ||
+      request.auditId !== fence.auditId ||
+      request.revisionId !== fence.revisionId ||
+      request.inputDigest !== fence.inputDigest
+    )
+      throw new Error('Inspection pipeline snapshot mismatch');
+    try {
+      const payload = await this.sources.load(
+        uid,
+        request.operationId,
+        fence,
+        signal,
+      );
+      this.traceBoundary?.('source_loaded');
+      const session = await this.sandboxes.connectInspection(
+        request.operationId,
+        sandboxId,
+        signal,
+      );
+      this.traceBoundary?.('sandbox_connected');
+      const result = await new InspectionRunner(session, this.jobs).run(
+        payload,
+        signal,
+      );
+      this.traceBoundary?.('inspection_ran');
+      const publication = await this.jobs.publish(payload, result);
+      this.traceBoundary?.('result_published');
+      return InspectionExecutionReceipt.parse({
+        schemaVersion: '1.0',
+        status: 'published',
+        operationId: request.operationId,
+        sandboxId,
+        ...publication,
+      });
+    } catch (error) {
+      const failureCode =
+        error instanceof SandboxControlFailure &&
+        ['create_unknown', 'handle_unrecorded'].includes(error.code)
+          ? error.code
+          : 'inspection_failed';
+      return InspectionExecutionReceipt.parse({
+        schemaVersion: '1.0',
+        status: 'execution_failed',
+        operationId: request.operationId,
+        sandboxId,
+        failureCode,
+      });
+    }
+  }
   private async perform(
     uid: string,
     requestValue: SandboxRequest,
@@ -71,13 +209,17 @@ export class InspectionPipeline {
         fence,
         signal,
       );
+      this.traceBoundary?.('source_loaded');
       const created = await this.sandboxes.createInspection(request, signal);
       sandboxId = created.sandboxId;
+      this.traceBoundary?.('sandbox_created');
       const result = await new InspectionRunner(created.session, this.jobs).run(
         payload,
         signal,
       );
+      this.traceBoundary?.('inspection_ran');
       const publication = await this.jobs.publish(payload, result);
+      this.traceBoundary?.('result_published');
       return {
         status: 'published' as const,
         operationId: request.operationId,

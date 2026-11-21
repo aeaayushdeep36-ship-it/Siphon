@@ -52,6 +52,10 @@ import {
   InvestigationTasks,
   requireInvestigationTask,
 } from './investigation-tasks.js';
+import {
+  aiDisclosureOptions,
+  hasCurrentAiDisclosure,
+} from './ai-disclosure.js';
 export { groqConfigurationDigest } from './groq-configuration-digest.js';
 
 const QuotaWindow = z.strictObject({
@@ -74,6 +78,7 @@ export class GroqAdmissionBlocked extends Error {
   constructor(
     public readonly code:
       | 'ai_request_too_large'
+      | 'ai_disclosure_required'
       | 'ai_quota_unavailable'
       | 'ai_operation_requires_reconciliation',
     public readonly retryAt: string | null = null,
@@ -94,6 +99,7 @@ export class GroqModelJobs {
     private readonly config: AiConfiguration,
     private readonly fetcher: typeof fetch = fetch,
     private readonly clock: () => Date = () => new Date(),
+    private readonly traceBoundary?: (name: string) => void,
   ) {}
 
   async run(
@@ -103,7 +109,9 @@ export class GroqModelJobs {
     prepared: Prepared,
     purpose: Purpose,
     signal?: AbortSignal,
+    phase: 'complete' | 'prepare' | 'dispatch' = 'complete',
   ) {
+    this.traceBoundary?.('runner_started');
     const fence = DispatchFence.parse(expected);
     try {
       return await this.runOnce(
@@ -113,6 +121,7 @@ export class GroqModelJobs {
         prepared,
         purpose,
         signal,
+        phase,
       );
     } catch (error) {
       if (error instanceof GroqAdmissionBlocked) {
@@ -139,6 +148,37 @@ export class GroqModelJobs {
     }
   }
 
+  /** Continue a durably reserved investigation without repeating admission. */
+  async dispatchInvestigation(
+    uid: string,
+    expected: unknown,
+    operationIdValue: string,
+    signal?: AbortSignal,
+  ) {
+    const fence = DispatchFence.parse(expected);
+    const operationId = Id.parse(operationIdValue);
+    const verified = await this.documents.transaction((tx) =>
+      requireInvestigationTask(
+        tx,
+        uid,
+        fence,
+        operationId,
+        this.config,
+        ['reserved'],
+        this.clock,
+      ),
+    );
+    return this.run(
+      uid,
+      fence,
+      operationId,
+      verified.prepared,
+      'investigation',
+      signal,
+      'dispatch',
+    );
+  }
+
   private async runOnce(
     uid: string,
     expected: unknown,
@@ -146,9 +186,12 @@ export class GroqModelJobs {
     prepared: Prepared,
     purpose: Purpose,
     signal?: AbortSignal,
+    phase: 'complete' | 'prepare' | 'dispatch' = 'complete',
   ) {
     const fence = DispatchFence.parse(expected);
     Id.parse(operationId);
+    if (phase !== 'complete' && purpose !== 'investigation')
+      throw new Error('Durable model phases are investigation-only');
     const request = GroqRequest.parse(prepared.request);
     const body = canonicalJson(request);
     const requestDigest = await sha256(body);
@@ -171,6 +214,7 @@ export class GroqModelJobs {
         'Published investigation evidence is required for binding',
       );
     const now = this.clock();
+    const disclosureConfiguration = aiDisclosureOptions(this.config);
     const revision = await this.documents.get(
       `audits/${fence.auditId}/revisions/${fence.revisionId}`,
     );
@@ -216,50 +260,69 @@ export class GroqModelJobs {
       policy.modelAttempts,
     ];
     // Configure only these provider counters; never create fake monetary balances.
-    await this.documents.transaction(async (tx) => {
-      await requireActiveRevision(tx, uid, fence);
-      const priorJob = await tx.get(`modelJobs/${operationId}`);
-      const priorOperation = await tx.get(`operations/${operationId}`);
-      const counters = await tx.getMany(
-        charges.map((charge) => `budgets/${charge.counterKey}`),
-      );
-      if (priorOperation && priorOperation.outcome !== 'reserved')
-        throw new GroqAdmissionBlocked('ai_operation_requires_reconciliation');
-      if (priorJob) {
-        const job = FreeModelJob.parse(priorJob);
+    if (phase !== 'dispatch')
+      await this.documents.transaction(async (tx) => {
+        await requireActiveRevision(tx, uid, fence);
         if (
-          job.operationId !== operationId ||
-          job.requestDigest !== requestDigest ||
-          job.configDigest !== configDigest ||
-          job.purpose !== purpose
+          !(await hasCurrentAiDisclosure(
+            tx,
+            uid,
+            fence.auditId,
+            fence.revisionId,
+            fence.inputDigest,
+            disclosureConfiguration,
+          ))
         )
-          throw new Error('AI configuration or request changed during replay');
-      }
-      for (const [index, raw] of counters.entries()) {
-        const limit = limits[index]!;
-        if (raw) {
-          const value = BudgetCounter.parse(raw);
-          if (value.limit > limit)
-            throw new Error(
-              'AI quota configuration reduced; reconcile existing counters',
-            );
-        } else
-          tx.set(
-            `budgets/${charges[index]!.counterKey}`,
-            BudgetCounter.parse({
-              schemaVersion: '1.0',
-              limit,
-              spent: 0,
-              reserved: 0,
-              halted: false,
-            }),
+          throw new GroqAdmissionBlocked('ai_disclosure_required');
+        const priorJob = await tx.get(`modelJobs/${operationId}`);
+        const priorOperation = await tx.get(`operations/${operationId}`);
+        const counters = await tx.getMany(
+          charges.map((charge) => `budgets/${charge.counterKey}`),
+        );
+        if (priorOperation && priorOperation.outcome !== 'reserved')
+          throw new GroqAdmissionBlocked(
+            'ai_operation_requires_reconciliation',
           );
-      }
-    });
-    await new AdmissionRepository(this.documents, this.clock).acquire(
-      uid,
-      fence,
-    );
+        if (priorJob) {
+          const job = FreeModelJob.parse(priorJob);
+          if (
+            job.operationId !== operationId ||
+            job.requestDigest !== requestDigest ||
+            job.configDigest !== configDigest ||
+            job.purpose !== purpose
+          )
+            throw new Error(
+              'AI configuration or request changed during replay',
+            );
+        }
+        for (const [index, raw] of counters.entries()) {
+          const limit = limits[index]!;
+          if (raw) {
+            const value = BudgetCounter.parse(raw);
+            if (value.limit > limit)
+              throw new Error(
+                'AI quota configuration reduced; reconcile existing counters',
+              );
+          } else
+            tx.set(
+              `budgets/${charges[index]!.counterKey}`,
+              BudgetCounter.parse({
+                schemaVersion: '1.0',
+                limit,
+                spent: 0,
+                reserved: 0,
+                halted: false,
+              }),
+            );
+        }
+      });
+    this.traceBoundary?.('quota_checked');
+    if (phase !== 'dispatch')
+      await new AdmissionRepository(this.documents, this.clock).acquire(
+        uid,
+        fence,
+      );
+    this.traceBoundary?.('slot_acquired');
     const operation = Operation.parse({
       schemaVersion: '1.0',
       id: operationId,
@@ -277,66 +340,84 @@ export class GroqModelJobs {
       updatedAt: now.toISOString(),
     });
     const store = new FirestoreAccountingStore(this.documents, policy);
-    try {
-      await reserveOperation(store, operation);
-    } catch (error) {
+    if (phase === 'dispatch') {
+      const existing = Operation.parse(
+        await this.documents.get(`operations/${operationId}`),
+      );
       if (
-        error instanceof AccountingConflict &&
-        error.code === 'budget_exhausted'
-      )
-        throw new GroqAdmissionBlocked('ai_quota_unavailable');
-      if (
-        error instanceof AccountingConflict &&
-        error.code === 'operation_conflict'
+        existing.outcome !== 'reserved' ||
+        existing.requestDigest !== requestDigest ||
+        existing.ownerUid !== uid ||
+        existing.fence !== fence.generation
       )
         throw new GroqAdmissionBlocked('ai_operation_requires_reconciliation');
-      throw error;
-    }
-    // Rebuild and bind the request from its reviewed source or published evidence.
-    try {
-      if (purpose === 'investigation')
-        await new InvestigationTasks(
-          this.documents,
-          this.config,
-          this.clock,
-        ).bind(uid, fence, operationId, evaluationId);
-      else if (purpose === 'context')
-        await new ContextTasks(
-          this.documents,
-          this.clock,
-          undefined,
-          this.config,
-        ).bind(uid, fence, operationId, sourceValues);
-      else
-        await new AdapterTasks(this.documents, this.clock, this.config).bind(
-          uid,
-          fence,
-          operationId,
-          sourceValues,
-        );
-    } catch (error) {
-      // Only an operation proven never dispatched may release its reservation.
-      // A concurrent/unknown dispatch must remain reserved for reconciliation.
+      Object.assign(operation, existing);
+    } else
       try {
-        await releaseUndispatched(
-          store,
-          operationId,
-          fence.generation,
-          this.clock().toISOString(),
-        );
-        const current = await this.documents.get(
-          `audits/${fence.auditId}/revisions/${fence.revisionId}`,
-        );
-        if (current?.slotLeaseId != null && current.activeOperationId == null)
-          await new AdmissionRepository(
+        await reserveOperation(store, operation);
+      } catch (error) {
+        if (
+          error instanceof AccountingConflict &&
+          error.code === 'budget_exhausted'
+        )
+          throw new GroqAdmissionBlocked('ai_quota_unavailable');
+        if (
+          error instanceof AccountingConflict &&
+          error.code === 'operation_conflict'
+        )
+          throw new GroqAdmissionBlocked(
+            'ai_operation_requires_reconciliation',
+          );
+        throw error;
+      }
+    this.traceBoundary?.('operation_reserved');
+    // Rebuild and bind the request from its reviewed source or published evidence.
+    if (phase !== 'dispatch')
+      try {
+        if (purpose === 'investigation')
+          await new InvestigationTasks(
+            this.documents,
+            this.config,
+            this.clock,
+          ).bind(uid, fence, operationId, evaluationId);
+        else if (purpose === 'context')
+          await new ContextTasks(
             this.documents,
             this.clock,
-          ).releaseReconciled(uid, fence, Id.parse(current.slotLeaseId));
-      } catch {
-        // Preserve any reservation or lease that cannot be safely released.
+            undefined,
+            this.config,
+          ).bind(uid, fence, operationId, sourceValues);
+        else
+          await new AdapterTasks(this.documents, this.clock, this.config).bind(
+            uid,
+            fence,
+            operationId,
+            sourceValues,
+          );
+      } catch (error) {
+        // Only an operation proven never dispatched may release its reservation.
+        // A concurrent/unknown dispatch must remain reserved for reconciliation.
+        try {
+          await releaseUndispatched(
+            store,
+            operationId,
+            fence.generation,
+            this.clock().toISOString(),
+          );
+          const current = await this.documents.get(
+            `audits/${fence.auditId}/revisions/${fence.revisionId}`,
+          );
+          if (current?.slotLeaseId != null && current.activeOperationId == null)
+            await new AdmissionRepository(
+              this.documents,
+              this.clock,
+            ).releaseReconciled(uid, fence, Id.parse(current.slotLeaseId));
+        } catch {
+          // Preserve any reservation or lease that cannot be safely released.
+        }
+        throw error;
       }
-      throw error;
-    }
+    this.traceBoundary?.('task_bound');
     const job = FreeModelJob.parse({
       schemaVersion: '1.0',
       operationId,
@@ -351,17 +432,35 @@ export class GroqModelJobs {
       admission: 'request_bytes_screen_not_token_measurement.v1',
       createdAt: now.toISOString(),
     });
-    await this.documents.transaction(async (tx) => {
-      await requireActiveRevision(tx, uid, fence);
-      const existing = await tx.get(`modelJobs/${operationId}`);
+    if (phase !== 'dispatch')
+      await this.documents.transaction(async (tx) => {
+        await requireActiveRevision(tx, uid, fence);
+        const existing = await tx.get(`modelJobs/${operationId}`);
+        if (
+          existing &&
+          canonicalJson({
+            ...FreeModelJob.parse(existing),
+            createdAt: null,
+          }) !== canonicalJson({ ...job, createdAt: null })
+        )
+          throw new Error('AI job is immutable');
+        if (!existing)
+          tx.set(`modelJobs/${operationId}`, nativeTimestamps(job));
+      });
+    this.traceBoundary?.('job_persisted');
+    if (phase === 'prepare')
+      return { status: 'reserved' as const, operationId };
+    if (phase === 'dispatch') {
+      const savedJob = FreeModelJob.parse(
+        await this.documents.get(`modelJobs/${operationId}`),
+      );
       if (
-        existing &&
-        canonicalJson({ ...FreeModelJob.parse(existing), createdAt: null }) !==
-          canonicalJson({ ...job, createdAt: null })
+        savedJob.requestDigest !== requestDigest ||
+        savedJob.configDigest !== configDigest ||
+        savedJob.purpose !== 'investigation'
       )
-        throw new Error('AI job is immutable');
-      if (!existing) tx.set(`modelJobs/${operationId}`, nativeTimestamps(job));
-    });
+        throw new GroqAdmissionBlocked('ai_operation_requires_reconciliation');
+    }
     const gate = {
       authorize: async (value: GroqRequest, digest: string) => {
         if (digest !== requestDigest || canonicalJson(value) !== body)
@@ -372,6 +471,17 @@ export class GroqModelJobs {
           async (tx, actual) => {
             const time = this.clock();
             await requireActiveRevision(tx, uid, fence);
+            if (
+              !(await hasCurrentAiDisclosure(
+                tx,
+                uid,
+                fence.auditId,
+                fence.revisionId,
+                fence.inputDigest,
+                disclosureConfiguration,
+              ))
+            )
+              throw new GroqAdmissionBlocked('ai_disclosure_required');
             const [rawTask, rawJob, rawWindow] = await tx.getMany([
               `${purpose === 'context' ? 'contextTasks' : purpose === 'adapter' ? 'adapterTasks' : 'investigationTasks'}/${operationId}`,
               `modelJobs/${operationId}`,
@@ -535,8 +645,19 @@ export class GroqModelJobs {
     } catch (error) {
       if (error instanceof GroqFailure)
         await this.settle(operation, error.usage, false, error);
+      else if (
+        error instanceof GroqAdmissionBlocked &&
+        error.code === 'ai_disclosure_required'
+      )
+        await releaseUndispatched(
+          store,
+          operationId,
+          fence.generation,
+          this.clock().toISOString(),
+        );
       throw error;
     }
+    this.traceBoundary?.('provider_returned');
     await this.settle(
       operation,
       completed.usage,
@@ -544,6 +665,7 @@ export class GroqModelJobs {
       undefined,
       completed.providerId,
     );
+    this.traceBoundary?.('operation_settled');
     if (purpose === 'investigation')
       await new InvestigationTasks(
         this.documents,
@@ -562,6 +684,7 @@ export class GroqModelJobs {
         operationId,
         completed.output,
       );
+    this.traceBoundary?.('candidate_published');
     return { providerId: completed.providerId };
   }
 

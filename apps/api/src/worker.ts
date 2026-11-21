@@ -27,8 +27,10 @@ import {
 import { ContextAnswerResolver } from './context-answers.js';
 import { StartAudit } from '@siphon/contracts';
 import { RedisRateFilter } from './redis-rate-filter.js';
+import { parseAiConfiguration, type AiEnvironment } from './ai-config.js';
+import { aiDisclosureOptions } from './ai-disclosure.js';
 
-export interface WorkerEnvironment {
+export interface WorkerEnvironment extends AiEnvironment {
   SIPHON_API_ENABLED: string;
   FIREBASE_PROJECT_ID: string;
   FIRESTORE_DATABASE_ID?: string;
@@ -53,6 +55,13 @@ export function createWorkerRuntime(
   transport: typeof fetch = fetch,
 ) {
   const config = WorkerConfiguration.parse(environment);
+  const aiDisclosure = (() => {
+    try {
+      return aiDisclosureOptions(parseAiConfiguration(environment));
+    } catch {
+      return null;
+    }
+  })();
   if (
     (!(
       environment.SIPHON_PRIVATE_KV &&
@@ -118,7 +127,7 @@ export function createWorkerRuntime(
           });
       },
     ),
-    workspace: new WorkspaceRepository(store),
+    workspace: new WorkspaceRepository(store, undefined, aiDisclosure),
     history: new HistoryRepository(store, store),
     reports,
     reportDownloads: new ReportDownloads(reports, downloads),

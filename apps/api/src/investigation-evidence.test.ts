@@ -7,7 +7,10 @@ import {
 } from '@siphon/contracts';
 import { sciencePython } from '../../../scripts/science-python.js';
 import { TestDocuments } from '../test/document-store.js';
-import { groqFixtureConfig } from '../test/groq-stage-fixture.js';
+import {
+  grantGroqFixtureConsent,
+  groqFixtureConfig,
+} from '../test/groq-stage-fixture.js';
 import { FirestoreAuditRepository } from './audit-repository.js';
 import { canonicalJson, sha256 } from './hashing.js';
 import { prepareOwnedInvestigation } from './investigation-evidence.js';
@@ -92,6 +95,12 @@ async function fixture() {
     stage: 'investigating',
     status: 'running',
   });
+  await grantGroqFixtureConsent(docs, base, {
+    ownerUid: 'alice',
+    auditId: fence.auditId,
+    revisionId: fence.revisionId,
+    inputDigest: fence.inputDigest,
+  });
   const common = {
     ownerUid: 'alice',
     auditId: fence.auditId,
@@ -167,8 +176,8 @@ async function fixture() {
 describe('owned investigation evidence preparation', () => {
   async function staged(useRest = false) {
     const f = await fixture();
-    const prepared = await f.run();
-    const { evidenceIds, ...identity } = prepared.expected;
+    const sourcePrepared = await f.run();
+    const { evidenceIds, ...identity } = sourcePrepared.expected;
     const draft = {
       schemaVersion: '1.0',
       ...identity,
@@ -210,20 +219,63 @@ describe('owned investigation evidence preparation', () => {
     f.docs.documents.get(f.base)!.stage = 'evaluating';
     const rest = useRest ? firestoreTransport(f.docs) : null;
     const store = rest?.client ?? f.docs;
+    const modelBoundaries: { name: string; requestCount: number }[] = [];
+    const modelJobs = new GroqModelJobs(
+      store,
+      groqFixtureConfig.apiKey,
+      groqFixtureConfig,
+      transport,
+      clock,
+      (name) =>
+        modelBoundaries.push({
+          name,
+          requestCount: rest?.calls.length ?? 0,
+        }),
+    );
+    let modelCalls = 0;
     const stage = new ScientificInvestigationStage(
       store,
       groqFixtureConfig,
-      new GroqModelJobs(
-        store,
-        groqFixtureConfig.apiKey,
-        groqFixtureConfig,
-        transport,
-        clock,
-      ),
+      {
+        run: async (...args) => {
+          const before = rest?.calls.length ?? 0;
+          const result = await modelJobs.run(...args);
+          modelCalls = (rest?.calls.length ?? before) - before;
+          return result;
+        },
+        dispatchInvestigation: (...args) =>
+          modelJobs.dispatchInvestigation(...args),
+      },
       clock,
     );
-    const result = await stage.run('alice', f.fence, f.operationId);
+    const prepareStart = rest?.calls.length ?? 0;
+    const phasePrepared = await stage.prepare('alice', f.fence, f.operationId);
+    const prepareRequests = (rest?.calls.length ?? prepareStart) - prepareStart;
+    const dispatchStart = rest?.calls.length ?? 0;
+    const result =
+      phasePrepared.status === 'dispatch_ready'
+        ? await stage.dispatch(
+            'alice',
+            phasePrepared.fence,
+            phasePrepared.operationId,
+          )
+        : phasePrepared;
+    const dispatchRequests =
+      (rest?.calls.length ?? dispatchStart) - dispatchStart;
     const stageRequests = rest?.calls.length ?? null;
+    if (process.env.SIPHON_TRACE_REST === '1')
+      console.log('Investigation child REST requests', {
+        prepare: prepareRequests,
+        dispatch: dispatchRequests,
+        modelPrepare: modelCalls,
+        total: stageRequests,
+        modelSegments: modelBoundaries.slice(1).map((boundary, index) => ({
+          from: modelBoundaries[index]!.name,
+          to: boundary.name,
+          requests:
+            boundary.requestCount - modelBoundaries[index]!.requestCount,
+        })),
+      });
     if (result.status !== 'awaiting_review')
       throw new Error('Expected authored draft');
     const read = () =>
@@ -258,11 +310,26 @@ describe('owned investigation evidence preparation', () => {
       rest,
       store,
       stageRequests,
+      prepareRequests,
+      dispatchRequests,
+      modelBoundaries,
     };
   }
   it('measures the real Firestore REST path without claiming hosted Free feasibility', async () => {
     const f = await staged(true);
     expect(f.stageRequests).toBeGreaterThan(0);
+    expect(
+      f.modelBoundaries
+        .slice(1)
+        .map(
+          (boundary, index) =>
+            boundary.requestCount - f.modelBoundaries[index]!.requestCount,
+        ),
+    ).toEqual([8, 5, 5, 5, 4, 5, 1, 0, 1, 0, 0, 11, 11, 6]);
+    expect(f.prepareRequests).toBe(37);
+    expect(f.dispatchRequests).toBe(47);
+    expect(f.prepareRequests).toBeLessThan(50);
+    expect(f.dispatchRequests).toBeLessThan(50);
     const before = f.rest!.calls.length;
     await f.review('accept');
     const reviewRequests = f.rest!.calls.length - before;

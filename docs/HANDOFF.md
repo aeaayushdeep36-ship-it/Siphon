@@ -1,4 +1,25 @@
-# Siphon handoff — 12 November 2026
+# Siphon handoff — 22 November 2026
+
+## Authoritative State Reconciliation Checkpoint — 2026-11-22
+
+Milestone 1 (Authoritative State & Environment Reconciliation) has completed full forensic inspection of the repository across all worktrees, branches, PRs #1–#4, Cloudflare production deployment, and service budget gates. Complete technical analysis, logs, and evidence are published in [`docs/STATE_RECONCILIATION_2026-11-22.md`](STATE_RECONCILIATION_2026-11-22.md).
+
+All worktrees and uncommitted user modifications have been preserved in place without resetting, stashing, or force-pushing.
+
+---
+
+### Authoritative Git State & Worktrees
+| PR # | Branch | Worktree Directory | Head Commit SHA | Base Branch | Working Copy Status |
+|:---:|:---|:---|:---|:---|:---|
+| **PR #1** | `coordination/shared-baseline-2026-11-11` | `D:\Freelance\Siphon` | `1d3cbc0ffa9de1f81d76c7c5a70ef2fcfe729681` | `main` | **Clean** (`working tree clean`). Draft PR, MERGEABLE. |
+| **PR #2** | `backend/audit-completion-2026-11-11` | `D:\Freelance\Siphon-backend` | `c1cb53304fcc4c80005c4239683a852489a476e8` | `coordination/shared-baseline-2026-11-11` | **DIRTY** — Uncommitted modification in `docs/TESTING.md` ($|P''(t)| \le M_i$ quadrature bound) **preserved**. Draft PR, MERGEABLE. |
+| **PR #3** | `frontend/integration-2026-11-11` | `D:\Freelance\Siphon-frontend-integration` | `4299f96e0c8693312eb724538438b4b391011493` | `coordination/shared-baseline-2026-11-11` | **DIRTY** — Uncommitted modification in `docs/HANDOFF.md` (skip link & 37/47 Firestore call counts) **preserved**. Draft PR, MERGEABLE. |
+| **PR #4** | `foundation/service-configuration-2026-11-11` | `D:\Freelance\Siphon-service-foundation` | `74d5883304235a9700a7e3e100a5fe6138f53c5e` | `coordination/shared-baseline-2026-11-11` | **Clean** (`working tree clean`). Draft PR, MERGEABLE. |
+
+- **Remote `origin/main`:** `3f17b02fcf8b000f200d84ac23609e2c009e96da` ("Document Siphon project and current status").
+- **Local `main`:** `ee73498691142a8d38db297b06dfb676188cc075` (1 commit behind `origin/main`).
+
+---
 
 ## Frontend integration checkpoint — 2026-11-11
 
@@ -9,21 +30,90 @@ Current public read-only probe: Pages returned HTTP 200, production-origin API p
 
 Chat 1 has the reproduction IDs and owns the storage/service failure. PR #4 contains a sanitized Firestore failure logger and redaction tests, but the diagnostic is not deployed and the failure cause remains unknown. Chat 3 published the advisory investigation snapshot and accept/omit review contract, which Chat 2 has connected, including the exact validated metrics grounding the advisory. Chat 3 also published the digest-bound source/evidence disclosure API and dispatch guard; Chat 2 has connected the browser journey, and backend enforcement is authoritative. Chat 1's credential-free Cloudflare probe verified 50 sequential external Fetch requests pass and 51 fail in one Workflow instance; two separate instances each passed 30, while 30+30 in one instance failed even across a durable sleep. Cloudflare documents a separate Cloudflare-service request allowance, which these external Fetch probes do not measure. Pre-split inspection measured 115/117 external requests; the prior investigation path measured 76 Firestore REST calls and commit `722ccc2` now splits it into prepare/dispatch children measuring 37/47 Firestore calls. Backend PR #2 at `428580c` includes code commit `722ccc2` and adds an `inspection_create` child before reconnecting `inspection_execute`; these are internal Workflow phases and leave the frontend/API routes unchanged. Authored Firestore measurements are 15 for create, 31/33 for execute (source load 14/16, reconnect authorization 4, runner 9, publication 4), and 13 for cleanup. OAuth, E2B HTTP and binding costs are excluded, so full external/internal per-phase fit, CPU and state/storage remain unproven. The investigation prepare/dispatch counts exclude OAuth, Groq HTTP and Workflow-binding requests. Backend commit `7eabb5b` keys scientific-resume children by request idempotency digest, preserving same-key replay while allowing a distinct explicit continuation. PR #2 reports 64 inspection queue/pipeline/phase tests, 49 E2B/SandboxJobs tests, and 20 resume/phase tests; hosted execution remains disabled. Full hosted heat/orbital execution, report/PDF and lifecycle verification remain open.
 
+### Implementation & Verification Matrix (PRs #1–#4)
+
+| Feature / Gate | Implemented | Merged to Main | Locally Tested | Verified Live | Notes / Blocking Dependencies |
+|:---|:---:|:---:|:---:|:---:|:---|
+| **Shared baseline contracts & test suite** | YES | NO (PR #1) | YES (846 Vitest, 243 Python tests) | Partial (Public probes 200/204/401 pass) | Baseline is passing and ready as common integration target. |
+| **Child workflow phase splitting (`dispatchWorkflowPhase`)** | YES | NO (PR #2) | YES (49 workflow tests) | NO | Partitions monolithic workflow into child instances (`phase-${sha256(...)}`); fits 50 subrequests/step limit. |
+| **Fail-closed accounting ledger & reservations** | YES | NO (PR #2) | YES (8 accounting tests) | YES (Fails closed) | Blocks dispatch if credit/budget documents are missing. Zero out-of-pocket spend guaranteed. |
+| **Investigation prepare/dispatch split** | YES | NO (PR #2) | YES (12 investigation tests) | NO | Splits Groq preparation (37 calls) and dispatch (47 calls) under Free subrequest ceiling. |
+| **Frontend user journey & consent panel** | YES | NO (PR #3) | YES (18 journey tests) | Partial (Synthetic draft created) | Requires explicit opt-in for advisory review. |
+| **Saved-state recovery under 503 `storage_unavailable`** | YES | NO (PR #3) | YES (`journey.test.tsx`) | YES (Observed in reproduction) | Displays retryable error; preserves draft state without crashing. |
+| **Keyboard skip navigation** | YES | NO (PR #3) | YES (Build passes) | NO | Accessible skip link added to main layout. |
+| **E2B HTTPS endpoint enforcement** | YES | NO (PR #4) | YES (17 e2b-client tests) | NO | Validates clean HTTPS origin without credentials or query strings. |
+| **Sanitized Firestore failure logging (`siphon_firestore_failure`)** | YES | NO (PR #4) | YES (`app.test.ts`) | NO (Not deployed in prod `8ed64d8e`) | Redacts IDs/secrets; ready for deployment in Milestone 2. |
+| **Read-only storage optimization (remove `:beginTransaction`)** | PLANNED | NO | NO | NO | Milestone 2 core target; will permanently fix parallel read contention. |
+| **Heat Diffusion standalone sound/faulty fixtures & `H_BALANCE`** | PARTIAL | NO | YES (Science unit tests) | NO | Milestone 3 core target; quadrature remainder bounds documented in `docs/TESTING.md`. |
+| **Orbital Dynamics multi-body accuracy & Groq data minimization** | PARTIAL | NO | YES (Science unit tests) | NO | Milestone 4 core target. |
+| **Bounded hosted verification run** | BLOCKED | NO | NO | NO | Blocked until M2 storage fix, verified E2B balance, and template approvals are completed. |
+
+---
+
+### Cloudflare Production Status & Free Tier Capacity
+- **Account:** `Aeaayushdeep36@gmail.com's Account` (`c0d2543c24951f025cae57100f6db6ef`)
+- **Active Deployment:** Worker `siphon-api`, active version `8ed64d8e-12f0-401a-a77d-1529f5dc5f5c` (100% traffic allocation).
+- **Flags:** `SIPHON_API_ENABLED="true"`, `SIPHON_INSPECTION_WORKFLOW_ENABLED="false"`. Production workflow is hard-disabled.
+- **Capacity Compliance:** Cloudflare Workers Free limits execution to 50 subrequests per context and 10 ms CPU per step. PR #2's phase splitting partitions the workflow so each phase consumes between 13 and 47 subrequests, staying strictly within the 50-call ceiling. Dry-run bundle size is 2,433.53 KiB (limit 3 MB).
+
+---
+
+### Zero Out-of-Pocket Safeguards & Accounting Reconciliation
+- In `apps/api/src/accounting.ts` and `sandbox-jobs.ts`, dispatch requires valid `configuration/e2b_credits`, `budgets/e2b_global_micro_usd`, and `sandboxTemplates/${templateEvidenceId}` records.
+- Production Firestore currently contains **no credit configuration or global budget documents**.
+- Dispatch fails closed immediately with `budget_exhausted` / `Budget has not been verified/configured`.
+- No unearned credits, approval records, or simulated budget documents have been or will be created.
+
+---
+
+### Storage Availability (`storage_unavailable`) Diagnosis & Resolution
+- **Root Cause:** `WorkspaceRepository.get` and `ProgressRepository.get` both execute `this.documents.transaction`, issuing `:beginTransaction` and `:commit` for read-only requests. When `App.tsx` fires parallel requests via `Promise.allSettled`, transaction lock contention or timeouts on `audits/${auditId}/revisions/${revisionId}` trigger 503 errors. In active production Worker version `8ed64d8e`, `FirestoreFailure` logging was suppressed in `app.onError`.
+- **Permanent Resolution (Milestone 2):** Remove `:beginTransaction` / `:commit` from read paths; use direct `:batchGet` (`documents.getMany`) and direct `documents.get`. Deploy sanitized `siphon_firestore_failure` logging.
+- **Client Recovery:** Verified in `apps/web/src/journey.test.tsx`: work remains safely disabled while storage is unavailable, with user recovery via retry refresh.
+
+---
+
+### Dependency Advisories & Production Cleanliness
+- `npm audit --omit=dev` confirms zero high and zero critical vulnerabilities in production runtime dependencies. 4 moderate advisories in `hono` and `glob`/`minimatch` (via `e2b`) do not affect Siphon's isolated routes. 21 moderate advisories exist strictly in dev tooling (`minimatch`, `zip-stream`).
+- Python runtime dependencies in `packages/science/requirements.txt` (`numpy==2.0.2`, `pydantic==2.14.1`, `reportlab==5.1.0`) are pinned and 100% passing across all 243 tests.
+
+---
+
 ## Backend branch checkpoint — 2026-11-11
 
-Chat 3 works in `D:\Freelance\Siphon-backend`, branch `backend/audit-completion-2026-11-11`, draft PR #2 based on shared baseline `01fbbfa`. Finalization now has an atomic replay receipt. Investigation is connected through existing accounted Groq jobs to an owner accept/omit review before immutable report/PDF publication; shared schemas expose the advisory snapshot and review route to Chat 2. Missing or uncertain settled output is never redispatched. Numerical verdicts stay deterministic and the report remains limited/partial because required extended check families are unreleased. Owner source/evidence disclosure consent is exposed through the revision workspace and API, with backend dispatch checks; the frontend integration is in PR #3. This remains distinct from the narrow source scanner.
+Chat 3 works in `D:\Freelance\Siphon-backend`, branch `backend/audit-completion-2026-11-11`, draft PR #2 based on shared baseline `01fbbfa`. Finalization now has an atomic replay receipt. Investigation uses accounted Groq jobs and owner accept/omit review before immutable report/PDF publication; workspace exposes the actual deterministic metric evidence behind advisory references. Explicit owner AI disclosure consent is implemented on the backend for context, adapter and numeric investigation requests. Missing or uncertain settled output is never redispatched. Numerical verdicts stay deterministic and the report remains limited/partial because required extended check families are unreleased.
 
-Local verification: before the latest contract projection, 872 tests/92 files and the full build passed after normalizing the fresh Windows checkout's line endings to committed LF without content changes. The investigation review snapshot now includes up to three validated deterministic metric evidence records, contract-bound to the draft provenance and all referenced metric IDs. Focused report publication tests (21) and TypeScript pass; full lint currently reports Prettier formatting issues in six Chat 1 endpoint-change files, which have not been modified here. The post-consent investigation draft path measured 76 Firestore REST calls (22 outside `GroqModelJobs.run`, 54 inside) and owner review seven through the real client with an authored transport; OAuth, real Groq network, Workflow binding accounting, and hosted CPU are excluded. Chat 1's isolated Workflow probe verified child creation/status APIs but did not expose Cloudflare's internal subrequest counter. This branch has not been deployed and neither required hosted audit has run. Keep workflow disabled pending actual financial/runtime/Free-plan gates and a compatible orchestration design. Chat 2 owns the review panel and frontend integration; fetch their branch before integration.
+Current implementation: scientific evaluation, investigation prepare/dispatch, report, PDF and finalization dispatch as separate deterministic child Workflow instances with metadata-only payloads. Preparation makes the reviewed task and durable reservation before dispatch. The next child reconstructs the request, rechecks authorization, calls Groq once, settles usage and publishes the review draft. The authored Firestore REST trace measured 37 calls for preparation and 47 for dispatch/settlement/publication/capacity release, compared with the earlier 76-call single child. Those counts exclude OAuth, the Groq HTTP request and Workflow service bindings; full live per-invocation headroom is not established. Inspection begin/reserve/create/execute/cleanup/finish also dispatch as separate children. Creation measured 15 Firestore REST calls. The reconnecting execute child measured 31 calls, or 33 when original revisions are included; measured segments are 14/16 for source loading, four for reconnect authorization, nine for the runner and four for publication. Cleanup measured 13 calls. These counts exclude OAuth and E2B requests.
 
-## Active three-chat coordination — 2026-11-11
+Scientific resume fix (2026-11-12): the root continuation now carries its request's stable idempotency digest as the evaluation child phase key. Replaying the same key resolves the same child; a distinct explicit continuation key creates a distinct evaluation child instead of colliding with a completed child. `resumeScientific` and deterministic child-ID tests cover the distinction. The Cloudflare entrypoint schema requires that key.
+
+Local verification: the 70 focused investigation/evidence/Groq/workflow-phase tests and the full API suite (813 tests across 84 files with the shared pinned science virtual environment) pass, including the real Firestore REST codec with authored transport. Normal and Worker TypeScript checks, lint/formatting, full `npm run build`, and `npm run test:worker-runtime` pass. The disabled local Worker runtime made zero outbound calls. Cloudflare Free was confirmed by the service-foundation branch. Its probe showed that 50 external requests succeed in one step, 51 fail, a step/sleep does not reset the per-instance count, and independent Workflow instances received separate budgets in the tested case. The new authored investigation Workflow phases measured 37/47 Firestore calls; OAuth, Groq, Workflow binding RPCs, internal-service counts, CPU and serialized state/storage remain unaccounted. The inspection children measure 15 calls for creation, 31/33 for execute and 13 for cleanup; execute segments are 14/16 source load, four reconnect authorization, nine runner and four publication. Keep production disabled. This branch has not been deployed and neither required hosted audit has run. E2B credit reconciliation, production role approvals, extended scientific methods, cleanup/recovery evidence and both hosted audits remain outstanding.
+
+## Active three-chat coordination — 2026-11-11 (Historical Context)
 
 The user has resumed work and explicitly authorized a secret-checked shared GitHub baseline, draft PRs, and subsequent commits/pushes on separate branches. This supersedes the paused/no-push instruction below. No force push, discarded user work, paid upgrade, overage, or unverified credit-consuming execution is authorized.
+
+Peer refresh before this backend unit (2026-11-12): PR #4 / `foundation/service-configuration-2026-11-11` is at `3e4d804`; it confirms the production Workflow flag remains false, Cloudflare Free and the 50/51 external-request probe, and a current signed-in E2B grant display of $100/$100 with $0.01 pending usage. Firestore still lacks E2B credit/template approvals, and only source/evaluation templates passed read-only current checks. PR #3 / `frontend/integration-2026-11-11` is at `1810e44`; it adds explicit “saved activity temporarily unavailable” copy when progress reads fail. The hosted synthetic draft initially returned `storage_unavailable`; a later read-only Refresh loaded the draft successfully. PR #4's failure diagnostic is not deployed, so the intermittent failure cause remains unknown. Neither peer change conflicts with this backend cut. No hosted audit, user source execution, or model request was triggered.
+
+Direct read-only recheck on 2026-11-12: Pages HEAD returned 200, Pages-origin API preflight returned 204, and unauthenticated `GET /api/v1/audits` returned 401. Wrangler reports production version `8ed64d8e-12f0-401a-a77d-1529f5dc5f5c` at 100%; its plain-text variables remain `SIPHON_API_ENABLED=true` and `SIPHON_INSPECTION_WORKFLOW_ENABLED=false`. Secret values were not read. The E2B read-only template audit, using ignored shared-base local configuration without printing values, again verified only source and evaluation (each private, single-build and current tag/build matched); inspection and PDF roles are not configured. The audit creates no sandbox. This does not reconcile the displayed workspace grant with application spend accounting or establish an available dispatch allowance. No production writes, deployments, model requests or sandbox executions occurred.
+
+Signed-in draft read follow-up on 2026-11-12: the selected synthetic heat revision initially returned `storage_unavailable` (request `4be41603-b8e6-4834-8e72-7fcd1a977800`) and showed “Loading persisted state…”. A later user-path Refresh loaded the workspace and progress: revision status `idle`, stage `draft`, generation 0, no source uploaded, and no readiness/plan/report. Start and upload remained unavailable because there is no source. A read-only service-account check using the actual Firestore REST client fetched this exact audit and revision; the audit pointed to that revision, and `WorkspaceRepository.get` plus `ProgressRepository.get` both parsed valid snapshots. The check printed only schema metadata, not user fields. A tail filtered to the deployed version and `firestore_transport_failed` emitted no match during the refresh; the deployed Worker does not yet log Firestore HTTP failure classifications. This establishes intermittent hosted reads and valid data through the local service-account path, but does not identify the Worker cause. PR #4's sanitized diagnostic needs to be deployed before a future failure can be attributed. No mutation, source upload, run or model request occurred.
 
 Shared baseline branch: `coordination/shared-baseline-2026-11-11`, based on `ee73498`. It preserves the existing frontend, Groq, scientific orchestration, E2B tooling and documentation work. Chat 1 owns service configuration, E2B endpoint consistency, runtime/credit evidence and Cloudflare Free feasibility. Chat 2 owns `apps/web` and frontend journey verification. Chat 3 owns backend workflow, investigation/report publication, recovery and genuine audit evidence. Each chat must fetch and inspect the other branches/PRs before a new unit, use an isolated worktree where possible, and communicate interface changes through its PR and this handoff. Production inspection workflow remains disabled until all financial/security/resource gates are evidenced.
 
 Baseline checks rerun on 2026-11-11: 846 Vitest tests/92 files; lint; full build; science (243 tests/78 subtests); disabled local Worker runtime all passed. Gitleaks 8.30.1 scanned all 417 nonignored source candidates: one deliberately unsigned `alg=none` JWT in `auth.test.ts` was reviewed as a non-credential fixture; a narrowly scoped exception for that exact test token yielded zero findings. Exact matching of three secret representations from ignored local settings against all candidates found no matches. Populated local environment files remain ignored and untracked. These checks do not establish hosted execution or production readiness.
 
-## Objective and current status
+## Objective and current status (Historical Context)
+
+Live read-only service probe at 2026-11-11 13:24 UTC: Firebase credential envelope validated, service-account OAuth/Firestore synthetic history query succeeded with zero rows; `configuration/e2b_credits`, `budgets/e2b_global_micro_usd` and inspection/source/evaluation/PDF dispatch records were all absent. Listing `sandboxTemplates` returned zero documents with no truncated page. Groq settings validated and its authenticated model-list endpoint listed the configured model, without running inference. Cloudflare's latest production deployment remains `8ed64d8e-12f0-401a-a77d-1529f5dc5f5c`; secret-name inventory includes the Firebase/E2B/Groq settings but does not expose/verify their production values. No deployment or production record writes were performed.
+
+Fresh read-only service checks at 2026-11-11 18:47 UTC: production Pages returned 200, the Pages-origin API preflight returned 204, and unauthenticated audit history returned 401. A fresh `npm run audit:e2b-templates` using the ignored local configuration from the shared base checkout verified the configured source and evaluation templates as private, single-build and tag/build matched. Inspection and PDF roles were not configured and were not checked. This audit creates no sandbox. It does not establish a current E2B spendable balance, Firestore credit reconciliation, hosted authenticated operation, or production approval. No deployment, sandbox creation or model request was performed.
+
+Service-foundation checkpoint: `foundation/service-configuration-2026-11-11` uses worktree `D:\Freelance\Siphon-service-foundation`, based on shared baseline `01fbbfa` / [draft PR #1](https://github.com/aeaayushdeep36-ship-it/Siphon/pull/1). The E2B endpoint consistency fix shares a clean HTTPS-origin validator between runtime and read-only audit, shares bounded metadata/tag verification, and binds the SDK termination client to that origin. Arbitrary endpoint paths are rejected because SDK/REST path resolution differs. Existing unresolved handles must be reconciled against their original provider before any endpoint change. Public API and sandbox evidence/credit schemas are unchanged.
+
+Fresh read-only account evidence on 2026-11-11: the signed-in E2B console shows Hobby Free, no cards, zero running sandboxes, a $100.00 remaining signup grant expiring November 1, 2027, and $0.01 usage pending deduction at invoice creation. These are rounded dashboard values, not an exact reconciled dispatch allowance. No credit snapshot, template approval or sandbox execution was fabricated. The updated read-only template audit verified source and evaluation as private single-build/tag-matched roles; inspection and PDF remain absent in the active local environment. Current npm audit reports 21 moderate dependency findings (including the E2B build-tool/minimatch chain), zero high/critical; review separately without automatic force fixes.
+
+Cloudflare Free feasibility remains unresolved. The current limits table labels subrequests per instance, while its prose says per invocation; pricing explicitly says steps are not invocations. Existing offline inspection REST measurements total 115 calls (117 for reused-source revisions), excluding OAuth, E2B SDK and bindings. Per-stage counts do not establish instance feasibility. Next: verify actual provider invocation boundaries and CPU with a bounded authored no-sandbox hosted probe before enabling execution; redesign durable work boundaries if required. Step/storage/day limits and account plan still need workload/account evidence.
 
 Complete the frontend/backend integration and run real heat and orbital audits, including reports, PDFs, accounting and sandbox cleanup. The goal is active. The project is not yet complete: the hosted inspection workflow is disabled and no full hosted audit has been verified.
 
@@ -31,7 +121,7 @@ The repository is `D:\Freelance\Siphon`. Read `AGENTS.md`, this file, the curren
 
 The user selected Groq with the configured Qwen model, E2B for isolated execution, Firebase authentication/Firestore, and Cloudflare hosting. Keep credentials server-side and deployment settings configurable. The user requires zero out-of-pocket spending and no paid upgrades. Do not invent credit balances, security approvals, scientific findings or completed audits.
 
-## What is working and what has been verified
+## What is working and what has been verified (Historical Context)
 
 - Pages is hosted at https://siphon-simulation-audit.pages.dev and the API at https://siphon-api.lookingforit.workers.dev. A recent read-only check returned Pages HTTP 200, allowed-origin preflight 204, and unauthenticated audit request 401. The API is enabled; the inspection workflow remains disabled.
 - Google sign-in and private history were verified in the hosted UI after the index fix. The existing synthetic heat draft appeared in history. Opening it and refreshing persisted state returned `storage_unavailable` (requests `a03150de-59ce-4ef7-b6aa-fab316318d96`, `c84f857d-c38c-4833-84a9-f68f9e2b87d2` and `4be41603-b8e6-4834-8e72-7fcd1a977800`); details stayed loading and controls disabled. The sanitized Firestore failure diagnostic in PR #4 is not deployed, so the cause remains unknown. No source upload or run was initiated, and the draft was not changed.
@@ -39,17 +129,11 @@ The user selected Groq with the configured Qwen model, E2B for isolated executio
 - Authored E2B heat, orbital, numeric-input and PDF smoke checks were run outside the production admission and publication flow. They are component evidence, not a complete Siphon audit. Earlier four-role template checks passed; the latest read-only audit of the current local configuration checked only source and evaluation, both private single-build templates with matching build and tag. Inspection and PDF were not configured for that latest check.
 - Latest local checks: 846 Vitest tests across 92 files passed; `npm run lint`, `npm run build`, `npm run verify:science` (243 tests and 78 subtests), and `npm run test:worker-runtime` passed. The latter checks the disabled workflow with no outbound calls, not a live simulation. No deployment followed the latest local changes.
 
-## Latest local changes needing review
+## Remaining Roadmap
 
-The E2B client checks template privacy, single-build count and tag/build mapping before and after sandbox creation. A read-only `npm run audit:e2b-templates` script checks configured roles without creating a sandbox. The current checkout also adds optional `E2B_API_URL` configuration to the runtime and passes it to verification and creation. Review this endpoint change before deployment: the kill call currently does not pass the configured URL, and the template audit script's SDK tag lookup does not pass it either. Ensure any custom endpoint is handled consistently and safely, or remove the override if it is unnecessary. The tests and build above passed on the current code, but they do not cover those endpoint consistency issues.
-
-Cloudflare's current [Workflows pricing](https://developers.cloudflare.com/workflows/reference/pricing/) and [limits](https://developers.cloudflare.com/workflows/reference/limits/) document finite Free-plan CPU, external subrequest, step and storage limits. A full Siphon workflow has not been measured against them. This may require design changes to stay within the user's cost constraint.
-
-## Remaining work
-
-1. When the signed-in browser session is exposed to the local browser tool, verify the hosted history page after the Firestore index repair. Do not handle passwords or authentication prompts on the user's behalf.
-2. Obtain current E2B balance and expiry from the signed-in dashboard, reconcile it with the application's accounting, and establish the required template records and operator-reviewed isolation/resource evidence. Earlier dashboard evidence of a grant and usage is not a current balance. No approved production `sandboxTemplates` records or `configuration/e2b_credits` snapshot have been verified.
-3. Determine whether the actual workflow fits Cloudflare Free CPU and subrequest limits; adapt the architecture if needed while preserving zero out-of-pocket spending. Complete any still-missing investigation/report features required by the product documents.
-4. After the gates are met, run a bounded synthetic hosted audit through the actual frontend, API, workflow and E2B path. Verify heat and orbital results, evidence, report/PDF, accounting reconciliation and sandbox termination. Investigate and fix any failures before claiming completion.
+1. **Milestone 2 (Storage Availability & Safety Safeguards):** Implement read-only storage optimization removing write transactions from `workspace.get` and `progress.get`; deploy sanitized Firestore error diagnostics; verify client recovery and E2B HTTPS/isolation safeguards.
+2. **Milestone 3 (Heat Diffusion Audit Verification & Fixtures):** Implement/verify standalone sound and known-bad PDE fixtures, `H_BALANCE` quadrature evaluation with second-derivative remainder bounds, clarification flow, and upload validation.
+3. **Milestone 4 (Orbital Dynamics Scientific Audit & Reporting):** Verify Orbital Dynamics invariants, Kepler/multi-body accuracy, Groq advisory pipeline with strict data minimization, and synchronized web/PDF reports.
+4. **Milestone 5 (Integration & Bounded Verification Gates):** Run full local test suites and contract checks; verify frontend accessibility; review bounded hosted verification gates; update final documentation and PR descriptions.
 
 Never enable the workflow or create billable sandboxes based solely on old credit evidence. Keep secrets out of logs, chat, frontend and tracked files. The ignored `apps/api/.dev.vars` contains local secrets; do not print it. `docs/PROJECT_CONTEXT.md` contains historical notes, and its current handoff supersedes older conflicting status entries.

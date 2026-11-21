@@ -26,6 +26,7 @@ function setup() {
     authorizeCreate: vi.fn(async () => {}),
     recordCreated: vi.fn(async () => {}),
     authorizeKill: vi.fn(async () => {}),
+    authorizeConnect: vi.fn(async () => {}),
     recordTermination: vi.fn(async () => {}),
   };
   const provider = {
@@ -33,6 +34,12 @@ function setup() {
       async () => null,
     ),
     create: vi.fn(async () => ({ sandboxId: 'sandbox-123' })),
+    connectInspection: vi.fn(async (sandboxId: string) => ({
+      sandboxId,
+      writeRequest: vi.fn(async () => {}),
+      run: vi.fn(async () => 0),
+      readResult: vi.fn(async () => new ReadableStream<Uint8Array>()),
+    })),
     kill: vi.fn(async () => true),
   };
   return {
@@ -88,6 +95,55 @@ describe('E2B control-plane boundary (offline)', () => {
       f.provider.create.mock.invocationCallOrder[0]!,
     );
   });
+  it('reconnects an inspection session only after durable handle authorization', async () => {
+    const f = setup();
+    const client = new E2bClient(
+      'test-secret',
+      f.gate,
+      f.provider,
+      'https://e2b.example.test',
+    );
+    const session = await client.connectInspection(
+      request.operationId,
+      'sandbox-123',
+    );
+    expect(session.sandboxId).toBe('sandbox-123');
+    expect(f.gate.authorizeConnect).toHaveBeenCalledWith(
+      request.operationId,
+      'sandbox-123',
+    );
+    expect(f.gate.authorizeConnect.mock.invocationCallOrder[0]).toBeLessThan(
+      f.provider.connectInspection.mock.invocationCallOrder[0]!,
+    );
+    expect(f.provider.connectInspection).toHaveBeenCalledWith(
+      'sandbox-123',
+      expect.objectContaining({
+        apiKey: 'test-secret',
+        apiUrl: 'https://e2b.example.test',
+        retries: 0,
+        requestTimeoutMs: 30000,
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+  it('does not reconnect when durable linkage is denied or the provider returns another handle', async () => {
+    const f = setup();
+    f.gate.authorizeConnect.mockRejectedValueOnce(new Error('denied'));
+    await expect(
+      f.client.connectInspection(request.operationId, 'sandbox-123'),
+    ).rejects.toMatchObject({ code: 'connect_unknown' });
+    expect(f.provider.connectInspection).not.toHaveBeenCalled();
+
+    f.provider.connectInspection.mockResolvedValueOnce({
+      sandboxId: 'different-sandbox',
+      writeRequest: vi.fn(async () => {}),
+      run: vi.fn(async () => 0),
+      readResult: vi.fn(async () => new ReadableStream<Uint8Array>()),
+    });
+    await expect(
+      f.client.connectInspection(request.operationId, 'sandbox-123'),
+    ).rejects.toMatchObject({ code: 'handle_unrecorded' });
+  });
   it('checks a build-specific E2B tag before admission and launches by that tag', async () => {
     const f = setup();
     f.provider.verifyTemplate = vi.fn(async () =>
@@ -103,7 +159,7 @@ describe('E2B control-plane boundary (offline)', () => {
       'approved-template',
       'siphon-build123',
       expect.any(AbortSignal),
-      'https://api.e2b.app/',
+      'https://api.e2b.app',
     );
     expect(f.provider.verifyTemplate.mock.invocationCallOrder[0]).toBeLessThan(
       f.gate.authorizeCreate.mock.invocationCallOrder[0]!,
@@ -119,16 +175,31 @@ describe('E2B control-plane boundary (offline)', () => {
       'test-secret',
       f.gate,
       f.provider,
-      'https://e2b.example.test/api',
+      'https://e2b.example.test/',
     );
-    await client.create(request);
+    f.provider.verifyTemplate.mockResolvedValue(
+      templateVerification('build-123'),
+    );
+    await client.create({
+      ...request,
+      templateBuildId: 'build-123',
+      templateTag: 'siphon-build123',
+    });
+    expect(f.provider.verifyTemplate).toHaveBeenCalledTimes(2);
+    for (const call of f.provider.verifyTemplate.mock.calls)
+      expect(call[4]).toBe('https://e2b.example.test');
     expect(f.provider.create).toHaveBeenCalledWith(
-      'approved-template',
-      expect.objectContaining({ apiUrl: 'https://e2b.example.test/api' }),
+      'approved-template:siphon-build123',
+      expect.objectContaining({ apiUrl: 'https://e2b.example.test' }),
     );
     expect(
       () => new E2bClient('test-secret', f.gate, f.provider, 'http://e2b.test'),
-    ).toThrow('E2B API endpoint must be a clean HTTPS URL');
+    ).toThrow('E2B API endpoint must be a clean HTTPS origin');
+    await client.kill(request.operationId, 'sandbox-123');
+    expect(f.provider.kill).toHaveBeenCalledWith(
+      'sandbox-123',
+      expect.objectContaining({ apiUrl: 'https://e2b.example.test' }),
+    );
   });
   it('fails closed when a build tag no longer resolves to the recorded build', async () => {
     const f = setup();

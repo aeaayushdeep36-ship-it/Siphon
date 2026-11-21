@@ -4,6 +4,10 @@
     "lib": ["ES2023"],
     "types": ["@cloudflare/workers-types"]
   },
-  "include": ["apps/api/worker/index.ts", "infra/cloudflare/typecheck.ts"],
+  "include": [
+    "apps/api/worker/index.ts",
+    "infra/cloudflare/typecheck.ts",
+    "infra/cloudflare/free-probe/index.ts"
+  ],
   "exclude": []
 }

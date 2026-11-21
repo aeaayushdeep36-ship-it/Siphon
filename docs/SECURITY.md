@@ -11,7 +11,6 @@ Before any Groq context, adapter or numeric-investigation request, the owner mus
 ## Terminal replay authorization — 2026-11-11
 
 A scientific finish receipt permits replay of the original finishing operation only after rechecking an active invitation, live owned audit, unchanged current revision/input, exact successor generation, matching report ID, partial terminal state and absence of attached capacity/operations. A different operation, deletion, ownership change or superseding revision denies replay. Server-held completion metadata never grants new execution or artifact access, and terminal status without the receipt is insufficient.
-
 ## E2B endpoint consistency (2026-11-11)
 
 Only trusted server/operator configuration may select the clean HTTPS control-plane origin. User/model/upload content cannot select it. Reject embedded credentials, paths, queries and fragments before I/O; do not echo malformed endpoints or provider exceptions. Shared runtime/audit template verification bounds metadata and disables redirects/retries. Cleanup binds the SDK client to the same origin, retains kill authorization, and records termination only from a known boolean outcome. Configuration changes cannot serve as evidence that an old provider handle terminated.

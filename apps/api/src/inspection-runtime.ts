@@ -48,7 +48,6 @@ import { PdfPipeline } from './pdf-pipeline.js';
 import { parseAiConfiguration, type AiEnvironment } from './ai-config.js';
 import { ScientificInvestigationStage } from './scientific-investigation-stage.js';
 import { GroqModelJobs } from './groq-model-jobs.js';
-
 import { E2bApiUrl } from './e2b-endpoint.js';
 import type { WorkflowPhaseBinding } from './workflow-phases.js';
 

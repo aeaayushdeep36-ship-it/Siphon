@@ -726,7 +726,8 @@ export function createApp(deps: ApiDependencies) {
   });
   app.onError((error, c) => {
     if (error instanceof FirestoreFailure) {
-      // Log only bounded classifications and a route template to diagnose
+      // Firestore REST errors are normalized for callers. Log only bounded
+      // classifications and the route template so operators can diagnose
       // intermittent storage failures without recording user or provider data.
       console.error('siphon_firestore_failure', {
         requestId: c.get('requestId'),

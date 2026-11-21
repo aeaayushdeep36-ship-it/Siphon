@@ -13,6 +13,8 @@ import {
   runInspectionWorkflow,
   type InspectionWorkflowSteps,
 } from '../src/inspection-workflow.js';
+import { DispatchFence } from '../src/audit-commands.js';
+import { runScientificWorkflow } from '../src/scientific-workflow.js';
 export { default } from '../src/worker.js';
 
 /** Native runtime boundary. No public HTTP trigger; the disabled-by-default
@@ -93,6 +95,43 @@ export class SiphonInspectionWorkflow extends WorkflowEntrypoint<InspectionWorkf
           comparison,
         };
       };
+      const scientific = z
+        .strictObject({
+          schemaVersion: z.literal('1.0'),
+          jobId: z.string().regex(/^[a-f0-9]{64}$/),
+          resumeScientific: z.literal(true),
+          fence: DispatchFence,
+        })
+        .safeParse(event.payload);
+      if (scientific.success) {
+        return await runScientificWorkflow(
+          scientific.data.jobId,
+          scientific.data.fence,
+          {
+            run: async <T>(name: string, callback: () => Promise<T>) => {
+              const checkpoint = await step.do(
+                name,
+                {
+                  retries: { limit: 0, delay: '1 second' },
+                  timeout: '5 minutes',
+                },
+                async () => {
+                  try {
+                    const encoded = JSON.stringify(await callback());
+                    if (encoded === undefined)
+                      throw new Error('Invalid checkpoint');
+                    return encoded;
+                  } catch {
+                    throw new NonRetryableError('scientific_stage_unavailable');
+                  }
+                },
+              );
+              return JSON.parse(checkpoint) as T;
+            },
+          },
+          services,
+        );
+      }
       const resume = z
         .strictObject({
           schemaVersion: z.literal('1.0'),

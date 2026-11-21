@@ -66,7 +66,15 @@ export const AuditWorkspace = z
       })
       .nullable()
       .default(null),
+    heatParameters: z
+      .strictObject({
+        densityKgM3: z.number().finite().positive(),
+        heatCapacityJKgK: z.number().finite().positive(),
+      })
+      .nullable()
+      .default(null),
     plan: AuditPlan.nullable(),
+    planDigest: Digest.nullable().default(null),
     operationalIssues: z
       .array(
         z.strictObject({

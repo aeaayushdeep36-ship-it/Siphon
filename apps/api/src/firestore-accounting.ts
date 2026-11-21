@@ -18,7 +18,7 @@ export class FirestoreAccountingStore implements AccountingStore {
     private readonly validateProviderDispatch?: (
       tx: DocumentTransaction,
       operation: Operation,
-    ) => Promise<void>,
+    ) => Promise<void | (() => void)>,
   ) {
     this.policy = ResourcePolicy.parse(policy);
   }
@@ -73,7 +73,10 @@ export class FirestoreAccountingStore implements AccountingStore {
       };
       return callback({
         prepareDispatch: async (operation, now) => {
-          await this.validateProviderDispatch?.(tx, operation);
+          const commitProvider = await this.validateProviderDispatch?.(
+            tx,
+            operation,
+          );
           const revision = await tx.get(
             `audits/${operation.auditId}/revisions/${operation.revisionId}`,
           );
@@ -83,7 +86,7 @@ export class FirestoreAccountingStore implements AccountingStore {
               'capacity_required',
               'Reserve execution capacity before dispatch.',
             );
-          return prepareAdmissionDispatch(
+          const commitAdmission = await prepareAdmissionDispatch(
             tx,
             operation.ownerUid,
             {
@@ -97,6 +100,10 @@ export class FirestoreAccountingStore implements AccountingStore {
             this.policy,
             operation,
           );
+          return () => {
+            commitAdmission();
+            commitProvider?.();
+          };
         },
         authorizeDispatch: async (operation) => {
           await requireActiveRevision(tx, operation.ownerUid, {

@@ -1,3 +1,4 @@
+import { sciencePython } from './science-python.js';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ObservationMapping } from '../packages/contracts/src/adapter.js';
@@ -29,7 +30,7 @@ for mapping in json.load(sys.stdin):
         results.append({"accepted":False})
 print(json.dumps(results))`;
 const output: unknown = JSON.parse(
-  execFileSync(process.env.SIPHON_PYTHON ?? 'python', ['-c', code], {
+  execFileSync(sciencePython, ['-c', code], {
     cwd: fileURLToPath(new URL('../packages/science/', import.meta.url)),
     input: JSON.stringify(cases),
     timeout: 10000,

@@ -4,6 +4,7 @@ import { googleAccessTokenProvider } from './google-oauth.js';
 import { FirestoreClient } from './firestore.js';
 import { ArtifactDownloadService } from './artifact-download.js';
 import { R2DownloadStore, type DownloadBucketBinding } from './r2-download.js';
+import { R2UploadStore, type UploadBucketBinding } from './r2-upload.js';
 import { InspectionSourceLoader } from './inspection-sources.js';
 import { SandboxJobs } from './sandbox-jobs.js';
 import { E2bClient, type SandboxControlPlane } from './e2b-client.js';
@@ -23,6 +24,7 @@ import { AdapterCoordinator } from './adapter-coordinator.js';
 import { BaselineSourceStage } from './baseline-source-stage.js';
 import { SourceExecutions } from './source-executions.js';
 import { SourcePipeline } from './source-pipeline.js';
+import { SourceJobFailed } from './source-runner.js';
 import { SourceOutputStore } from './source-output-store.js';
 import { DispatchFence } from './audit-commands.js';
 import { BaselineValidationStage } from './baseline-validation-stage.js';
@@ -35,16 +37,26 @@ import { FidelityExecutions } from './fidelity-executions.js';
 import { AdapterVerification } from './adapter-verification.js';
 import { ScientificEligibilityStage } from './scientific-eligibility-stage.js';
 import { ScientificQuestions } from './scientific-questions.js';
+import { ScientificEvaluationCoordinator } from './scientific-evaluation-coordinator.js';
+import { ConservationPipeline } from './conservation-pipeline.js';
+import { ConservationExecutions } from './conservation-executions.js';
+import { ScientificReportStage } from './scientific-report-stage.js';
+import { ScientificPdfStage } from './scientific-pdf-stage.js';
+import { ScientificFinishStage } from './scientific-finish-stage.js';
+import { ReportPdfPublications } from './report-publication.js';
+import { PdfPipeline } from './pdf-pipeline.js';
+import { parseAiConfiguration, type AiEnvironment } from './ai-config.js';
 
-export interface InspectionWorkflowEnvironment {
+export interface InspectionWorkflowEnvironment extends AiEnvironment {
   SIPHON_INSPECTION_WORKFLOW_ENABLED: string;
   FIREBASE_PROJECT_ID: string;
+  FIRESTORE_DATABASE_ID?: string;
   GOOGLE_SERVICE_ACCOUNT_EMAIL: string;
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: string;
   E2B_API_KEY: string;
-  SIPHON_ARTIFACTS?: DownloadBucketBinding;
+  E2B_API_URL?: string;
+  SIPHON_ARTIFACTS?: DownloadBucketBinding & Partial<UploadBucketBinding>;
   SIPHON_PRIVATE_KV?: KvArtifactBinding;
-  MODEL_API_KEY?: string;
 }
 const Configuration = FirebaseServiceConfiguration.safeExtend({
   SIPHON_INSPECTION_WORKFLOW_ENABLED: z.literal('true'),
@@ -53,7 +65,26 @@ const Configuration = FirebaseServiceConfiguration.safeExtend({
     .min(1)
     .max(512)
     .regex(/^[\x21-\x7e]+$/),
+  E2B_API_URL: z
+    .string()
+    .url()
+    .refine((value) => new URL(value).protocol === 'https:')
+    .optional(),
 });
+
+function aiIssueMessage(code: string): string {
+  switch (code) {
+    case 'ai_configuration_required':
+    case 'ai_credentials_required':
+      return 'AI review needs the configured server-side Groq settings and API key.';
+    case 'ai_request_too_large':
+      return 'This AI request exceeds the configured input size. No source was truncated; review the input and free-tier limits before retrying.';
+    case 'ai_quota_unavailable':
+      return 'The AI allowance is exhausted, cooling down, or paused for reconciliation. Retry after the allowance resets or the pause is resolved.';
+    default:
+      return 'The next audit stage needs service verification or reconciliation; existing evidence has been preserved.';
+  }
+}
 
 /** Configuration does not provision templates/credits or grant execution. All
  * real repository/provider gates remain mandatory. Offline ports are explicit
@@ -84,9 +115,15 @@ export function createInspectionServices(
     config.FIREBASE_PROJECT_ID,
     token,
     transport,
+    config.FIRESTORE_DATABASE_ID,
   );
-  const jobs = new SandboxJobs(store, clock);
-  const client = new E2bClient(config.E2B_API_KEY, jobs, provider);
+  const jobs = new SandboxJobs(store, clock, true);
+  const client = new E2bClient(
+    config.E2B_API_KEY,
+    jobs,
+    provider,
+    config.E2B_API_URL,
+  );
   const downloads = new ArtifactDownloadService(
     store,
     environment.SIPHON_PRIVATE_KV
@@ -100,12 +137,23 @@ export function createInspectionServices(
     new InspectionJobs(store, clock),
   );
   const coordinator = new InspectionCoordinator(store, jobs, pipeline, clock);
+  // Configuration is parsed without exposing secrets. Missing/invalid AI
+  // settings block only AI stages, never select a legacy provider implicitly.
+  const ai = (() => {
+    try {
+      return parseAiConfiguration(environment);
+    } catch {
+      return null;
+    }
+  })();
   const context = new ContextCoordinator(
     store,
     downloads,
-    environment.MODEL_API_KEY ?? '',
+    ai?.apiKey ?? '',
     transport,
     clock,
+    undefined,
+    ai ?? undefined,
   );
   const continueContext = async (jobId: string) => {
     const job = InspectionStageJob.parse(await store.get(`stageJobs/${jobId}`));
@@ -164,7 +212,14 @@ export function createInspectionServices(
       fence,
       { activity: 'reading_context', experiments: null },
     );
-    const result = await context.run(job.ownerUid, fence, ids);
+    const result = ai
+      ? await context.run(job.ownerUid, fence, ids)
+      : {
+          status: 'blocked' as const,
+          fence,
+          code: 'ai_configuration_required',
+          required: ['Groq backend settings and API key'],
+        };
     if (result.status === 'blocked')
       await store.transaction(async (tx) => {
         await requireActiveRevision(tx, job.ownerUid, fence);
@@ -178,10 +233,7 @@ export function createInspectionServices(
             operationalIssues: [
               {
                 code: result.code,
-                message:
-                  result.code === 'meta_credentials_required'
-                    ? 'AI review is waiting for the project Meta API key.'
-                    : 'The next audit stage needs service verification or review; existing evidence has been preserved.',
+                message: aiIssueMessage(result.code),
               },
             ],
           }),
@@ -211,19 +263,26 @@ export function createInspectionServices(
     });
   };
   const continueAdapter = async (uid: string, fence: unknown) => {
-    const result = await new AdapterCoordinator(
-      store,
-      downloads,
-      environment.MODEL_API_KEY ?? '',
-      transport,
-      clock,
-    ).run(uid, fence);
+    const result = !ai
+      ? {
+          status: 'blocked' as const,
+          fence: DispatchFence.parse(fence),
+          code: 'ai_configuration_required',
+        }
+      : await new AdapterCoordinator(
+          store,
+          downloads,
+          ai.apiKey,
+          transport,
+          clock,
+          ai,
+        ).run(uid, fence);
     if (result.status === 'blocked')
       await stageIssue(
         uid,
-        fence,
+        result.fence,
         result.code,
-        'Adapter review is waiting for verified service configuration or reconciliation. Existing evidence has been preserved.',
+        aiIssueMessage(result.code),
       );
     return result;
   };
@@ -281,6 +340,18 @@ export function createInspectionServices(
           'baseline_validation_pending',
           'Baseline observations have been stored. Independent numeric validation and adapter comparison are still pending. Scientific checks have not started.',
         );
+      else if (
+        result.status === 'needs_input' &&
+        result.reasons.some(
+          (reason) => reason.code === 'numeric_input_validator_required',
+        )
+      )
+        await stageIssue(
+          job.ownerUid,
+          fence,
+          'numeric_input_validator_required',
+          'CSV and NPY inputs are waiting for the isolated validation runtime to be updated. Your uploaded files are preserved.',
+        );
       else
         await stageIssue(
           job.ownerUid,
@@ -291,16 +362,23 @@ export function createInspectionServices(
           'Baseline execution needs input review or cleanup reconciliation. No adapter fidelity result has been issued.',
         );
       return result;
-    } catch {
+    } catch (error) {
       await stageIssue(
         job.ownerUid,
         fence,
-        'baseline_stage_unavailable',
-        'Baseline execution is waiting for verified runtime configuration or reconciliation. Existing evidence has been preserved.',
+        error instanceof SourceJobFailed
+          ? 'source_job_failed'
+          : 'baseline_stage_unavailable',
+        error instanceof SourceJobFailed
+          ? 'The isolated simulation did not complete. Review the script and supported input formats; runtime configuration or cleanup may also need attention. No observations from this attempt were published.'
+          : 'Baseline execution is waiting for verified runtime configuration or reconciliation. Existing evidence has been preserved.',
       );
       return {
         status: 'blocked' as const,
-        code: 'baseline_stage_unavailable' as const,
+        code:
+          error instanceof SourceJobFailed
+            ? ('source_job_failed' as const)
+            : ('baseline_stage_unavailable' as const),
         kind,
       };
     }
@@ -431,6 +509,122 @@ export function createInspectionServices(
       };
     }
   };
+  const scientificJob = async (jobId: string, expected: unknown) => {
+    const job = InspectionStageJob.parse(await store.get(`stageJobs/${jobId}`));
+    const fence = DispatchFence.parse(expected);
+    if (
+      job.auditId !== fence.auditId ||
+      job.revisionId !== fence.revisionId ||
+      job.inputDigest !== fence.inputDigest ||
+      job.status !== 'inspection_complete'
+    )
+      throw new Error('Scientific workflow job changed');
+    return { job, fence };
+  };
+  const scientificEvaluateForJob = async (jobId: string, expected: unknown) => {
+    const { job, fence } = await scientificJob(jobId, expected);
+    const revision = await store.get(
+      `audits/${fence.auditId}/revisions/${fence.revisionId}`,
+    );
+    if (
+      revision?.stage === 'investigating' ||
+      revision?.stage === 'reporting'
+    ) {
+      const stage = await store.get(
+        `scientificBudgetStages/${fence.revisionId}`,
+      );
+      return {
+        status: 'published' as const,
+        fence,
+        operationId: z.string().uuid().parse(stage?.operationId),
+      };
+    }
+    const pipeline = new ConservationPipeline(
+      new StoredObservationLoader(store, downloads),
+      new ConservationExecutions(store, clock),
+      client,
+    );
+    const result = await new ScientificEvaluationCoordinator(
+      store,
+      pipeline,
+      clock,
+    ).run(job.ownerUid, fence);
+    return result;
+  };
+  const scientificReportForJob = async (
+    jobId: string,
+    expected: unknown,
+    operationId: unknown,
+  ) => {
+    const { job, fence } = await scientificJob(jobId, expected);
+    return new ScientificReportStage(store, clock).publish(
+      job.ownerUid,
+      fence,
+      operationId,
+    );
+  };
+  const scientificPdfForJob = async (jobId: string, expected: unknown) => {
+    const { job, fence } = await scientificJob(jobId, expected);
+    try {
+      if (
+        !environment.SIPHON_PRIVATE_KV &&
+        typeof environment.SIPHON_ARTIFACTS?.put !== 'function'
+      )
+        throw new Error('Private PDF storage is unavailable');
+      const objects = environment.SIPHON_PRIVATE_KV
+        ? new KvArtifacts(environment.SIPHON_PRIVATE_KV, store, clock)
+        : new R2UploadStore(
+            environment.SIPHON_ARTIFACTS as UploadBucketBinding,
+          );
+      const pdf = await new ScientificPdfStage(
+        store,
+        jobs,
+        new PdfPipeline(
+          new ReportPdfPublications(store, objects, clock),
+          client,
+        ),
+        clock,
+      ).run(job.ownerUid, fence);
+      if (pdf.status !== 'published')
+        await stageIssue(
+          job.ownerUid,
+          fence,
+          'pdf_reconciliation_required',
+          'The structured report is available. PDF rendering needs cleanup or reconciliation.',
+        );
+      return { ...pdf, fence };
+    } catch {
+      await stageIssue(
+        job.ownerUid,
+        fence,
+        'pdf_unavailable',
+        'The structured report is available. PDF rendering needs service configuration or reconciliation.',
+      );
+      return { status: 'unavailable' as const, fence };
+    }
+  };
+  const scientificFinishForJob = async (
+    jobId: string,
+    expected: unknown,
+    operationId: unknown,
+  ) => {
+    const { job, fence } = await scientificJob(jobId, expected);
+    try {
+      return await new ScientificFinishStage(store, clock).finish(
+        job.ownerUid,
+        fence,
+        operationId,
+      );
+    } catch {
+      await stageIssue(
+        job.ownerUid,
+        fence,
+        'completion_reconciliation_required',
+        'The report and PDF are available. Completion is waiting for execution cleanup or reconciliation.',
+      );
+      return { status: 'completion_pending' as const, fence };
+    }
+  };
   return {
     coordinator,
     continueContext,
@@ -438,6 +632,10 @@ export function createInspectionServices(
     baselineForJob,
     validateBaselineForJob,
     compareBaselinesForJob,
+    scientificEvaluateForJob,
+    scientificReportForJob,
+    scientificPdfForJob,
+    scientificFinishForJob,
   };
 }
 

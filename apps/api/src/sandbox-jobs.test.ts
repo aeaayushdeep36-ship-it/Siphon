@@ -33,6 +33,8 @@ async function setup(role: SandboxRequest['role'] = 'source') {
     inputDigest: String(revision.inputDigest),
     role,
     templateId: 'fixture-template',
+    templateBuildId: 'fixture-build',
+    templateTag: 'fixture-build-tag',
     templateEvidenceId: crypto.randomUUID(),
     lifetimeSeconds: 60,
   };
@@ -50,6 +52,8 @@ async function setup(role: SandboxRequest['role'] = 'source') {
     schemaVersion: '1.0',
     id: request.templateEvidenceId,
     templateId: request.templateId,
+    templateBuildId: request.templateBuildId,
+    templateTag: request.templateTag,
     role,
     imageDigest: 'a'.repeat(64),
     runtimeDigest: 'b'.repeat(64),
@@ -58,7 +62,7 @@ async function setup(role: SandboxRequest['role'] = 'source') {
     networkIsolationVerified: true,
     privateAccessVerified: true,
     resourceLimitsVerified: true,
-    immutableTemplateVerified: true,
+    singlePrivateBuildVerified: true,
     microUsdPerSecondCeiling: 10,
   });
   const charges = [
@@ -135,6 +139,12 @@ async function terminatedUsage() {
   const f = await setup();
   await f.jobs.bind(f.request);
   const client = new E2bClient('fixture', f.jobs, {
+    verifyTemplate: async () => ({
+      buildId: f.request.templateBuildId!,
+      tagBuildId: f.request.templateBuildId!,
+      buildCount: 1,
+      isPrivate: true,
+    }),
     create: async () => ({ sandboxId: 'sandbox-usage' }),
     kill: async () => true,
   });
@@ -338,6 +348,12 @@ describe('durable sandbox bindings', () => {
       const path = `audits/${f.request.auditId}/revisions/${f.request.revisionId}`;
       const leaseId = String(f.docs.documents.get(path)!.slotLeaseId);
       const client = new E2bClient('fixture', f.jobs, {
+        verifyTemplate: async () => ({
+          buildId: f.request.templateBuildId!,
+          tagBuildId: f.request.templateBuildId!,
+          buildCount: 1,
+          isPrivate: true,
+        }),
         create: async () => ({ sandboxId: 'sandbox-ended' }),
         kill: async () => found,
       });
@@ -381,6 +397,12 @@ describe('durable sandbox bindings', () => {
     const f = await setup();
     await f.jobs.bind(f.request);
     const client = new E2bClient('fixture', f.jobs, {
+      verifyTemplate: async () => ({
+        buildId: f.request.templateBuildId!,
+        tagBuildId: f.request.templateBuildId!,
+        buildCount: 1,
+        isPrivate: true,
+      }),
       create: async () => ({ sandboxId: 'sandbox-uncertain' }),
       kill: async () => {
         throw new Error('timeout');
@@ -398,6 +420,12 @@ describe('durable sandbox bindings', () => {
     await f.jobs.bind(f.request);
     let creates = 0;
     const client = new E2bClient('fixture-key', f.jobs, {
+      verifyTemplate: async () => ({
+        buildId: f.request.templateBuildId!,
+        tagBuildId: f.request.templateBuildId!,
+        buildCount: 1,
+        isPrivate: true,
+      }),
       create: async () => {
         creates++;
         return { sandboxId: 'sandbox-gated' };

@@ -1,5 +1,13 @@
 # Siphon code style and engineering conventions
 
+## Current AI/configuration conventions (2026-11-08)
+
+Use explicit Groq configuration/client on the active Worker path. This supersedes conflicting Meta protocol/model/credit guidance below; retain those modules for labelled compatibility/history/tests, never a production fallback. Model, endpoint, reasoning effort, quotas, timeout and transport/input-byte bounds come from validated `SIPHON_AI_*`; the server secret is `GROQ_API_KEY`. Do not put selected model IDs or credentials into production request builders.
+
+Hash the exact validated wire request, including prompts/schema; exclude credentials from configuration digests and persisted jobs. Strict-schema conversion/normalization translates optional fields for constrained output; preserve original Zod semantic validation and usage on output errors. The independent full-request byte screen is not a tokenizer, measured rendered context or Meta billing proof. Reserve configured full input/output capacity and preserve durable quotas/revision fences; never automatically repeat uncertain calls.
+
+Keep project/account/database/origins and bindings configurable. `FIRESTORE_DATABASE_ID` supports named databases with a documented compatible default. Protocol allowlists, schema/prompt/check versions, scientific rules, lifecycle maxima and labelled fixtures remain intentional constants. Central versioned policy remains authoritative, and this migration does not claim every existing timeout literal was centralized. Track the empty-key example, ignore `.dev.vars`, and record actual verification in [Testing](TESTING.md).
+
 Version: 1.6 | Updated: 2026-10-30 | Status: partial backend, report reads and local PDF rendering are verified; see the command status below.
 
 ## Deadline integration status (2026-10-30)

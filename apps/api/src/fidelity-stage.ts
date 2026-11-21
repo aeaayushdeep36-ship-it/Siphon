@@ -116,6 +116,12 @@ export class FidelityStage {
           inputDigest: fence.inputDigest,
           role: 'evaluation',
           templateId: evidence.templateId,
+          ...(evidence.templateBuildId
+            ? { templateBuildId: evidence.templateBuildId }
+            : {}),
+          ...(evidence.templateTag
+            ? { templateTag: evidence.templateTag }
+            : {}),
           templateEvidenceId: evidence.id,
           lifetimeSeconds: config.lifetimeSeconds,
         });

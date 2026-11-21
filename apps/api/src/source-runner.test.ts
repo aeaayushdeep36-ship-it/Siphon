@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { SourceRunner, type SourceSession } from './source-runner.js';
+import { CommandExitError, type Sandbox } from 'e2b';
+import {
+  E2bSourceSession,
+  SourceJobFailed,
+  SourceRunner,
+  type SourceSession,
+} from './source-runner.js';
 import { sha256 } from './hashing.js';
 
 async function setup() {
@@ -99,11 +105,37 @@ describe('source sandbox transport (offline)', () => {
     expect(f.gate.claim).not.toHaveBeenCalled();
     expect(f.session.run).not.toHaveBeenCalled();
   });
-  it.each(['exit', 'identity', 'hash', 'bytes', 'manifest_size', 'cancelled'])(
+  it('handles an E2B nonzero command exit without exposing its output', async () => {
+    const sandbox = {
+      sandboxId: 'authored-source',
+      commands: {
+        run: vi.fn(async () => {
+          throw new CommandExitError({
+            exitCode: 2,
+            stdout: 'private',
+            stderr: 'private',
+          });
+        }),
+      },
+    } as unknown as Sandbox;
+    expect(
+      await new E2bSourceSession(sandbox).run(
+        AbortSignal.timeout(1000),
+        'adapter_v1',
+      ),
+    ).toBe(2);
+    const f = await setup();
+    f.session.run = async () => 2;
+    await expect(f.runner.run(f.request)).rejects.toBeInstanceOf(
+      SourceJobFailed,
+    );
+    expect(f.session.readManifest).not.toHaveBeenCalled();
+    expect(f.session.readObservation).not.toHaveBeenCalled();
+  });
+  it.each(['identity', 'hash', 'bytes', 'manifest_size', 'cancelled'])(
     'rejects %s output without returning collected evidence',
     async (kind) => {
       const f = await setup();
-      if (kind === 'exit') f.session.run = async () => 2;
       if (kind === 'identity') f.manifest.adapterDigest = 'd'.repeat(64);
       if (kind === 'hash')
         f.session.readObservation = async () =>

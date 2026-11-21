@@ -39,6 +39,10 @@ export class E2bFidelitySession implements FidelitySession {
     if (side !== 'original' && side !== 'adapted')
       throw new Error('Invalid baseline side');
     const key = ObservationKey.parse(value);
+    await this.sandbox.files.makeDir(`/tmp/siphon-fidelity-${side}`, {
+      signal,
+      requestTimeoutMs: 30000,
+    });
     await this.sandbox.files.write(
       `/tmp/siphon-fidelity-${side}/obs_${key}.npy`,
       bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),

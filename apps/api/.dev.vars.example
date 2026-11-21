@@ -3,8 +3,53 @@
 SIPHON_API_ENABLED="false"
 SIPHON_INSPECTION_WORKFLOW_ENABLED="false"
 E2B_API_KEY=""
+# Optional provider API endpoint override. HTTPS required; normally leave default.
+E2B_API_URL="https://api.e2b.app"
+# Template builds accept exactly one base: an immutable image plus runtime
+# user, or an existing build-specific E2B template tag/build-ID tuple.
+SIPHON_E2B_BASE_IMAGE=""
+SIPHON_E2B_RUNTIME_USER=""
+SIPHON_E2B_BASE_TEMPLATE_ID=""
+SIPHON_E2B_BASE_TEMPLATE_TAG=""
+SIPHON_E2B_BASE_TEMPLATE_BUILD_ID=""
+SIPHON_E2B_BUILD_CPU="2"
+SIPHON_E2B_BUILD_MEMORY_MB="1024"
+SIPHON_INSPECTION_TEMPLATE_ID=""
+SIPHON_INSPECTION_TEMPLATE_BUILD_ID=""
+SIPHON_INSPECTION_TEMPLATE_TAG=""
+SIPHON_SOURCE_TEMPLATE_ID=""
+SIPHON_SOURCE_TEMPLATE_BUILD_ID=""
+SIPHON_SOURCE_TEMPLATE_TAG=""
+SIPHON_EVALUATION_TEMPLATE_ID=""
+SIPHON_EVALUATION_TEMPLATE_BUILD_ID=""
+SIPHON_EVALUATION_TEMPLATE_TAG=""
+SIPHON_PDF_TEMPLATE_ID=""
+SIPHON_PDF_TEMPLATE_BUILD_ID=""
+SIPHON_PDF_TEMPLATE_TAG=""
 FIREBASE_PROJECT_ID=""
+# Firebase's default database or an explicitly selected named database.
+FIRESTORE_DATABASE_ID="(default)"
 GOOGLE_SERVICE_ACCOUNT_EMAIL=""
 GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY=""
 # Use JSON containing exact allowed origins; no wildcard, path or trailing slash.
 SIPHON_ALLOWED_ORIGINS='["http://localhost:5173"]'
+
+# Server-only Groq integration. Paste the key ONLY into the ignored .dev.vars.
+# Verify the account's current free limits; these conservative application caps
+# reserve headroom and are not a guarantee of provider availability.
+SIPHON_AI_PROVIDER="groq"
+SIPHON_AI_MODEL="qwen/qwen3.8-27b"
+SIPHON_AI_ENDPOINT="https://api.groq.com/openai/v1/chat/completions"
+SIPHON_AI_REASONING_EFFORT="low"
+GROQ_API_KEY=""
+SIPHON_AI_REQUEST_TIMEOUT_MS="60000"
+# Complete serialized request bytes; this is NOT a rendered-token measurement.
+SIPHON_AI_MAX_INPUT_BYTES="6000"
+SIPHON_AI_MAX_INPUT_TOKENS="6000"
+SIPHON_AI_MAX_OUTPUT_TOKENS="1000"
+SIPHON_AI_MAX_REQUEST_BYTES="262144"
+SIPHON_AI_MAX_RESPONSE_BYTES="524288"
+SIPHON_AI_REQUESTS_PER_MINUTE="20"
+SIPHON_AI_REQUESTS_PER_DAY="900"
+SIPHON_AI_TOKENS_PER_MINUTE="7000"
+SIPHON_AI_TOKENS_PER_DAY="180000"

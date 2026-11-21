@@ -256,12 +256,6 @@ export class SourceReadiness {
           expiry,
           Date.parse(Timestamp.parse(artifact.expiresAt)),
         );
-        if (!file.path.endsWith('.py'))
-          reasons.push({
-            artifactId: file.artifactId,
-            code: 'numeric_input_validation_required',
-            line: null,
-          });
       }
       const parsed = py.map((file, index) => {
         const record = inspected[index],

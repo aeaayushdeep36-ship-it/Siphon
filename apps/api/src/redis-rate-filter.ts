@@ -39,7 +39,8 @@ export class RedisRateFilter implements UserRateGate {
     let response: Response;
     try {
       const deadline = AbortSignal.timeout(3000);
-      response = await this.transport(this.origin, {
+      const transport = this.transport;
+      response = await transport(this.origin, {
         method: 'POST',
         headers: {
           authorization: `Bearer ${this.token}`,
@@ -47,7 +48,7 @@ export class RedisRateFilter implements UserRateGate {
         },
         body: JSON.stringify(['EVAL', script, 1, key]),
         signal: deadline,
-        redirect: 'error',
+        redirect: 'manual',
       });
       if (!response.ok) throw new Error('unavailable');
       const count = z

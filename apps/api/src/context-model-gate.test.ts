@@ -9,7 +9,7 @@ import { FirestoreAccountingStore } from './firestore-accounting.js';
 import { reserveOperation, Operation } from './accounting.js';
 import { sha256, canonicalJson } from './hashing.js';
 import { reserveMetaCost } from './meta-pricing.js';
-import { MetaClient } from './meta-client.js';
+import { MetaClient, MetaRequest } from './meta-client.js';
 import { ContextProposal } from '@siphon/contracts';
 import { ContextPipeline } from './context-pipeline.js';
 import { AuditCommands } from './audit-commands.js';
@@ -87,7 +87,11 @@ async function setup(count = 1) {
     inputDigest,
   };
   const tasks = new ContextTasks(docs, () => now);
-  const prepared = await tasks.prepare('alice', fence, sources);
+  const rawPrepared = await tasks.prepare('alice', fence, sources);
+  const prepared = {
+    ...rawPrepared,
+    request: MetaRequest.parse(rawPrepared.request),
+  };
   const price = {
     schemaVersion: '1.0',
     version: 'fixture',

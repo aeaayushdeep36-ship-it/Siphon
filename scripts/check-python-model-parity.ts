@@ -1,3 +1,4 @@
+import { sciencePython } from './science-python.js';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -70,7 +71,7 @@ for (const item of cases) {
 }
 // Fixed test helper and fixed fixture file only. No upload path/source argument.
 const response = execFileSync(
-  process.env.SIPHON_PYTHON ?? 'python',
+  sciencePython,
   [
     '-c',
     "import runpy; runpy.run_path('tests/model_boundaries.py', run_name='__main__')",

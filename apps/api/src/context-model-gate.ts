@@ -1,3 +1,4 @@
+import { LEGACY_META_MODEL } from './legacy-meta-profile.js';
 import { z } from 'zod';
 import {
   Count,
@@ -31,7 +32,7 @@ export const ModelTokenEvidence = z.strictObject({
   schemaVersion: z.literal('1.0'),
   id: Id,
   requestDigest: Digest,
-  model: z.literal('muse-wonder-1.0'),
+  model: z.literal(LEGACY_META_MODEL),
   inputTokenUpperBound: Count.refine((n) => n > 0),
   tokenizerVersion: z.string().min(1).max(100),
   methodEvidenceDigest: Digest,

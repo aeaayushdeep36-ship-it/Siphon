@@ -85,6 +85,17 @@ export class AuditApi {
     signal?: AbortSignal,
   ): Promise<T> {
     const response = await this.response(path, signal ? { signal } : {});
+    if (
+      !response.headers
+        .get('Content-Type')
+        ?.toLowerCase()
+        .includes('application/json')
+    )
+      throw new RequestFailure(
+        'api_unavailable',
+        'The API is not responding with JSON. Check that the API is running and VITE_API_BASE_URL points to its origin.',
+        null,
+      );
     const result = schema.safeParse(await response.json());
     if (!result.success)
       throw new RequestFailure(
@@ -103,11 +114,40 @@ export class AuditApi {
     const operation = `${method} ${path} ${serialized}`;
     const key = this.keys.get(operation) ?? crypto.randomUUID();
     this.keys.set(operation, key);
-    const response = await this.response(path, {
-      method,
-      headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key },
-      ...(body === undefined ? {} : { body: serialized }),
-    });
+    let response: Response;
+    try {
+      response = await this.response(path, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': key },
+        ...(body === undefined ? {} : { body: serialized }),
+      });
+    } catch (error) {
+      // A confirmed stopped continuation cannot make progress under the same
+      // Workflow ID. Only a later explicit user action gets a new key; unknown
+      // outcomes and the original inspection retain theirs for safe recovery.
+      if (
+        error instanceof RequestFailure &&
+        error.code === 'workflow_stopped' &&
+        method === 'POST' &&
+        /^\/audits\/[^/]+\/revisions\/[^/]+\/(resume|scientific-run)$/.test(
+          path,
+        ) &&
+        this.keys.get(operation) === key
+      )
+        this.keys.delete(operation);
+      throw error;
+    }
+    if (
+      !response.headers
+        .get('Content-Type')
+        ?.toLowerCase()
+        .includes('application/json')
+    )
+      throw new RequestFailure(
+        'api_unavailable',
+        'The API is not responding with JSON. Check that the API is running and VITE_API_BASE_URL points to its origin.',
+        null,
+      );
     const result = schema.safeParse(await response.json());
     if (!result.success)
       throw new RequestFailure(

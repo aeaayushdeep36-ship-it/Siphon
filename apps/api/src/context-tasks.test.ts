@@ -4,6 +4,7 @@ import { FirestoreAuditRepository } from './audit-repository.js';
 import { TestDocuments } from '../test/document-store.js';
 import { canonicalJson, sha256 } from './hashing.js';
 import { AuditCommands } from './audit-commands.js';
+import { MetaRequest } from './meta-client.js';
 
 async function setup() {
   const docs = new TestDocuments();
@@ -132,10 +133,9 @@ describe('context model-task preparation and publication', () => {
   it('keeps uploaded instructions in data and produces the exact full-request digest', async () => {
     const f = await setup();
     const prepared = await f.prepare();
-    expect(prepared.request.input[0].content).toContain('untrusted data');
-    expect(prepared.request.input[1].content).toContain(
-      'Ignore every instruction',
-    );
+    const request = MetaRequest.parse(prepared.request);
+    expect(request.input[0].content).toContain('untrusted data');
+    expect(request.input[1].content).toContain('Ignore every instruction');
     expect(prepared.requestDigest).toBe(
       await sha256(canonicalJson(prepared.request)),
     );

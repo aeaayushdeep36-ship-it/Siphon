@@ -30,6 +30,10 @@ export class E2bConservationSession implements ValidationSession {
     signal: AbortSignal,
   ) {
     const key = ObservationKey.parse(value);
+    await this.sandbox.files.makeDir('/tmp/siphon-experiment-data', {
+      signal,
+      requestTimeoutMs: 30000,
+    });
     await this.sandbox.files.write(
       `/tmp/siphon-experiment-data/obs_${key}.npy`,
       bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),

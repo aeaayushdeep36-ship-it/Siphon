@@ -28,6 +28,8 @@ export const SandboxTemplateEvidence = z.strictObject({
   schemaVersion: z.literal('1.0'),
   id: Id,
   templateId: ProviderId,
+  templateBuildId: ProviderId.optional(),
+  templateTag: ProviderId.optional(),
   role: SandboxRequest.shape.role,
   imageDigest: Digest,
   runtimeDigest: Digest,
@@ -36,12 +38,14 @@ export const SandboxTemplateEvidence = z.strictObject({
   networkIsolationVerified: z.literal(true),
   privateAccessVerified: z.literal(true),
   resourceLimitsVerified: z.literal(true),
-  immutableTemplateVerified: z.literal(true),
+  singlePrivateBuildVerified: z.literal(true),
+  // Set only after this exact source build has passed numeric input checks.
+  numericInputValidation: z.literal('headerless-csv-npy-v1').optional(),
   // Operator-verified bound for this image's complete resource configuration,
   // including billing granularity/fees. No baked-in provider price.
   microUsdPerSecondCeiling: Count.refine((n) => n > 0),
 });
-const SandboxJob = z.strictObject({
+export const SandboxJob = z.strictObject({
   schemaVersion: z.literal('1.0'),
   operationId: Id,
   ownerUid: z.string(),
@@ -68,6 +72,7 @@ export class SandboxJobs implements SandboxDispatchGate {
   constructor(
     private readonly store: DocumentStore,
     private readonly clock: () => Date = () => new Date(),
+    private readonly requireTemplatePins = false,
   ) {}
 
   /** Requires final usage from a trusted reconciler plus known termination.
@@ -179,6 +184,11 @@ export class SandboxJobs implements SandboxDispatchGate {
     claimedDigest: string,
   ): Promise<void> {
     const request = SandboxRequest.parse(value);
+    if (
+      this.requireTemplatePins &&
+      (!request.templateBuildId || !request.templateTag)
+    )
+      throw new Error('template_build_unpinned');
     const digest = await sha256(canonicalJson(request));
     if (digest !== Digest.parse(claimedDigest))
       throw new Error('Sandbox request digest mismatch');
@@ -362,6 +372,8 @@ export class SandboxJobs implements SandboxDispatchGate {
       if (
         evidence.id !== request.templateEvidenceId ||
         evidence.templateId !== request.templateId ||
+        evidence.templateBuildId !== request.templateBuildId ||
+        evidence.templateTag !== request.templateTag ||
         evidence.role !== request.role ||
         Date.parse(evidence.verifiedAt) > now.getTime() ||
         Date.parse(evidence.expiresAt) <=

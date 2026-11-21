@@ -153,6 +153,10 @@ export class InspectionCoordinator {
         inputDigest: current.inputDigest,
         role: 'inspection',
         templateId: evidence.templateId,
+        ...(evidence.templateBuildId
+          ? { templateBuildId: evidence.templateBuildId }
+          : {}),
+        ...(evidence.templateTag ? { templateTag: evidence.templateTag } : {}),
         templateEvidenceId: evidence.id,
         lifetimeSeconds: config.lifetimeSeconds,
       });

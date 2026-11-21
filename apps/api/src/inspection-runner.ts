@@ -27,6 +27,10 @@ export class E2bInspectionSession implements InspectionSession {
     return this.sandbox.sandboxId;
   }
   async writeRequest(bytes: Uint8Array, signal: AbortSignal) {
+    await this.sandbox.files.makeDir('/tmp/siphon-inspection', {
+      signal,
+      requestTimeoutMs: 30000,
+    });
     await this.sandbox.files.write(
       inputPath,
       bytes.buffer.slice(

@@ -1,3 +1,4 @@
+import { sciencePython } from './science-python.js';
 import { execFileSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -26,7 +27,7 @@ const request = InspectionJobRequest.parse({
   })),
 });
 const output = execFileSync(
-  process.env.SIPHON_PYTHON ?? 'python',
+  sciencePython,
   ['-m', 'siphon_science.inspection_job'],
   {
     cwd: fileURLToPath(new URL('../packages/science/', import.meta.url)),

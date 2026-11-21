@@ -1,6 +1,7 @@
 import {
   AuditPlan,
   AdapterProposal,
+  BaselineComparison,
   AuditWorkspace,
   ContextProposal,
   Id,
@@ -22,6 +23,14 @@ import { interpretAdapterAnswers } from './adapter-questions.js';
 import { Answer, Digest, Count } from '@siphon/contracts';
 import { ScientificQuestions } from './scientific-questions.js';
 import { ScientificEligibilityStage } from './scientific-eligibility-stage.js';
+import { AdapterVerification } from './adapter-verification.js';
+import { ScientificBudgetStage } from './scientific-budget-stage.js';
+import { ScientificPlanStage } from './scientific-plan-stage.js';
+import { SandboxJobs } from './sandbox-jobs.js';
+import {
+  HeatParameterValues,
+  ScientificParameters,
+} from './scientific-parameters.js';
 
 export const SubmitAdapterReview = z.strictObject({
   schemaVersion: z.literal('1.0'),
@@ -38,6 +47,11 @@ export const SubmitScientificAnswer = z.strictObject({
   questionSetDigest: Digest,
   answer: Answer,
 });
+export const ContinueAdapterReview = z.strictObject({
+  schemaVersion: z.literal('1.0'),
+  expectedGeneration: Count,
+  expectedInputDigest: Digest,
+});
 
 /** Explicit display snapshot; never exposes private execution/configuration records. */
 export class WorkspaceRepository {
@@ -45,6 +59,53 @@ export class WorkspaceRepository {
     private readonly documents: DocumentStore,
     private readonly clock: () => Date = () => new Date(),
   ) {}
+  submitHeatParameters(
+    uid: string,
+    auditId: string,
+    revisionId: string,
+    value: unknown,
+  ) {
+    return new ScientificParameters(this.documents, this.clock).submitHeat(
+      uid,
+      auditId,
+      revisionId,
+      value,
+    );
+  }
+  async prepareScientificPlan(
+    uid: string,
+    auditId: string,
+    revisionId: string,
+    value: unknown,
+  ) {
+    Id.parse(auditId);
+    Id.parse(revisionId);
+    const input = ContinueAdapterReview.parse(value);
+    const fence = {
+      auditId,
+      revisionId,
+      generation: input.expectedGeneration,
+      inputDigest: input.expectedInputDigest,
+    };
+    const prior = await this.documents.get(
+      `audits/${auditId}/revisions/${revisionId}/plans/current`,
+    );
+    if (!prior)
+      await new ScientificBudgetStage(
+        this.documents,
+        new SandboxJobs(this.documents, this.clock),
+        this.clock,
+      ).reserve(uid, fence);
+    const result = await new ScientificPlanStage(
+      this.documents,
+      this.clock,
+    ).publish(uid, fence);
+    return {
+      schemaVersion: '1.0' as const,
+      planDigest: result.planDigest,
+      replayed: result.replayed,
+    };
+  }
   async submitScientificAnswer(
     uid: string,
     auditId: string,
@@ -87,7 +148,7 @@ export class WorkspaceRepository {
         generation: input.expectedGeneration,
       },
       base = `audits/${auditId}/revisions/${revisionId}`;
-    return this.documents.transaction(async (tx) => {
+    const receipt = await this.documents.transaction(async (tx) => {
       const state = await requireActiveRevision(tx, uid, fence);
       const [saved, questions, prior] = await tx.getMany([
         `${base}/adapterProposals/current`,
@@ -150,6 +211,93 @@ export class WorkspaceRepository {
         replayed: false,
       };
     });
+    if (receipt.allDeclaredConfirmed) {
+      await this.continueAdapterReview(uid, auditId, revisionId, {
+        schemaVersion: '1.0',
+        expectedGeneration: fence.generation,
+        expectedInputDigest: fence.inputDigest,
+      });
+    }
+    return receipt;
+  }
+  async continueAdapterReview(
+    uid: string,
+    auditId: string,
+    revisionId: string,
+    value: unknown,
+  ) {
+    Id.parse(auditId);
+    Id.parse(revisionId);
+    const input = ContinueAdapterReview.parse(value);
+    const fence = {
+      auditId,
+      revisionId,
+      generation: input.expectedGeneration,
+      inputDigest: input.expectedInputDigest,
+    };
+    const base = `audits/${auditId}/revisions/${revisionId}`;
+    // Comparison and review can finish in either order. The workflow handles
+    // a review already present when it publishes the comparison; this path
+    // handles a comparison that was published first. Both paths are replayable.
+    const readiness = await this.documents.transaction(async (tx) => {
+      await requireActiveRevision(tx, uid, fence);
+      const [stage, review] = await tx.getMany([
+        `fidelityStages/${revisionId}`,
+        `${base}/adapterReviews/current`,
+      ]);
+      if (
+        !review ||
+        review.ownerUid !== uid ||
+        review.auditId !== auditId ||
+        review.revisionId !== revisionId ||
+        review.inputDigest !== fence.inputDigest
+      )
+        throw new Error('Adapter review is unavailable');
+      if (!stage) return { status: 'waiting' as const };
+      if (
+        stage.ownerUid !== uid ||
+        stage.auditId !== auditId ||
+        stage.revisionId !== revisionId ||
+        stage.inputDigest !== fence.inputDigest ||
+        stage.generation !== fence.generation
+      )
+        throw new Error('Comparison stage snapshot changed');
+      const operationId = Id.parse(stage.operationId);
+      const comparison = await tx.get(
+        `${base}/baselineComparisons/${operationId}`,
+      );
+      if (!comparison) return { status: 'waiting' as const };
+      if (
+        comparison.ownerUid !== uid ||
+        comparison.auditId !== auditId ||
+        comparison.revisionId !== revisionId ||
+        comparison.inputDigest !== fence.inputDigest ||
+        comparison.operationId !== operationId ||
+        comparison.resultDigest !==
+          (await sha256(canonicalJson(comparison.result)))
+      )
+        throw new Error('Comparison snapshot changed');
+      if (BaselineComparison.parse(comparison.result).status !== 'matched')
+        return { status: 'comparison_unmatched' as const };
+      return { status: 'ready' as const, operationId };
+    });
+    if (readiness.status === 'ready') {
+      await new AdapterVerification(this.documents, this.clock).publish(
+        uid,
+        fence,
+        readiness.operationId,
+      );
+      await new ScientificQuestions(this.documents, this.clock).prepare(
+        uid,
+        fence,
+      );
+      await new ScientificEligibilityStage(this.documents, this.clock).assess(
+        uid,
+        fence,
+      );
+      return { schemaVersion: '1.0' as const, status: 'continued' as const };
+    }
+    return { schemaVersion: '1.0' as const, status: readiness.status };
   }
   async get(uid: string, auditId: string, revisionId: string) {
     Id.parse(auditId);
@@ -166,6 +314,7 @@ export class WorkspaceRepository {
         savedQuestions,
         savedReview,
         scienceRecord,
+        parameterRecord,
       ] = await tx.getMany([
         base,
         `${base}/inspection/current`,
@@ -175,6 +324,7 @@ export class WorkspaceRepository {
         `${base}/adapterQuestions/current`,
         `${base}/adapterReviews/current`,
         `${base}/scientificQuestions/current`,
+        `${base}/scientificParameters/current`,
       ]);
       if (
         !revision ||
@@ -306,6 +456,23 @@ export class WorkspaceRepository {
           throw new Error('Scientific question display integrity failure');
         scientificQuestions = { questionSet, questionSetDigest, answer };
       }
+      let heatParameters = null;
+      if (parameterRecord) {
+        heatParameters = HeatParameterValues.parse(parameterRecord.parameters);
+        if (
+          !plan ||
+          audit.domain !== 'heat_diffusion' ||
+          parameterRecord.ownerUid !== uid ||
+          parameterRecord.auditId !== auditId ||
+          parameterRecord.revisionId !== revisionId ||
+          parameterRecord.inputDigest !== state.inputDigest ||
+          parameterRecord.planDigest !== savedPlan?.planDigest ||
+          parameterRecord.declaration !== 'user_supplied' ||
+          parameterRecord.parametersDigest !==
+            (await sha256(canonicalJson(heatParameters)))
+        )
+          throw new Error('Heat parameter display integrity failure');
+      }
       return AuditWorkspace.parse({
         schemaVersion: '1.0',
         auditId,
@@ -327,7 +494,9 @@ export class WorkspaceRepository {
           : null,
         adapterReview,
         scientificQuestions,
+        heatParameters,
         plan,
+        planDigest: savedPlan ? Digest.parse(savedPlan.planDigest) : null,
         operationalIssues: revision.operationalIssues ?? [],
         uploadStates: uploads.map((upload, index) => {
           const artifact = artifacts[index];

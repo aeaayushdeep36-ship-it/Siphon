@@ -6,6 +6,7 @@ import { SourceJobRequest, AdapterProposal } from '@siphon/contracts';
 import { sha256, canonicalJson } from './hashing.js';
 import { AuditCommands } from './audit-commands.js';
 import { SourcePipeline } from './source-pipeline.js';
+import { SourceJobFailed } from './source-runner.js';
 
 async function setup() {
   const docs = new TestDocuments();
@@ -186,6 +187,45 @@ async function setup() {
   };
 }
 describe('durable baseline execution and output reservation', () => {
+  it('terminates a sandbox after a nonzero source job without collecting output', async () => {
+    const f = await setup();
+    let killed = false;
+    let read = false;
+    const pipeline = new SourcePipeline(f.executions, {
+      createSource: async () => {
+        f.dispatch();
+        return {
+          sandboxId: 'fixture-source',
+          session: {
+            sandboxId: 'fixture-source',
+            writeRequest: async () => {},
+            run: async () => 2,
+            readManifest: async () => {
+              read = true;
+              return new Response('{}').body!;
+            },
+            readObservation: async () => {
+              read = true;
+              return new Response('').body!;
+            },
+          },
+        };
+      },
+      kill: async () => {
+        killed = true;
+        return 'killed';
+      },
+    });
+    await expect(
+      pipeline.run(
+        f.docs.documents.get(`sandboxJobs/${f.operationId}`)!.request,
+        f.request,
+        f.approvalId,
+      ),
+    ).rejects.toBeInstanceOf(SourceJobFailed);
+    expect(killed).toBe(true);
+    expect(read).toBe(false);
+  });
   it('reserves before creation and connects the real source claim/collector to termination', async () => {
     const f = await setup();
     const raw = 'unvalidated';

@@ -961,6 +961,32 @@
         }
       ]
     },
+    "heatParameters": {
+      "default": null,
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "densityKgM3": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "heatCapacityJKgK": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          },
+          "required": [
+            "densityKgM3",
+            "heatCapacityJKgK"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "plan": {
       "anyOf": [
         {
@@ -1512,6 +1538,18 @@
         }
       ]
     },
+    "planDigest": {
+      "default": null,
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "operationalIssues": {
       "default": [],
       "maxItems": 10,
@@ -1555,7 +1593,9 @@
     "adapterQuestionSetDigest",
     "adapterReview",
     "scientificQuestions",
+    "heatParameters",
     "plan",
+    "planDigest",
     "operationalIssues"
   ],
   "additionalProperties": false

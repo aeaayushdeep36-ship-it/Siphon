@@ -27,6 +27,7 @@ import {
 import { type UploadObjectStore } from './r2-upload.js';
 import { DispatchFence, authorize } from './audit-commands.js';
 import { RETENTION } from './retention.js';
+import { HeatParameterValues } from './scientific-parameters.js';
 
 /** Builds the report from actual trusted stage records. No report-shaped caller
  * payload, model-supplied verdicts, numerical values or evidence URLs are accepted. */
@@ -55,15 +56,23 @@ export class ReportPublication {
         throw new Error('Report publication requires reporting stage');
       const audit = await authorize(tx, uid, fence.auditId, false);
       const base = `audits/${fence.auditId}/revisions/${fence.revisionId}`;
-      const [revision, rawContext, rawAdapter, rawPlan, prior, outputRaw] =
-        await tx.getMany([
-          base,
-          `${base}/context/current`,
-          `${base}/adapters/current`,
-          `${base}/plans/current`,
-          `${base}/reports/${reportId}`,
-          `budgets/revision_output_bytes_${fence.revisionId}`,
-        ]);
+      const [
+        revision,
+        rawContext,
+        rawAdapter,
+        rawPlan,
+        prior,
+        outputRaw,
+        rawParameters,
+      ] = await tx.getMany([
+        base,
+        `${base}/context/current`,
+        `${base}/adapters/current`,
+        `${base}/plans/current`,
+        `${base}/reports/${reportId}`,
+        `budgets/revision_output_bytes_${fence.revisionId}`,
+        `${base}/scientificParameters/current`,
+      ]);
       if (!rawContext || !rawAdapter || !rawPlan)
         throw new Error('Trusted report stage records missing');
       const context = ContextProposal.parse(rawContext.proposal),
@@ -143,6 +152,7 @@ export class ReportPublication {
           string,
           { sourceOperationId: string; reportDigest: string }
         >();
+      const assumptions: EvidenceReport['assumptions'] = [];
       for (const operationId of ids) {
         const [record, rawOperation, rawTermination, rawJob] = await tx.getMany(
           [
@@ -165,6 +175,31 @@ export class ReportPublication {
           .parse(record.report);
         const digest = await sha256(canonicalJson(result)),
           diagnostics = result.diagnostics;
+        if (audit.domain === 'heat_diffusion') {
+          const values = HeatParameterValues.parse(rawParameters?.parameters);
+          if (
+            rawParameters?.ownerUid !== uid ||
+            rawParameters.auditId !== fence.auditId ||
+            rawParameters.revisionId !== fence.revisionId ||
+            rawParameters.inputDigest !== fence.inputDigest ||
+            rawParameters.planDigest !== planDigest ||
+            rawParameters.declaration !== 'user_supplied' ||
+            rawParameters.parametersDigest !==
+              (await sha256(canonicalJson(values))) ||
+            diagnostics.profile.kind !== 'heat_energy_si' ||
+            diagnostics.profile.densityKgM3 !== values.densityKgM3 ||
+            diagnostics.profile.heatCapacityJKgK !== values.heatCapacityJKgK
+          )
+            throw new Error(
+              'Report thermal declarations differ from evaluated values',
+            );
+          assumptions.push({
+            id: operationId,
+            statement: `The user declared constant density ${values.densityKgM3} kg/m³ and specific heat capacity ${values.heatCapacityJKgK} J/(kg·K).`,
+            basis: 'user_declaration',
+            evidenceIds: [operationId],
+          });
+        }
         if (
           record.ownerUid !== uid ||
           record.auditId !== fence.auditId ||
@@ -344,7 +379,7 @@ export class ReportPublication {
         incompleteReasons: [
           'Reported-sample conservation does not establish continuous-time, trajectory, discretization or physical correctness. Additional accuracy and refinement checks are unavailable in this release.',
         ],
-        assumptions: [],
+        assumptions,
         unansweredQuestions: [],
         readiness: {
           status: null,

@@ -1,3 +1,4 @@
+import { sciencePython } from './science-python.js';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
@@ -35,7 +36,7 @@ for values,profile in fixtures:
     out.append({"request":request,"result":run_diagnostics_job(request,payloads)})
 print(json.dumps(out,allow_nan=False))`;
 const output: unknown = JSON.parse(
-  execFileSync(process.env.SIPHON_PYTHON ?? 'python', ['-c', code], {
+  execFileSync(sciencePython, ['-c', code], {
     cwd: fileURLToPath(new URL('../packages/science/', import.meta.url)),
     encoding: 'utf8',
     timeout: 10000,

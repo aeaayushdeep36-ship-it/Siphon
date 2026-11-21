@@ -1,3 +1,4 @@
+import { sciencePython } from './science-python.js';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -11,7 +12,7 @@ const sources = [
   'exec("never executed")\n',
   'return 42\n',
 ];
-const python = process.env.SIPHON_PYTHON ?? 'python';
+const python = sciencePython;
 const cwd = fileURLToPath(new URL('../packages/science/', import.meta.url));
 const code = [
   'import json,sys',

@@ -22,7 +22,7 @@ async function fixture() {
     networkIsolationVerified: true,
     privateAccessVerified: true,
     resourceLimitsVerified: true,
-    immutableTemplateVerified: true,
+    singlePrivateBuildVerified: true,
     microUsdPerSecondCeiling: 10,
   });
   for (const [kind, request] of [

@@ -42,6 +42,16 @@ const Configuration = z.strictObject({
   maximumOutputBytes: Count.refine((n) => n > 0),
   maximumElements: Count.refine((n) => n > 0),
 });
+const ReadinessReasons = z
+  .array(
+    z.strictObject({
+      artifactId: Id,
+      code: z.string().min(1).max(100),
+      line: z.number().int().positive().nullable(),
+    }),
+  )
+  .min(1)
+  .max(2000);
 
 /** Executes one immutable baseline observation in a fresh untrusted VM. Two
  * successful source runs alone do not establish fidelity or physical validity.
@@ -92,6 +102,39 @@ export class BaselineSourceStage {
         throw new Error(
           'Baseline source requires the current immutable proposal',
         );
+      const numericInputs = manifest.filter(
+        (file) => file.path.endsWith('.csv') || file.path.endsWith('.npy'),
+      );
+      if (numericInputs.length) {
+        const selected = existing
+          ? SandboxRequest.safeParse(existing.request)
+          : Configuration.safeParse(
+              await tx.get('configuration/source_dispatch'),
+            );
+        const evidenceId = selected.success
+          ? selected.data.templateEvidenceId
+          : null;
+        const evidence = evidenceId
+          ? SandboxTemplateEvidence.safeParse(
+              await tx.get(`sandboxTemplates/${evidenceId}`),
+            )
+          : null;
+        if (
+          !evidence?.success ||
+          evidence.data.id !== evidenceId ||
+          evidence.data.role !== 'source' ||
+          !evidence.data.templateBuildId ||
+          !evidence.data.templateTag ||
+          evidence.data.numericInputValidation !== 'headerless-csv-npy-v1'
+        )
+          return {
+            numericReasons: numericInputs.map((file) => ({
+              artifactId: file.artifactId,
+              code: 'numeric_input_validator_required',
+              line: null,
+            })),
+          };
+      }
       if (existing) {
         if (
           existing.ownerUid !== uid ||
@@ -112,6 +155,9 @@ export class BaselineSourceStage {
           request: SandboxRequest.parse(existing.request),
           maximumOutputBytes: Count.parse(existing.maximumOutputBytes),
           maximumElements: Count.parse(existing.maximumElements),
+          rejection: existing.rejection
+            ? ReadinessReasons.parse(existing.rejection)
+            : null,
         };
       }
       const config = Configuration.parse(
@@ -138,6 +184,12 @@ export class BaselineSourceStage {
           inputDigest: fence.inputDigest,
           role: 'source',
           templateId: evidence.templateId,
+          ...(evidence.templateBuildId
+            ? { templateBuildId: evidence.templateBuildId }
+            : {}),
+          ...(evidence.templateTag
+            ? { templateTag: evidence.templateTag }
+            : {}),
           templateEvidenceId: evidence.id,
           lifetimeSeconds: config.lifetimeSeconds,
         });
@@ -151,6 +203,7 @@ export class BaselineSourceStage {
         request,
         maximumOutputBytes: config.maximumOutputBytes,
         maximumElements: config.maximumElements,
+        rejection: null,
         createdAt: this.clock(),
       });
       return {
@@ -164,6 +217,13 @@ export class BaselineSourceStage {
         maximumElements: config.maximumElements,
       };
     });
+    if ('numericReasons' in stage)
+      return {
+        status: 'needs_input' as const,
+        kind,
+        operationId: null,
+        reasons: stage.numericReasons,
+      };
     const priorOutput = await this.documents.get(
       `sourceOutputPlans/${stage.operationId}`,
     );
@@ -187,6 +247,31 @@ export class BaselineSourceStage {
     const priorOperation = await this.documents.get(
       `operations/${stage.operationId}`,
     );
+    if (stage.rejection && priorOperation) {
+      const operation = Operation.parse(priorOperation);
+      if (
+        operation.outcome === 'reserved' ||
+        (operation.outcome === 'failed' &&
+          operation.providerHandle === null &&
+          operation.usage !== null &&
+          operation.charges.every(
+            (charge) => operation.usage?.[charge.counterKey] === 0,
+          ))
+      ) {
+        await releaseUndispatched(
+          new FirestoreAccountingStore(this.documents),
+          stage.operationId,
+          fence.generation,
+          this.clock().toISOString(),
+        );
+        return {
+          status: 'needs_input' as const,
+          kind,
+          operationId: stage.operationId,
+          reasons: stage.rejection,
+        };
+      }
+    }
     if (
       priorOperation &&
       Operation.parse(priorOperation).outcome !== 'reserved'
@@ -197,6 +282,37 @@ export class BaselineSourceStage {
         kind,
         operationId: stage.operationId,
       };
+    const bytes = await this.downloads.readBatch(
+      uid,
+      fence,
+      stage.manifest.map((file) => file.artifactId),
+      stage.policy.uploadBytes,
+      signal,
+    );
+    const request = SourceJobRequest.parse({
+      schemaVersion: '1.0',
+      operationId: stage.operationId,
+      inputDigest: fence.inputDigest,
+      adapterDigest: stage.adapterDigest,
+      entryArtifactId: stage.adapter.sourceArtifactId,
+      mappings: stage.adapter.mappings,
+      maximumOutputBytes: stage.maximumOutputBytes,
+      maximumElements: stage.maximumElements,
+      files: stage.manifest.map((file) => {
+        const source = bytes.find(
+          (item) => item.artifactId === file.artifactId,
+        );
+        if (
+          !source ||
+          source.sha256 !== file.sha256 ||
+          source.bytes.length !== file.bytes
+        )
+          throw new Error('Baseline download differs from manifest');
+        let binary = '';
+        for (const byte of source.bytes) binary += String.fromCharCode(byte);
+        return { ...file, dataBase64: btoa(binary) };
+      }),
+    });
     const evidence = SandboxTemplateEvidence.parse(
         await this.documents.get(
           `sandboxTemplates/${stage.request.templateEvidenceId}`,
@@ -233,42 +349,32 @@ export class BaselineSourceStage {
       }),
     );
     await this.jobs.bind(stage.request);
-    const bytes = await this.downloads.readBatch(
-      uid,
-      fence,
-      stage.manifest.map((file) => file.artifactId),
-      stage.policy.uploadBytes,
-      signal,
-    );
-    const request = SourceJobRequest.parse({
-      schemaVersion: '1.0',
-      operationId: stage.operationId,
-      inputDigest: fence.inputDigest,
-      adapterDigest: stage.adapterDigest,
-      entryArtifactId: stage.adapter.sourceArtifactId,
-      mappings: stage.adapter.mappings,
-      maximumOutputBytes: stage.maximumOutputBytes,
-      maximumElements: stage.maximumElements,
-      files: stage.manifest.map((file) => {
-        const source = bytes.find(
-          (item) => item.artifactId === file.artifactId,
-        );
-        if (
-          !source ||
-          source.sha256 !== file.sha256 ||
-          source.bytes.length !== file.bytes
-        )
-          throw new Error('Baseline download differs from manifest');
-        let binary = '';
-        for (const byte of source.bytes) binary += String.fromCharCode(byte);
-        return { ...file, dataBase64: btoa(binary) };
-      }),
-    });
     const readiness = await new SourceReadiness(
       this.documents,
       this.clock,
     ).approve(uid, fence, request, kind);
     if (readiness.status !== 'ready') {
+      const reasons = ReadinessReasons.parse(readiness.reasons);
+      await this.documents.transaction(async (tx) => {
+        await requireActiveRevision(tx, uid, fence);
+        const current = await tx.get(stagePath);
+        if (
+          current?.operationId !== stage.operationId ||
+          current.ownerUid !== uid
+        )
+          throw new Error('Baseline stage changed before input review');
+        if (
+          current.rejection &&
+          canonicalJson(ReadinessReasons.parse(current.rejection)) !==
+            canonicalJson(reasons)
+        )
+          throw new Error('Baseline input review changed');
+        tx.set(stagePath, {
+          ...current,
+          rejection: reasons,
+          updatedAt: this.clock(),
+        });
+      });
       await releaseUndispatched(
         new FirestoreAccountingStore(this.documents),
         stage.operationId,

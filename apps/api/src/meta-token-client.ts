@@ -1,3 +1,4 @@
+import { LEGACY_META_COUNT_ENDPOINT } from './legacy-meta-profile.js';
 import { z } from 'zod';
 import { Count } from '@siphon/contracts';
 import { MetaRequest } from './meta-client.js';
@@ -49,19 +50,17 @@ export class MetaTokenClient {
     let response: Response;
     try {
       deadline.throwIfAborted();
-      response = await this.transport(
-        'https://api.meta.ai/v1/responses/input_tokens',
-        {
-          method: 'POST',
-          redirect: 'error',
-          signal: deadline,
-          headers: {
-            authorization: `Bearer ${this.apiKey}`,
-            'content-type': 'application/json',
-          },
-          body,
+      const transport = this.transport;
+      response = await transport(LEGACY_META_COUNT_ENDPOINT, {
+        method: 'POST',
+        redirect: 'manual',
+        signal: deadline,
+        headers: {
+          authorization: `Bearer ${this.apiKey}`,
+          'content-type': 'application/json',
         },
-      );
+        body,
+      });
     } catch {
       throw new MetaTokenFailure('transport_unknown');
     }

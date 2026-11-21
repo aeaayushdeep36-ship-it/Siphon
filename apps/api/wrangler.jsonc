@@ -3,12 +3,12 @@
   "name": "siphon-api",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-29",
-  "workers_dev": false,
+  "workers_dev": true,
   "preview_urls": false,
   "routes": [],
   "observability": { "enabled": false },
   "vars": {
-    "SIPHON_API_ENABLED": "false",
+    "SIPHON_API_ENABLED": "true",
     "SIPHON_INSPECTION_WORKFLOW_ENABLED": "false",
   },
   "workflows": [
@@ -21,8 +21,7 @@
   "kv_namespaces": [
     {
       "binding": "SIPHON_PRIVATE_KV",
-      // Replace only after verifying the selected account is Workers Free.
-      "id": "00000000000000000000000000000000",
+      "id": "1733854d968347fea193e095b505124d",
     },
   ],
   "ratelimits": [

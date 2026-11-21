@@ -23,7 +23,7 @@ describe('provider-rendered Meta token counting boundary', () => {
       async (url, init) => {
         sequence.push('count');
         expect(url).toBe('https://api.meta.ai/v1/responses/input_tokens');
-        expect(init?.redirect).toBe('error');
+        expect(init?.redirect).toBe('manual');
         bodies.push(String(init?.body));
         return Response.json({
           object: 'response.input_tokens',

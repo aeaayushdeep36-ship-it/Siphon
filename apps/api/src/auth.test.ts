@@ -101,6 +101,41 @@ describe('Firebase ID verification', () => {
       verifyFirebaseIdentity(await token(), 'siphon-test', resolver, date),
     ).rejects.toThrow('identity_unavailable');
   });
+  it('follows only a redirect that ends at the Firebase certificate URL', async () => {
+    let redirectMode: RequestRedirect | undefined;
+    const resolver = firebaseCertificateResolver(async (_input, init) => {
+      redirectMode = init?.redirect;
+      const response = Response.json(
+        { known: 'not-imported-by-this-test' },
+        { headers: { 'cache-control': 'public, max-age=3600' } },
+      );
+      Object.defineProperties(response, {
+        redirected: { value: true },
+        url: {
+          value:
+            'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com',
+        },
+      });
+      return response;
+    });
+    await expect(
+      verifyFirebaseIdentity(await token(), 'siphon-test', resolver, date),
+    ).rejects.toThrow('invalid_credentials');
+    expect(redirectMode).toBe('follow');
+  });
+  it('rejects a certificate redirect outside the pinned Google endpoint', async () => {
+    const resolver = firebaseCertificateResolver(async () => {
+      const response = Response.json({});
+      Object.defineProperties(response, {
+        redirected: { value: true },
+        url: { value: 'https://attacker.example/certificates' },
+      });
+      return response;
+    });
+    await expect(
+      verifyFirebaseIdentity(await token(), 'siphon-test', resolver, date),
+    ).rejects.toThrow('identity_unavailable');
+  });
 });
 
 describe('Google service authorization', () => {
@@ -115,7 +150,8 @@ describe('Google service authorization', () => {
       async (input, init) => {
         calls++;
         expect(String(input)).toBe('https://oauth2.googleapis.com/token');
-        const params = init?.body as URLSearchParams;
+        expect(init?.redirect).toBe('manual');
+        const params = new URLSearchParams(String(init?.body));
         const assertion = params.get('assertion');
         expect(assertion).not.toBeNull();
         const result = await jwtVerify(assertion!, keys.publicKey, {

@@ -3,7 +3,7 @@ import { RequirementId } from '@siphon/contracts';
 import { TestDocuments } from '../test/document-store.js';
 import { FirestoreAuditRepository } from './audit-repository.js';
 import { buildScientificPlan } from './scientific-plan.js';
-import { ResumeService } from './runs.js';
+import { ResumeService, type InspectionWorkflowBinding } from './runs.js';
 import { canonicalJson, sha256 } from './hashing.js';
 
 describe('scientific workflow trigger', () => {
@@ -97,7 +97,7 @@ describe('scientific workflow trigger', () => {
       plan,
       planDigest,
     });
-    const create = vi.fn(async () => ({})),
+    const create = vi.fn<InspectionWorkflowBinding['create']>(async () => ({})),
       binding = {
         create,
         get: vi.fn(async () => ({
@@ -140,8 +140,26 @@ describe('scientific workflow trigger', () => {
     );
     expect(create.mock.calls[0]).toEqual(create.mock.calls[1]);
     expect(create.mock.calls[0]).toMatchObject([
-      { params: { jobId, resumeScientific: true, fence: { generation: 0 } } },
+      {
+        params: {
+          jobId,
+          resumeScientific: true,
+          phaseKey: expect.stringMatching(/^[a-f0-9]{64}$/),
+          fence: { generation: 0 },
+        },
+      },
     ]);
+    const firstPhaseKey = create.mock.calls[0]![0].params.phaseKey;
+    await service.resumeScientific(
+      'alice',
+      audit.id,
+      audit.currentRevisionId,
+      input,
+      'new-attempt',
+    );
+    expect(create).toHaveBeenCalledTimes(3);
+    expect(create.mock.calls[2]![0].id).not.toBe(create.mock.calls[0]![0].id);
+    expect(create.mock.calls[2]![0].params.phaseKey).not.toBe(firstPhaseKey);
     await expect(
       service.resumeScientific(
         'bob',
@@ -151,6 +169,6 @@ describe('scientific workflow trigger', () => {
         'other',
       ),
     ).rejects.toThrow();
-    expect(create).toHaveBeenCalledTimes(2);
+    expect(create).toHaveBeenCalledTimes(3);
   });
 });

@@ -489,6 +489,51 @@ export class SandboxJobs implements SandboxDispatchGate {
     });
   }
 
+  /** Reconnect only through active, durable operation-to-handle linkage. */
+  async authorizeConnect(
+    operationId: string,
+    sandboxId: string,
+  ): Promise<void> {
+    Id.parse(operationId);
+    ProviderId.parse(sandboxId);
+    await this.store.transaction(async (tx) => {
+      const [operationValue, handle, job, termination] = await tx.getMany([
+        `operations/${operationId}`,
+        `sandboxHandles/${sandboxId}`,
+        `sandboxJobs/${operationId}`,
+        `sandboxTerminations/${operationId}`,
+      ]);
+      const operation = Operation.parse(operationValue);
+      const sandboxJob = SandboxJob.parse(job);
+      await requireActiveRevision(tx, operation.ownerUid, {
+        auditId: operation.auditId,
+        revisionId: operation.revisionId,
+        inputDigest: operation.inputDigest,
+        generation: operation.fence,
+      });
+      if (
+        !handle ||
+        operation.id !== operationId ||
+        operation.providerHandle !== sandboxId ||
+        operation.outcome !== 'dispatching' ||
+        handle.operationId !== operationId ||
+        handle.ownerUid !== operation.ownerUid ||
+        handle.auditId !== operation.auditId ||
+        handle.revisionId !== operation.revisionId ||
+        sandboxJob.operationId !== operationId ||
+        sandboxJob.ownerUid !== operation.ownerUid ||
+        sandboxJob.requestDigest !== operation.requestDigest ||
+        sandboxJob.request.operationId !== operationId ||
+        sandboxJob.request.auditId !== operation.auditId ||
+        sandboxJob.request.revisionId !== operation.revisionId ||
+        sandboxJob.request.inputDigest !== operation.inputDigest ||
+        sandboxJob.request.role !== 'inspection' ||
+        termination
+      )
+        throw new Error('Sandbox connection handle is not authorized');
+    });
+  }
+
   /** Cleanup authorization uses durable linkage, never a client-supplied sandbox ID alone. */
   async authorizeKill(operationId: string, sandboxId: string): Promise<void> {
     Id.parse(operationId);

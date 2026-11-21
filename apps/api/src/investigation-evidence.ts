@@ -44,12 +44,13 @@ export async function prepareOwnedInvestigationInTransaction(
   evaluationIdValue: unknown,
   config: AiConfiguration,
   clock: () => Date = () => new Date(),
+  preparationStage: 'evaluating' | 'investigating' = 'investigating',
 ) {
   const fence = DispatchFence.parse(expected);
   const evaluationId = Id.parse(evaluationIdValue);
   const base = `audits/${fence.auditId}/revisions/${fence.revisionId}`;
   const state = await requireActiveRevision(tx, uid, fence);
-  if (state.stage !== 'investigating')
+  if (state.stage !== preparationStage)
     throw new Error('Investigation requires the investigation stage');
   const [
     revision,

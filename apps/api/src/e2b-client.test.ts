@@ -26,6 +26,7 @@ function setup() {
     authorizeCreate: vi.fn(async () => {}),
     recordCreated: vi.fn(async () => {}),
     authorizeKill: vi.fn(async () => {}),
+    authorizeConnect: vi.fn(async () => {}),
     recordTermination: vi.fn(async () => {}),
   };
   const provider = {
@@ -33,6 +34,12 @@ function setup() {
       async () => null,
     ),
     create: vi.fn(async () => ({ sandboxId: 'sandbox-123' })),
+    connectInspection: vi.fn(async (sandboxId: string) => ({
+      sandboxId,
+      writeRequest: vi.fn(async () => {}),
+      run: vi.fn(async () => 0),
+      readResult: vi.fn(async () => new ReadableStream<Uint8Array>()),
+    })),
     kill: vi.fn(async () => true),
   };
   return {
@@ -87,6 +94,55 @@ describe('E2B control-plane boundary (offline)', () => {
     expect(f.gate.authorizeCreate.mock.invocationCallOrder[0]).toBeLessThan(
       f.provider.create.mock.invocationCallOrder[0]!,
     );
+  });
+  it('reconnects an inspection session only after durable handle authorization', async () => {
+    const f = setup();
+    const client = new E2bClient(
+      'test-secret',
+      f.gate,
+      f.provider,
+      'https://e2b.example.test',
+    );
+    const session = await client.connectInspection(
+      request.operationId,
+      'sandbox-123',
+    );
+    expect(session.sandboxId).toBe('sandbox-123');
+    expect(f.gate.authorizeConnect).toHaveBeenCalledWith(
+      request.operationId,
+      'sandbox-123',
+    );
+    expect(f.gate.authorizeConnect.mock.invocationCallOrder[0]).toBeLessThan(
+      f.provider.connectInspection.mock.invocationCallOrder[0]!,
+    );
+    expect(f.provider.connectInspection).toHaveBeenCalledWith(
+      'sandbox-123',
+      expect.objectContaining({
+        apiKey: 'test-secret',
+        apiUrl: 'https://e2b.example.test',
+        retries: 0,
+        requestTimeoutMs: 30000,
+        signal: expect.any(AbortSignal),
+      }),
+    );
+  });
+  it('does not reconnect when durable linkage is denied or the provider returns another handle', async () => {
+    const f = setup();
+    f.gate.authorizeConnect.mockRejectedValueOnce(new Error('denied'));
+    await expect(
+      f.client.connectInspection(request.operationId, 'sandbox-123'),
+    ).rejects.toMatchObject({ code: 'connect_unknown' });
+    expect(f.provider.connectInspection).not.toHaveBeenCalled();
+
+    f.provider.connectInspection.mockResolvedValueOnce({
+      sandboxId: 'different-sandbox',
+      writeRequest: vi.fn(async () => {}),
+      run: vi.fn(async () => 0),
+      readResult: vi.fn(async () => new ReadableStream<Uint8Array>()),
+    });
+    await expect(
+      f.client.connectInspection(request.operationId, 'sandbox-123'),
+    ).rejects.toMatchObject({ code: 'handle_unrecorded' });
   });
   it('checks a build-specific E2B tag before admission and launches by that tag', async () => {
     const f = setup();

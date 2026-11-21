@@ -11,6 +11,11 @@ import {
   QuestionSet,
 } from '@siphon/contracts';
 import { z } from 'zod';
+import type { AiDisclosureOptions } from './ai-disclosure.js';
+import {
+  AiDisclosureConsents,
+  readAiDisclosureSnapshot,
+} from './ai-disclosure.js';
 import { type DocumentStore } from './firestore.js';
 import {
   authorize,
@@ -31,6 +36,10 @@ import {
   HeatParameterValues,
   ScientificParameters,
 } from './scientific-parameters.js';
+import {
+  InvestigationReviews,
+  readInvestigationReview,
+} from './investigation-review.js';
 
 export const SubmitAdapterReview = z.strictObject({
   schemaVersion: z.literal('1.0'),
@@ -58,7 +67,42 @@ export class WorkspaceRepository {
   constructor(
     private readonly documents: DocumentStore,
     private readonly clock: () => Date = () => new Date(),
+    private readonly aiDisclosureConfiguration: AiDisclosureOptions | null = null,
   ) {}
+  submitAiDisclosure(
+    uid: string,
+    auditId: string,
+    revisionId: string,
+    value: unknown,
+    key: string,
+  ) {
+    if (!this.aiDisclosureConfiguration)
+      throw new ApiError(
+        503,
+        'ai_disclosure_unavailable',
+        'AI disclosure is unavailable because no provider is configured.',
+      );
+    return new AiDisclosureConsents(
+      this.documents,
+      this.aiDisclosureConfiguration,
+      this.clock,
+    ).submit(uid, auditId, revisionId, value, key);
+  }
+  submitInvestigationReview(
+    uid: string,
+    auditId: string,
+    revisionId: string,
+    value: unknown,
+    key: string,
+  ) {
+    return new InvestigationReviews(this.documents, this.clock).submit(
+      uid,
+      auditId,
+      revisionId,
+      value,
+      key,
+    );
+  }
   submitHeatParameters(
     uid: string,
     auditId: string,
@@ -495,6 +539,26 @@ export class WorkspaceRepository {
         adapterReview,
         scientificQuestions,
         heatParameters,
+        investigation: await readInvestigationReview(
+          tx,
+          uid,
+          {
+            auditId,
+            revisionId,
+            generation: state.generation,
+            inputDigest: state.inputDigest,
+          },
+          this.clock,
+          true,
+        ),
+        aiDisclosure: await readAiDisclosureSnapshot(
+          tx,
+          uid,
+          auditId,
+          revisionId,
+          state.inputDigest,
+          this.aiDisclosureConfiguration,
+        ),
         plan,
         planDigest: savedPlan ? Digest.parse(savedPlan.planDigest) : null,
         operationalIssues: revision.operationalIssues ?? [],

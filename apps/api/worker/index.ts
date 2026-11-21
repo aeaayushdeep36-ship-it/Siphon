@@ -10,11 +10,17 @@ import {
   type InspectionWorkflowEnvironment,
 } from '../src/inspection-runtime.js';
 import {
-  runInspectionWorkflow,
-  type InspectionWorkflowSteps,
+  runInspectionPhase,
+  InspectionWorkflowPayload,
 } from '../src/inspection-workflow.js';
 import { DispatchFence } from '../src/audit-commands.js';
-import { runScientificWorkflow } from '../src/scientific-workflow.js';
+import { runScientificPhase } from '../src/scientific-workflow.js';
+import {
+  dispatchWorkflowPhase,
+  isInspectionWorkflowPhase,
+  isScientificWorkflowPhase,
+  InspectionPhasePayload,
+} from '../src/workflow-phases.js';
 export { default } from '../src/worker.js';
 
 /** Native runtime boundary. No public HTTP trigger; the disabled-by-default
@@ -25,6 +31,15 @@ export class SiphonInspectionWorkflow extends WorkflowEntrypoint<InspectionWorkf
     try {
       const services = createInspectionServices(this.env),
         coordinator = services.coordinator;
+      const dispatchPhase = (chainId: string, payload: unknown) => {
+        if (!this.env.SIPHON_INSPECTION)
+          throw new Error('Workflow binding is unavailable');
+        return dispatchWorkflowPhase(
+          this.env.SIPHON_INSPECTION,
+          chainId,
+          payload,
+        );
+      };
       const adapterAndBaselines = async (jobId: string, fence: unknown) => {
         const adapter = await step.do(
           'adapter.propose',
@@ -100,13 +115,27 @@ export class SiphonInspectionWorkflow extends WorkflowEntrypoint<InspectionWorkf
           schemaVersion: z.literal('1.0'),
           jobId: z.string().regex(/^[a-f0-9]{64}$/),
           resumeScientific: z.literal(true),
+          phaseKey: z.string().regex(/^[a-f0-9]{64}$/),
           fence: DispatchFence,
         })
         .safeParse(event.payload);
       if (scientific.success) {
-        return await runScientificWorkflow(
-          scientific.data.jobId,
-          scientific.data.fence,
+        await dispatchPhase(scientific.data.jobId, {
+          schemaVersion: '1.0',
+          jobId: scientific.data.jobId,
+          phase: 'scientific_evaluate',
+          phaseKey: scientific.data.phaseKey,
+          fence: scientific.data.fence,
+        });
+        return {
+          status: 'phase_dispatched' as const,
+          phase: 'scientific_evaluate',
+        };
+      }
+      const phase = InspectionPhasePayload.safeParse(event.payload);
+      if (phase.success && isScientificWorkflowPhase(phase.data.phase)) {
+        return await runScientificPhase(
+          phase.data,
           {
             run: async <T>(name: string, callback: () => Promise<T>) => {
               const checkpoint = await step.do(
@@ -130,7 +159,75 @@ export class SiphonInspectionWorkflow extends WorkflowEntrypoint<InspectionWorkf
             },
           },
           services,
+          (payload) => dispatchPhase(phase.data.jobId, payload),
         );
+      }
+      if (phase.success && isInspectionWorkflowPhase(phase.data.phase)) {
+        const result = await runInspectionPhase(
+          phase.data,
+          {
+            run: async <T>(name: string, callback: () => Promise<T>) => {
+              const checkpoint = await step.do(
+                name,
+                {
+                  retries: { limit: 0, delay: '1 second' },
+                  timeout: '5 minutes',
+                },
+                async () => {
+                  try {
+                    const encoded = JSON.stringify(await callback());
+                    if (encoded === undefined)
+                      throw new Error('Invalid checkpoint');
+                    return encoded;
+                  } catch {
+                    throw new NonRetryableError('inspection_stage_unavailable');
+                  }
+                },
+              );
+              return JSON.parse(checkpoint) as T;
+            },
+          },
+          coordinator,
+          services.inspectionJobForJob,
+          (payload) => dispatchPhase(phase.data.jobId, payload),
+        );
+        if (
+          phase.data.phase === 'inspection_finish' &&
+          'status' in result &&
+          result.status === 'inspection_complete' &&
+          result.next !== 'unsupported'
+        )
+          await dispatchPhase(phase.data.jobId, {
+            schemaVersion: '1.0',
+            jobId: phase.data.jobId,
+            phase: 'context',
+            phaseKey: phase.data.phaseKey,
+          });
+        return result;
+      }
+      if (phase.success && phase.data.phase === 'context') {
+        const context = await step.do(
+          'context.review',
+          { retries: { limit: 0, delay: '1 second' }, timeout: '5 minutes' },
+          async () => {
+            try {
+              return await services.continueContext(phase.data.jobId);
+            } catch {
+              throw new NonRetryableError('context_stage_failed');
+            }
+          },
+        );
+        if (
+          context.status === 'continue' ||
+          context.status === 'adapter_pending'
+        ) {
+          const baseline = await adapterAndBaselines(
+            phase.data.jobId,
+            context.fence,
+          );
+          return { context, ...baseline };
+        }
+        return context;
       }
       const resume = z
         .strictObject({
@@ -158,48 +255,25 @@ export class SiphonInspectionWorkflow extends WorkflowEntrypoint<InspectionWorkf
           return await adapterAndBaselines(resume.data.jobId, context.fence);
         return context;
       }
-      const steps: InspectionWorkflowSteps = {
-        do: (name, config, callback) =>
-          step.do(name, config, async () => {
-            try {
-              return await callback();
-            } catch {
-              throw new NonRetryableError('inspection_step_failed');
-            }
-          }),
-      };
-      const inspection = await runInspectionWorkflow(
+      const inspectionPayload = InspectionWorkflowPayload.safeParse(
         event.payload,
-        steps,
-        coordinator,
       );
-      if (
-        inspection.status !== 'inspection_complete' ||
-        inspection.next === 'unsupported'
-      )
-        return inspection;
-      const context = await step.do(
-        'context.review',
-        { retries: { limit: 0, delay: '1 second' }, timeout: '5 minutes' },
-        async () => {
-          try {
-            return await services.continueContext(inspection.jobId);
-          } catch {
-            throw new NonRetryableError('context_stage_failed');
-          }
-        },
-      );
-      if (
-        context.status === 'continue' ||
-        context.status === 'adapter_pending'
-      ) {
-        const baseline = await adapterAndBaselines(
-          inspection.jobId,
-          context.fence,
+      if (inspectionPayload.success) {
+        const job = await services.inspectionJobForJob(
+          inspectionPayload.data.jobId,
         );
-        return { inspection, context, ...baseline };
+        await dispatchPhase(inspectionPayload.data.jobId, {
+          schemaVersion: '1.0',
+          jobId: inspectionPayload.data.jobId,
+          phase: 'inspection_begin',
+          phaseKey: job.operationId,
+        });
+        return {
+          status: 'phase_dispatched' as const,
+          phase: 'inspection_begin',
+        };
       }
-      return { inspection, context };
+      throw new NonRetryableError('inspection_payload_invalid');
     } catch {
       // Workflow dashboards/logs must never retain credential/config/input errors.
       throw new NonRetryableError('inspection_workflow_unavailable');

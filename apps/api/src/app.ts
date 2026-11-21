@@ -6,6 +6,8 @@ import {
   ReserveUpload,
   SubmitAnswers,
   StartAudit,
+  SubmitInvestigationReview,
+  SubmitAiDisclosure,
 } from '@siphon/contracts';
 import { type UploadRepository } from './uploads.js';
 import { parseRequestJson } from './request-json.js';
@@ -44,6 +46,8 @@ export interface ApiDependencies {
         | 'continueAdapterReview'
         | 'prepareScientificPlan'
         | 'submitHeatParameters'
+        | 'submitInvestigationReview'
+        | 'submitAiDisclosure'
       >
     >;
   history: Pick<HistoryRepository, 'list'>;
@@ -575,6 +579,53 @@ export function createApp(deps: ApiDependencies) {
           input,
         ),
       );
+    },
+  );
+  app.post(
+    '/api/v1/audits/:auditId/revisions/:revisionId/investigation-review',
+    async (c) => {
+      const auditId = Id.parse(c.req.param('auditId')),
+        revisionId = Id.parse(c.req.param('revisionId'));
+      if (!deps.workspace.submitInvestigationReview)
+        throw new ApiError(
+          503,
+          'service_unavailable',
+          'Investigation review is unavailable.',
+        );
+      const input = await parseRequestJson(
+        c.req.raw,
+        SubmitInvestigationReview,
+      );
+      const result = await deps.workspace.submitInvestigationReview(
+        c.get('identity').uid,
+        auditId,
+        revisionId,
+        input,
+        c.req.header('Idempotency-Key') ?? '',
+      );
+      return c.json(result, result.replayed ? 200 : 201);
+    },
+  );
+  app.post(
+    '/api/v1/audits/:auditId/revisions/:revisionId/ai-disclosure',
+    async (c) => {
+      const auditId = Id.parse(c.req.param('auditId')),
+        revisionId = Id.parse(c.req.param('revisionId'));
+      if (!deps.workspace.submitAiDisclosure)
+        throw new ApiError(
+          503,
+          'ai_disclosure_unavailable',
+          'AI disclosure is unavailable.',
+        );
+      const input = await parseRequestJson(c.req.raw, SubmitAiDisclosure);
+      const result = await deps.workspace.submitAiDisclosure(
+        c.get('identity').uid,
+        auditId,
+        revisionId,
+        input,
+        c.req.header('Idempotency-Key') ?? '',
+      );
+      return c.json(result, result.replayed ? 200 : 201);
     },
   );
   app.post(

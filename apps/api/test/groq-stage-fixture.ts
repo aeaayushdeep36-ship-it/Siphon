@@ -4,6 +4,10 @@ import { TestDocuments } from './document-store.js';
 import { ContextProposal, InspectionResult } from '@siphon/contracts';
 import { canonicalJson, sha256 } from '../src/hashing.js';
 import { GROQ_CHAT_ENDPOINT, type AiConfiguration } from '../src/ai-config.js';
+import {
+  aiDisclosureDigest,
+  aiDisclosureOptions,
+} from '../src/ai-disclosure.js';
 // Explicit fake provider/account limits, never an attestation about a live account.
 export const groqFixtureConfig: AiConfiguration = {
   provider: 'groq',
@@ -22,6 +26,30 @@ export const groqFixtureConfig: AiConfiguration = {
   tokensPerMinute: 25000,
   tokensPerDay: 100000,
 };
+
+export async function grantGroqFixtureConsent(
+  docs: TestDocuments,
+  base: string,
+  identity: {
+    ownerUid: string;
+    auditId: string;
+    revisionId: string;
+    inputDigest: string;
+  },
+  config: AiConfiguration = groqFixtureConfig,
+) {
+  const disclosureDigest = await aiDisclosureDigest(
+    aiDisclosureOptions(config),
+  );
+  docs.documents.set(`${base}/aiDisclosure/current`, {
+    schemaVersion: '1.0',
+    ...identity,
+    disclosureDigest,
+    decision: 'accepted',
+    acceptedAt: '2026-11-08T00:00:00.000Z',
+    updatedAt: '2026-11-08T00:00:00.000Z',
+  });
+}
 
 export async function groqContextFixture(
   text = 'temperature = [300., 300.]\n',
@@ -92,6 +120,13 @@ export async function groqContextFixture(
     inputDigest,
     operationId: inspectionOperationId,
     resultDigest,
+    gate: {
+      schemaVersion: '1.0',
+      status: 'ready',
+      sourceDigests: [{ artifactId, sha256: sourceDigest }],
+      findings: [],
+      next: 'review_requirements',
+    },
   });
   docs.documents.set(`inspectionExecutions/${inspectionOperationId}`, {
     status: 'published',
@@ -106,6 +141,12 @@ export async function groqContextFixture(
     inputDigest,
     artifactId,
     inspection,
+  });
+  await grantGroqFixtureConsent(docs, base, {
+    ownerUid: 'alice',
+    auditId: fence.auditId,
+    revisionId: fence.revisionId,
+    inputDigest: fence.inputDigest,
   });
   const proposal = ContextProposal.parse({
     schemaVersion: '1.0',

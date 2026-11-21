@@ -15,9 +15,11 @@ import { type InspectionJobRequest } from '@siphon/contracts';
 import { type DocumentStore } from './firestore.js';
 import { firestoreTransport } from '../test/firestore-transport.js';
 import {
+  runInspectionPhase,
   runInspectionWorkflow,
   type InspectionWorkflowSteps,
 } from './inspection-workflow.js';
+import { InspectionPhasePayload } from './workflow-phases.js';
 import {
   createInspectionRuntime,
   type InspectionWorkflowEnvironment,
@@ -52,6 +54,7 @@ function workflowSteps(
 async function setup(
   decorate?: (documents: TestDocuments) => DocumentStore,
   sourceCount = 1,
+  requestCount: () => number = () => 0,
 ) {
   const docs = new TestDocuments();
   const store = decorate?.(docs) ?? docs;
@@ -208,6 +211,9 @@ async function setup(
       sandboxId: session.sandboxId,
       inspectionSession: session,
     })),
+    connectInspection: vi.fn<
+      NonNullable<SandboxControlPlane['connectInspection']>
+    >(async () => session),
     kill: vi.fn<SandboxControlPlane['kill']>(async () => true),
   };
   const jobs = new SandboxJobs(store, clock),
@@ -232,10 +238,16 @@ async function setup(
     },
     clock,
   );
+  const pipelineBoundaries: { name: string; requestCount: number }[] = [];
   const pipeline = new InspectionPipeline(
     new InspectionSourceLoader(store, downloads),
     client,
     new InspectionJobs(store, clock),
+    (name) =>
+      pipelineBoundaries.push({
+        name,
+        requestCount: requestCount(),
+      }),
   );
   const coordinator = new InspectionCoordinator(store, jobs, pipeline, clock);
   return {
@@ -256,6 +268,7 @@ async function setup(
     client,
     coordinator,
     pipeline,
+    pipelineBoundaries,
     store,
   };
 }
@@ -742,6 +755,90 @@ describe('durable audit queue and concrete inspection coordination (offline)', (
       'inspection_complete',
     );
   });
+  it('chains begin, reserve, execute, cleanup and finish as metadata-only child phases', async () => {
+    const f = await setup();
+    const { receipt } = await f.enqueue();
+    const job = InspectionStageJob.parse(
+      f.docs.documents.get(`stageJobs/${receipt.jobId}`),
+    );
+    const phase = InspectionPhasePayload.parse({
+      schemaVersion: '1.0',
+      jobId: receipt.jobId,
+      phase: 'inspection_begin',
+      phaseKey: job.operationId,
+    });
+    const dispatched: InspectionPhasePayload[] = [];
+    const steps = {
+      run: async <T>(_name: string, callback: () => Promise<T>) => callback(),
+    };
+    const run = (value: unknown) =>
+      runInspectionPhase(
+        value,
+        steps,
+        f.coordinator,
+        async (jobId) =>
+          InspectionStageJob.parse(f.docs.documents.get(`stageJobs/${jobId}`)),
+        async (payload) => void dispatched.push(payload),
+      );
+
+    const begin = await run(phase);
+    expect(begin).toMatchObject({ phase: 'inspection_reserve' });
+    const reserve = await run(dispatched.pop());
+    expect(reserve).toMatchObject({ phase: 'inspection_create' });
+    const create = await run(dispatched.pop());
+    expect(create).toMatchObject({ phase: 'inspection_execute' });
+    const execute = await run(dispatched.pop());
+    expect(execute).toMatchObject({ phase: 'inspection_cleanup' });
+    const cleanup = await run(dispatched.pop());
+    expect(cleanup).toMatchObject({ phase: 'inspection_finish' });
+    const finish = await run(dispatched.pop());
+    expect(finish).toMatchObject({ status: 'inspection_complete' });
+    expect(dispatched).toHaveLength(0);
+    expect(JSON.stringify(phase)).not.toMatch(
+      /sourceText|requestBody|sandboxId/,
+    );
+  });
+  it('sends an ambiguous create directly to cleanup without retrying or loading sources', async () => {
+    const f = await setup();
+    const { receipt } = await f.enqueue();
+    const job = InspectionStageJob.parse(
+      f.docs.documents.get(`stageJobs/${receipt.jobId}`),
+    );
+    const phase = (name: InspectionPhasePayload['phase']) =>
+      InspectionPhasePayload.parse({
+        schemaVersion: '1.0',
+        jobId: receipt.jobId,
+        phase: name,
+        phaseKey: job.operationId,
+      });
+    const dispatched: InspectionPhasePayload[] = [];
+    const run = (value: unknown) =>
+      runInspectionPhase(
+        value,
+        {
+          run: async <T>(_name: string, callback: () => Promise<T>) =>
+            callback(),
+        },
+        f.coordinator,
+        async (jobId) =>
+          InspectionStageJob.parse(f.docs.documents.get(`stageJobs/${jobId}`)),
+        async (payload) => void dispatched.push(payload),
+      );
+    f.provider.create.mockRejectedValueOnce(
+      new Error('unknown provider result'),
+    );
+    await run(phase('inspection_begin'));
+    await run(dispatched.pop());
+    const create = await run(dispatched.pop());
+    expect(create).toMatchObject({ phase: 'inspection_cleanup' });
+    expect(f.provider.create).toHaveBeenCalledOnce();
+    const cleanup = await run(dispatched.pop());
+    expect(cleanup).toMatchObject({ phase: 'inspection_finish' });
+    const finish = await run(dispatched.pop());
+    expect(finish).toMatchObject({ status: 'awaiting_reconciliation' });
+    expect(dispatched).toHaveLength(0);
+    expect(JSON.stringify(dispatched)).not.toMatch(/sourceText|requestBody/);
+  });
   it.each([
     [1, false],
     [10, false],
@@ -750,10 +847,14 @@ describe('durable audit queue and concrete inspection coordination (offline)', (
     'bounds separate phase REST calls for %i sources (distinct original revisions: %s)',
     async (sourceCount, originalRevisions) => {
       let counted: ReturnType<typeof firestoreTransport>;
-      const f = await setup((documents) => {
-        counted = firestoreTransport(documents);
-        return counted.client;
-      }, sourceCount);
+      const f = await setup(
+        (documents) => {
+          counted = firestoreTransport(documents);
+          return counted.client;
+        },
+        sourceCount,
+        () => counted.calls.length,
+      );
       if (originalRevisions) {
         const current = structuredClone(f.docs.documents.get(f.path)!);
         const uploads = [...f.docs.documents.values()].filter(
@@ -783,9 +884,42 @@ describe('durable audit queue and concrete inspection coordination (offline)', (
         throw new Error('Missing preparation phase');
       const reserved = await f.coordinator.reserve(initial.job);
       measure('reserve');
-      expect((await f.coordinator.execute(reserved)).status).toBe(
+      const createStart = counted!.calls.length;
+      const created = await f.coordinator.createSandbox(reserved);
+      expect(created).toMatchObject({
+        status: 'creation_finished',
+        receipt: { status: 'created', sandboxId: f.session.sandboxId },
+      });
+      const createCalls = counted!.calls.length - createStart;
+      measure('create');
+      const executeStart = counted!.calls.length;
+      const dispatchedJob = InspectionStageJob.parse(
+        f.docs.documents.get(`stageJobs/${receipt.jobId}`),
+      );
+      expect((await f.coordinator.executeConnected(dispatchedJob)).status).toBe(
         'execution_finished',
       );
+      const byName = Object.fromEntries(
+        f.pipelineBoundaries.map((boundary) => [
+          boundary.name,
+          boundary.requestCount,
+        ]),
+      );
+      const pipelineSegments = [
+        byName.source_loaded! - executeStart,
+        byName.sandbox_connected! - byName.source_loaded!,
+        byName.inspection_ran! - byName.sandbox_connected!,
+        byName.result_published! - byName.inspection_ran!,
+      ];
+      expect(pipelineSegments).toEqual(
+        originalRevisions ? [16, 4, 9, 4] : [14, 4, 9, 4],
+      );
+      if (process.env.SIPHON_TRACE_REST === '1')
+        console.log('Inspection child REST boundaries', {
+          createCalls,
+          boundaries: f.pipelineBoundaries,
+          segments: pipelineSegments,
+        });
       measure('execute');
       expect((await f.coordinator.cleanup(receipt.jobId)).cleanup).toBe(
         'confirmed',
@@ -797,7 +931,14 @@ describe('durable audit queue and concrete inspection coordination (offline)', (
       measure('finish');
       // Leave headroom for authentication and scheduler calls. These are metadata
       // phase regression bounds, not a claim that hosted CPU/provider I/O fits Free.
-      for (const name of ['begin', 'reserve', 'execute', 'cleanup', 'finish'])
+      for (const name of [
+        'begin',
+        'reserve',
+        'create',
+        'execute',
+        'cleanup',
+        'finish',
+      ])
         expect(counts[name]).toBeLessThanOrEqual(44);
       if (process.env.SIPHON_TRACE_REST === '1')
         console.log(

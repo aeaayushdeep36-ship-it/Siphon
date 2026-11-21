@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "const": "groq"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "endpoint": {
+          "type": "string",
+          "maxLength": 500,
+          "format": "uri"
+        },
+        "noticeVersion": {
+          "type": "string",
+          "const": "groq_audit_disclosure.v1"
+        },
+        "scopes": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "string",
+              "const": "source_context"
+            },
+            {
+              "type": "string",
+              "const": "source_adapter"
+            },
+            {
+              "type": "string",
+              "const": "numeric_investigation"
+            }
+          ],
+          "items": false,
+          "minItems": 3,
+          "maxItems": 3
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "endpoint",
+        "noticeVersion",
+        "scopes"
+      ],
+      "additionalProperties": false
+    },
+    "disclosureDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "required",
+        "accepted",
+        "revoked"
+      ]
+    },
+    "acceptedAt": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "configuration",
+    "disclosureDigest",
+    "status",
+    "acceptedAt"
+  ],
+  "additionalProperties": false
+}

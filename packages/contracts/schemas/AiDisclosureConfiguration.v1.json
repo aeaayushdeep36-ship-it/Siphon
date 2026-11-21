@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "provider": {
+      "type": "string",
+      "const": "groq"
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "endpoint": {
+      "type": "string",
+      "maxLength": 500,
+      "format": "uri"
+    },
+    "noticeVersion": {
+      "type": "string",
+      "const": "groq_audit_disclosure.v1"
+    },
+    "scopes": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "string",
+          "const": "source_context"
+        },
+        {
+          "type": "string",
+          "const": "source_adapter"
+        },
+        {
+          "type": "string",
+          "const": "numeric_investigation"
+        }
+      ],
+      "items": false,
+      "minItems": 3,
+      "maxItems": 3
+    }
+  },
+  "required": [
+    "provider",
+    "model",
+    "endpoint",
+    "noticeVersion",
+    "scopes"
+  ],
+  "additionalProperties": false
+}

@@ -13,5 +13,5 @@
     "types": ["node"]
   },
   "include": ["apps/**/*.ts", "packages/**/*.ts", "scripts/**/*.ts"],
-  "exclude": ["apps/api/worker/**"]
+  "exclude": ["apps/api/worker/**", "infra/cloudflare/free-probe/**"]
 }

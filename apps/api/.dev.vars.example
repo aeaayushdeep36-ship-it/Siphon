@@ -3,7 +3,8 @@
 SIPHON_API_ENABLED="false"
 SIPHON_INSPECTION_WORKFLOW_ENABLED="false"
 E2B_API_KEY=""
-# Optional provider API endpoint override. HTTPS required; normally leave default.
+# Optional server-owned HTTPS origin; no path/query/fragment/credentials.
+# Keep fixed until all sandbox handles are terminated/reconciled.
 E2B_API_URL="https://api.e2b.app"
 # Template builds accept exactly one base: an immutable image plus runtime
 # user, or an existing build-specific E2B template tag/build-ID tuple.

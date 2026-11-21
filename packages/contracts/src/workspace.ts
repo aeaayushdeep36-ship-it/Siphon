@@ -15,6 +15,8 @@ import { ContextProposal } from './context.js';
 import { AuditPlan } from './plans.js';
 import { AdapterProposal } from './adapter.js';
 import { Answer, QuestionSet } from './questions.js';
+import { InvestigationReviewSnapshot } from './investigation.js';
+import { AiDisclosureSnapshot } from './ai-disclosure.js';
 
 export const AuditHistoryResponse = z.strictObject({
   schemaVersion: SchemaVersion,
@@ -73,6 +75,8 @@ export const AuditWorkspace = z
       })
       .nullable()
       .default(null),
+    investigation: InvestigationReviewSnapshot.nullable().default(null),
+    aiDisclosure: AiDisclosureSnapshot.nullable().default(null),
     plan: AuditPlan.nullable(),
     planDigest: Digest.nullable().default(null),
     operationalIssues: z
@@ -92,6 +96,7 @@ export const AuditWorkspace = z
       value.plan,
       value.adapterProposal,
       value.adapterQuestions,
+      value.investigation?.draft,
     ])
       if (
         snapshot &&

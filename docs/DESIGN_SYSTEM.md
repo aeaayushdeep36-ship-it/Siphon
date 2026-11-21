@@ -1,5 +1,17 @@
 # Siphon design system and interaction specification
 
+## Advisory investigation review (2026-11-11)
+
+The workspace displays the server-validated investigation snapshot with configured provider/model, expiry, hypotheses, suggested investigations and their evidence IDs. Before owner review it shows the exact validated metric records grounding the advisory, including values, units, target, uncertainty, interval, deterministic verdict, check version, limitations and metric IDs. Include advisory text and Omit advisory text save an immutable decision for that draft; they never alter deterministic metrics/verdicts or dispatch report work. Owner review is followed by a separate Resume report preparation action. Historical, expired, stale/unavailable or mismatched revision snapshots cannot be reviewed. Report resumption is disabled while review is pending or expired. Source/evidence disclosure consent is connected through the revision API and enforced by the backend before AI dispatch; advisory text alone is not evidence.
+
+## Saved-state recovery (2026-11-11)
+
+Report loading, read failure and confirmed unpublished state are distinct. A failed read offers Retry report read, which performs no mutation; an existing report may remain visible with an explicit stale-availability warning. `AiDisclosurePanel` presents configured provider/model/endpoint and data scopes, requires an unchecked explicit decision, supports revocation, and explains that revocation cannot recall prior disclosures. It is mounted in the audit flow and posts digest-bound accept/revoke decisions to the revision consent API. Start and resume controls require an accepted workspace snapshot; backend dispatch enforcement is authoritative. A missing configuration stays fail-closed. The narrow source scanner does not guarantee that private information is absent.
+
+Historical draft revisions disable source selection/upload even when their saved state is `draft`/`idle`. New inputs belong in a current successor revision. Local React journey tests cover both domain choices, owner-history navigation, uploads, unknown/custom clarification answers, sign-out and report/PDF availability/integrity; hosted execution and browser layout/accessibility acceptance remain open.
+
+Connection failures during workspace/progress reads retain the last saved snapshots and display an explicit warning that they may be out of date. Read-only polling resumes automatically with bounded backoff; Refresh audit requests an immediate read. Navigation and sign-out stop the old poller, and terminal/historical server snapshots stop repeated polling. Reconnection never starts or repeats experiments. This change preserves the supplied console design; local polling tests do not establish a completed hosted journey.
+
 ## Frontend design integration (2026-11-09)
 
 The React client now uses the supplied Siphon console design for the landing page, domain selection, audit workspace and evidence report. Heat and Gravitation select the corresponding existing domain values; workspace controls continue to use authenticated API contracts. Example audit data in the supplied design is not presented as a live result. Empty, blocked and unavailable states reflect the data and configuration actually returned by the application. The supplied imagery is stored in `apps/web/public/design/`, and smooth scrolling respects reduced-motion preferences.
@@ -91,7 +103,7 @@ Plots need axis labels/units, legends when needed, baseline/refinement identitie
 
 ## Accessibility and responsive behavior
 
-Target WCAG 2.2 AA: keyboard operation, visible focus, semantic headings/landmarks, associated labels, sufficient contrast, accessible names, and reduced-motion support. Test desktop and 360 CSS-pixel viewport without page-wide horizontal overflow. Wide code/data panels can scroll within labelled regions.
+Target WCAG 2.2 AA: keyboard operation, visible focus, semantic headings/landmarks, associated labels, sufficient contrast, accessible names, and reduced-motion support. Provide a visible-on-focus skip link to the main landmark so keyboard users can bypass the persistent header. Test desktop and 360 CSS-pixel viewport without page-wide horizontal overflow. Wide code/data panels can scroll within labelled regions.
 
 Use a polite live region for coalesced progress; announce material transitions/errors rather than every log line. Focus errors after submission and preserve keyboard position during background updates. Charts must not be the only way to access a finding. Do not hide essential information behind hover-only interactions.
 

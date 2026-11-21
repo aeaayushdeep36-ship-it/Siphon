@@ -8,16 +8,16 @@ All worktrees and uncommitted user modifications have been preserved in place wi
 
 ---
 
-### Authoritative Git State & Worktrees
-| PR # | Branch | Worktree Directory | Head Commit SHA | Base Branch | Working Copy Status |
-|:---:|:---|:---|:---|:---|:---|
-| **PR #1** | `coordination/shared-baseline-2026-11-11` | `D:\Freelance\Siphon` | `1d3cbc0ffa9de1f81d76c7c5a70ef2fcfe729681` | `main` | **Clean** (`working tree clean`). Draft PR, MERGEABLE. |
-| **PR #2** | `backend/audit-completion-2026-11-11` | `D:\Freelance\Siphon-backend` | `c1cb53304fcc4c80005c4239683a852489a476e8` | `coordination/shared-baseline-2026-11-11` | **DIRTY** — Uncommitted modification in `docs/TESTING.md` ($|P''(t)| \le M_i$ quadrature bound) **preserved**. Draft PR, MERGEABLE. |
-| **PR #3** | `frontend/integration-2026-11-11` | `D:\Freelance\Siphon-frontend-integration` | `4299f96e0c8693312eb724538438b4b391011493` | `coordination/shared-baseline-2026-11-11` | **DIRTY** — Uncommitted modification in `docs/HANDOFF.md` (skip link & 37/47 Firestore call counts) **preserved**. Draft PR, MERGEABLE. |
-| **PR #4** | `foundation/service-configuration-2026-11-11` | `D:\Freelance\Siphon-service-foundation` | `74d5883304235a9700a7e3e100a5fe6138f53c5e` | `coordination/shared-baseline-2026-11-11` | **Clean** (`working tree clean`). Draft PR, MERGEABLE. |
+### Authoritative Git State & Worktrees (Updated Post-Merge 2026-11-22)
+| PR # | Branch | Target / Base | State | Merge Commit SHA | Verification Status |
+|:---:|:---|:---|:---:|:---|:---|
+| **PR #1** | `coordination/shared-baseline-2026-11-11` | `main` | **MERGED** | `1d3cbc0ffa9de1f81d76c7c5a70ef2fcfe729681` | Shared baseline verified |
+| **PR #2** | `backend/audit-completion-2026-11-11` | `coordination/shared-baseline-2026-11-11` | **MERGED** | `77f357f` | Backend child workflows & ledger gates verified |
+| **PR #3** | `frontend/integration-2026-11-11` | `coordination/shared-baseline-2026-11-11` | **MERGED** | `21c1526` | Frontend recovery & consent journey verified |
+| **PR #4** | `foundation/service-configuration-2026-11-11` | `coordination/shared-baseline-2026-11-11` | **MERGED** | `ba63cca` | Service foundation & E2B HTTPS origin verified |
 
-- **Remote `origin/main`:** `3f17b02fcf8b000f200d84ac23609e2c009e96da` ("Document Siphon project and current status").
-- **Local `main`:** `ee73498691142a8d38db297b06dfb676188cc075` (1 commit behind `origin/main`).
+- **Base branch `main`:** Updated and pushed to origin at `ced5fb8`, integrating PRs #1–#4 cleanly with zero conflicts.
+- **Unified Working Branch:** `feat/scientific-audit-completion` established from updated `main` (`ced5fb8`), targeted for the unified PR and all subsequent milestone commits. All worktrees (`D:\Freelance\Siphon`, `D:\Freelance\Siphon-backend`, `D:\Freelance\Siphon-frontend-integration`, `D:\Freelance\Siphon-service-foundation`) verified clean with zero uncommitted or lost changes.
 
 ---
 

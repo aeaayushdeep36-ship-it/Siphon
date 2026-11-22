@@ -3,6 +3,7 @@ import {
   CheckId,
   Digest,
   Domain,
+  Finite,
   Id,
   SchemaVersion,
   Timestamp,
@@ -14,6 +15,7 @@ import { EvidenceReport, ReportCheck, ReportExperiment } from './reports.js';
 export const SampledAccuracyPolicy = z.strictObject({
   scope: z.literal('reported_samples'),
   target: MetricEvidence.shape.target,
+  quadratureUncertaintyBound: Finite.nonnegative().optional(),
 });
 
 /** Reviewed deterministic plan. Schema validation does not establish the truth
@@ -67,12 +69,9 @@ export const AuditPlan = z
         !decision ||
         decision.registryVersion !== plan.registryVersion ||
         (plan.domain === 'heat_diffusion') !== check.checkId.startsWith('H_') ||
-        check.selection !==
-          (decision.status === 'eligible'
-            ? 'selected'
-            : decision.status === 'ineligible'
-              ? 'excluded'
-              : 'unresolved') ||
+        (check.selection === 'selected' && decision.status !== 'eligible') ||
+        (check.selection === 'unresolved' && decision.status !== 'unresolved') ||
+        (check.selection === 'excluded' && decision.status === 'unresolved') ||
         (check.selection === 'selected' &&
           (!decision.released ||
             !check.experimentIds.length ||

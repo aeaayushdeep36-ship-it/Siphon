@@ -187,7 +187,10 @@ export class ReportPublication {
             rawParameters.declaration !== 'user_supplied' ||
             rawParameters.parametersDigest !==
               (await sha256(canonicalJson(values))) ||
-            diagnostics.profile.kind !== 'heat_energy_si' ||
+            !(
+              diagnostics.profile.kind === 'heat_energy_si' ||
+              diagnostics.profile.kind === 'heat_balance_si'
+            ) ||
             diagnostics.profile.densityKgM3 !== values.densityKgM3 ||
             diagnostics.profile.heatCapacityJKgK !== values.heatCapacityJKgK
           )

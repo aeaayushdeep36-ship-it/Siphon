@@ -120,7 +120,7 @@ describe('answer-derived context declarations', () => {
     const result = await f.resolver.resolve('alice', fence);
     expect(result.allUserDeclarationsResolved).toBe(true);
     expect(result.questionDraft).toBeNull();
-    expect(result.declarations).toHaveLength(6);
+    expect(result.declarations).toHaveLength(7);
     expect((await f.resolver.resolve('alice', fence)).replayed).toBe(true);
     expect(
       f.docs.documents.get(`audits/${f.audit.id}/revisions/${fence.revisionId}`)
@@ -133,7 +133,7 @@ describe('answer-derived context declarations', () => {
       f.answer(f.questions.questions[0]!),
     ]);
     const first = await f.resolver.resolve('alice', firstFence);
-    expect(first.questionDraft?.questions).toHaveLength(5);
+    expect(first.questionDraft?.questions).toHaveLength(6);
     expect(
       first.questionDraft!.questions.some((q) => q.key === 'context.units'),
     ).toBe(false);
@@ -160,7 +160,7 @@ describe('answer-derived context declarations', () => {
       value: null,
       answer: { customText: 'Lengths use cm', selectedOptionId: 'si' },
     });
-    expect(result.questionDraft?.questions).toHaveLength(6);
+    expect(result.questionDraft?.questions).toHaveLength(7);
   });
   it('blocks carrying declarations when source changes even if a new input digest is supplied', async () => {
     const f = await setup();

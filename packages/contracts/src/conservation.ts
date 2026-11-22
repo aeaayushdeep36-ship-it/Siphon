@@ -11,7 +11,7 @@ import { SampledAccuracyPolicy } from './plans.js';
 
 const profileChecks = {
   heat_energy_si: ['H_ENERGY'],
-  heat_balance_si: [],
+  heat_balance_si: ['H_BALANCE'],
   central_orbit_si: ['O_ENERGY', 'O_ANGULAR'],
   isolated_orbits_si: ['O_ENERGY', 'O_ANGULAR', 'O_MOMENTUM'],
 } as const;
@@ -131,12 +131,16 @@ export function validateConservationJobResult(
       canonical(evidence.target) !== canonical(policy.target)
     )
       throw new Error('Conservation metric snapshot mismatch');
+    const quadratureBound = policy.quadratureUncertaintyBound ?? 0;
+    const expectedBound =
+      metric.arithmetic !== null
+        ? metric.arithmetic.absoluteUncertaintyBound + quadratureBound
+        : null;
     if (
       metric.arithmetic === null
         ? evidence.uncertainty !== null
         : !evidence.uncertainty ||
-          evidence.uncertainty.value !==
-            metric.arithmetic.absoluteUncertaintyBound ||
+          Math.abs(evidence.uncertainty.value - expectedBound!) > 1e-12 ||
           evidence.uncertainty.unit !== metric.unit ||
           canonical(evidence.uncertainty.evidenceIds) !==
             canonical([d.operationId])

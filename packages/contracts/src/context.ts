@@ -7,6 +7,7 @@ export const ContextField = z.enum([
   'thermal_model',
   'thermal_boundary',
   'heat_sources',
+  'thermal_quadrature',
   'time_control',
   'gravity_profile',
   'additional_forces',

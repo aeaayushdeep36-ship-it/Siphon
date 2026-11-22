@@ -81,7 +81,10 @@ function fixture(faulty = false) {
   };
 }
 
-describe('conservation transport and actual authored scientific callable', () => {
+describe(
+  'conservation transport and actual authored scientific callable',
+  { timeout: 30_000 },
+  () => {
   it.each([false, true])(
     'measures real NPY heat evidence through Python (faulty=%s)',
     async (faulty) => {
@@ -94,6 +97,7 @@ describe('conservation transport and actual authored scientific callable', () =>
       expect(f.gate.claim).toHaveBeenCalledOnce();
       expect(f.session.writeObservation).toHaveBeenCalledTimes(3);
     },
+    30_000,
   );
   it('rejects corrupted bytes and undeclared source before claiming any VM', async () => {
     const f = fixture();

@@ -18,7 +18,7 @@ describe('deterministic context clarification', () => {
     'creates domain-specific %s questions with custom and unknown choices',
     (domain) => {
       const set = buildContextQuestions(snapshot(domain));
-      expect(set.questions).toHaveLength(domain === 'heat_diffusion' ? 6 : 7);
+      expect(set.questions).toHaveLength(7);
       expect(
         set.questions.every(
           (q) =>
@@ -50,7 +50,7 @@ describe('deterministic context clarification', () => {
     });
     expect(
       unresolvedContextQuestions('heat_diffusion', set, [answer])?.questions,
-    ).toHaveLength(6);
+    ).toHaveLength(7);
   });
   it('resolves option-only declarations while preserving unknown and missing answers', () => {
     const set = buildContextQuestions(snapshot());
@@ -77,7 +77,7 @@ describe('deterministic context clarification', () => {
     expect(interpreted[1]).toMatchObject({ state: 'unknown', value: null });
     expect(
       unresolvedContextQuestions('heat_diffusion', set, answers)?.questions,
-    ).toHaveLength(5);
+    ).toHaveLength(6);
   });
   it('does not treat custom units or unsupported geometry as confirmed details', () => {
     const set = buildContextQuestions(snapshot());

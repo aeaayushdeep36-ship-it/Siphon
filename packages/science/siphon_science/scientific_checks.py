@@ -8,15 +8,16 @@ never silently assigned zero uncertainty. Targets remain user requirements.
 
 from typing import Annotated, Literal
 
-from pydantic import Field, TypeAdapter, model_validator
+from pydantic import ConfigDict, Field, TypeAdapter, model_validator
+from pydantic.alias_generators import to_camel
 
 from .evidence import decide_absolute_metric
 from .models import Digest, Identifier, WireModel
 
-RELEASED_CHECKS = frozenset(("H_ENERGY", "O_ENERGY", "O_ANGULAR", "O_MOMENTUM"))
+RELEASED_CHECKS = frozenset(("H_ENERGY", "H_BALANCE", "O_ENERGY", "O_ANGULAR", "O_MOMENTUM"))
 PROFILE_CHECKS = {
     "heat_energy_si": ("H_ENERGY",),
-    "heat_balance_si": (),  # Physical/time quadrature policy is not released.
+    "heat_balance_si": ("H_BALANCE",),
     "central_orbit_si": ("O_ENERGY", "O_ANGULAR"),
     "isolated_orbits_si": ("O_ENERGY", "O_ANGULAR", "O_MOMENTUM"),
 }
@@ -37,13 +38,23 @@ class MetricSupport(WireModel):
 
 
 class SampledAccuracyPolicy(WireModel):
+    model_config = ConfigDict(
+        strict=True,
+        extra="forbid",
+        alias_generator=to_camel,
+        validate_by_alias=True,
+        validate_by_name=True,
+        revalidate_instances="always",
+        hide_input_in_errors=True,
+    )
     scope: Literal["reported_samples"]
     target: MetricSupport | None
+    quadrature_uncertainty_bound: Magnitude | None = None
 
 
 LIMITATIONS = [
     "Criterion applies only to invariant drift at the exported sample states, treating represented states and parameters as exact mathematical inputs.",
-    "The interval encloses formula-evaluation roundoff only; it does not bound physical state/parameter error, mapping errors, spatial quadrature error or unobserved between-sample behavior.",
+    "The interval encloses formula-evaluation roundoff (and certified time-quadrature remainder bounds for H_BALANCE); it does not bound physical state/parameter error, mapping errors, spatial discretization error or unobserved between-sample behavior.",
     "Conservation within a declared target does not establish trajectory/phase accuracy, convergence, physical validation or absence of defects; an exceedance alone does not diagnose a code bug.",
 ]
 
@@ -63,16 +74,30 @@ def evaluate_sampled_metric(diagnostic, metric, *, check_id, plan_digest, eviden
     if target and target.unit != metric["unit"]:
         raise ValueError("accuracy_target_unit_mismatch")
     arithmetic = metric["arithmetic"]
-    uncertainty = (
-        {
-            "value": arithmetic["absoluteUncertaintyBound"],
+    quadrature_bound = (
+        getattr(policy, "quadrature_uncertainty_bound", None) if check_id == "H_BALANCE" else None
+    )
+    quadrature_val = float(quadrature_bound) if quadrature_bound is not None else 0.0
+
+    if arithmetic is not None:
+        bound_val = arithmetic["absoluteUncertaintyBound"] + quadrature_val
+        if check_id == "H_BALANCE":
+            justification = (
+                f"Directed decimal50_interval_v1 enclosure of the heat balance residual formula on exact represented inputs plus certified quadrature uncertainty bound {quadrature_val} J."
+                if quadrature_val > 0.0
+                else "Directed decimal50_interval_v1 enclosure of the heat balance residual formula on exact represented inputs; trapezoidal time quadrature is mathematically exact for the declared piecewise-linear power profile."
+            )
+        else:
+            justification = "Directed decimal50_interval_v1 enclosure of the invariant drift formula on exact represented inputs; scope is reported samples only."
+        uncertainty = {
+            "value": bound_val,
             "unit": metric["unit"],
-            "justification": "Directed decimal50_interval_v1 enclosure of the invariant drift formula on exact represented inputs; scope is reported samples only.",
+            "justification": justification,
             "evidenceIds": [diagnostic["operationId"]],
         }
-        if arithmetic is not None
-        else None
-    )
+    else:
+        uncertainty = None
+
     decision = decide_absolute_metric(
         metric["value"],
         target=target.value if target else None,

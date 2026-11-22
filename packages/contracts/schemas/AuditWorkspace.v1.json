@@ -305,6 +305,7 @@
                       "thermal_model",
                       "thermal_boundary",
                       "heat_sources",
+                      "thermal_quadrature",
                       "time_control",
                       "gravity_profile",
                       "additional_forces",
@@ -1986,6 +1987,10 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "quadratureUncertaintyBound": {
+                    "type": "number",
+                    "minimum": 0
                   }
                 },
                 "required": [

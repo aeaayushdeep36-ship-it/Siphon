@@ -474,6 +474,10 @@
                 "type": "null"
               }
             ]
+          },
+          "quadratureUncertaintyBound": {
+            "type": "number",
+            "minimum": 0
           }
         },
         "required": [

@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+const IPV4_PATTERN = /^\d{1,3}(\.\d{1,3}){3}$/;
+const IPV6_PATTERN = /^\[?[0-9a-fA-F:]+\]?$/;
+
 /** Server-owned control-plane origin. Paths are forbidden because the REST
  * verifier and E2B SDK construct their endpoint paths differently. */
 export const E2bApiUrl = z
@@ -8,6 +11,19 @@ export const E2bApiUrl = z
   .refine((value) => {
     try {
       const url = new URL(value);
+      const host = url.hostname.toLowerCase();
+      const hasExplicitPort =
+        Boolean(url.port) || value.slice('https://'.length).includes(':');
+      const isIp =
+        IPV4_PATTERN.test(host) ||
+        IPV6_PATTERN.test(host) ||
+        host.startsWith('[');
+      const isLocalhost =
+        host === 'localhost' ||
+        host.endsWith('.localhost') ||
+        host === 'localhost.' ||
+        host.endsWith('.localhost.');
+
       return (
         /^https:\/\/[^/?#\\\s]+\/?$/.test(value) &&
         url.protocol === 'https:' &&
@@ -16,7 +32,10 @@ export const E2bApiUrl = z
         !url.search &&
         !url.hash &&
         url.pathname === '/' &&
-        value === value.trim()
+        value === value.trim() &&
+        !hasExplicitPort &&
+        !isIp &&
+        !isLocalhost
       );
     } catch {
       return false;

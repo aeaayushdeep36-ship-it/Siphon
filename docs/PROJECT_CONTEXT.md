@@ -1,6 +1,36 @@
 # Siphon project context and next steps
 
-# Current handoff — 2026-11-12
+# Authoritative Completion Checkpoint — 2026-11-22
+
+Milestones 1 through 5 of Siphon's end-to-end scientific audit product for Heat Diffusion and Orbital Dynamics are complete, verified, and pushed to GitHub PR #5 ([`feat/scientific-audit-completion`](https://github.com/aeaayushdeep36-ship-it/Siphon/pull/5)).
+
+## Milestones Summary & Verification Status
+1. **Milestone 1 (Authoritative State & Reconciliation)**: Complete. Branches PRs #1–#4 merged into `main` at `ced5fb8` and consolidated on `feat/scientific-audit-completion`.
+2. **Milestone 2 (Storage Availability & Security Safeguards)**: Complete.
+   - Fixed `storage_unavailable` (503) contention in `WorkspaceRepository.get` and `ProgressRepository.get` by switching to direct read-only batch get operations (`baf1e04`).
+   - Hardened `E2bApiUrl` in `apps/api/src/e2b-endpoint.ts` against SSRF, custom ports, loopback addresses, and metadata targets (`a45ab86`).
+3. **Milestone 3 (Heat Diffusion Engine & Fixtures)**: Complete.
+   - Implemented standalone fixtures `sound_heat_diffusion.py` ($dE = 0.0$ J machine precision conservation) and `faulty_heat_diffusion.py` (seeded convective flux leak) in `packages/science/fixtures/heat/` (`9152af1`).
+   - Authored Fourier 2D mode exact analytical solver with sinc cell-averaging and $L^2/L^\infty$ volume-weighted error norms (`heat_reference.py`).
+   - Implemented spatial ($p \approx 2.00$) and temporal ($q \approx 1.00$) convergence order verifiers under diffusive CFL scaling (`heat_refinement.py`).
+   - Implemented defensible `H_BALANCE` second-derivative quadrature error bound ($M_i \Delta t^3 / 12$) with Decimal-50 interval arithmetic roundoff enclosures in `siphon_science/heat.py` and `scientific_checks.py`.
+   - Comprehensive test suite in `packages/science/tests/test_heat_fixtures.py` (`369866d`).
+4. **Milestone 4 (Orbital Dynamics Engine, Groq Advisory & Reporting)**: Complete.
+   - Implemented two-body Kepler orbit fixture `sound_kepler_orbit.py` ($e=0.1$, $\mu = 3.986004418 \times 10^{14}\text{ m}^3/\text{s}^2$) conserving energy ($\le 10^{-7}$) and angular momentum to machine precision, with exact analytical comparison (`419e692`).
+   - Implemented faulty Kepler orbit fixture `faulty_kepler_orbit.py` with seeded non-conservative drag dissipating $> 5\%$ energy.
+   - Implemented isolated three-body gravitational choreography `sound_three_body.py` (Lagrange equilateral solution) conserving energy, angular momentum, linear momentum, and center-of-mass velocity.
+   - Authored Halley-accelerated Kepler anomaly solver (machine precision $\le 10^{-14}$ within 3-5 iterations) and exact Lagrange 3-body analytical solver in `orbital_reference.py`.
+   - Authored 2nd-order (Verlet $p \approx 2$) and 4th-order (RK4 $p \approx 4$) convergence order verifiers in `orbital_refinement.py`.
+   - Validated Groq advisory stage with strict data minimization (structured digests only; deterministic results immutable to AI text).
+   - Validated report and PDF rendering synchronization (`Report.tsx`, `pdf_render.py`).
+5. **Milestone 5 (Integration, Hosted Boundaries & Final Verification)**: Complete.
+   - Cloudflare Workers Free capacity confirmed: 468 KiB gzip bundle size, 50-external-request headroom enforced by child workflows.
+   - Fail-closed spendable balance reconciliation enforced: zero out-of-pocket spend guaranteed.
+   - In accordance with Requirement 20, because production Firestore contains no unearned credits and inspection/PDF E2B templates remain unconfigured on the provider, production workflow dispatch remains hard-disabled (`SIPHON_INSPECTION_WORKFLOW_ENABLED="false"`). Local synthetic suites for both domains pass 100% cleanly.
+
+---
+
+# Current handoff — 2026-11-12 (Historical Context)
 
 Active coordinated completion: the user resumed and authorized safe baseline publication and per-chat draft PRs/commits. Shared branch `coordination/shared-baseline-2026-11-11` is at `1d3cbc0`, including main's README/status commit `3f17b02`; draft PR #1 is clean/mergeable against current `main`: [PR #1](https://github.com/aeaayushdeep36-ship-it/Siphon/pull/1). Service work is isolated on `foundation/service-configuration-2026-11-11`; frontend/backend chats use their own branches. See [HANDOFF](HANDOFF.md) for current ownership, account observations and prerequisite gaps. This supersedes historical paused/no-push status. Production execution stays disabled.
 

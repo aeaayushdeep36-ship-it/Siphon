@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TestDocuments } from '../test/document-store.js';
 import { FirestoreAuditRepository } from './audit-repository.js';
 import { ProgressRepository } from './progress.js';
@@ -84,6 +84,18 @@ describe('durable bounded progress', () => {
       progress: null,
       pollAfterSeconds: null,
     });
+  });
+  it('does not open a write transaction on read-only get', async () => {
+    const f = await setup();
+    const transactionSpy = vi.spyOn(f.store, 'transaction');
+    const result = await f.repository.get(
+      'alice',
+      f.audit.id,
+      f.fence.revisionId,
+    );
+    expect(result.status).toBe('running');
+    expect(transactionSpy).not.toHaveBeenCalled();
+    transactionSpy.mockRestore();
   });
   it('denies other owners, inactive invitations and deleted audits', async () => {
     const f = await setup();

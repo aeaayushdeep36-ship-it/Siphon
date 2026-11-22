@@ -41,7 +41,7 @@ export const InvestigationStage = DispatchFence.extend({
  * provenance and the exact evidence snapshot before displaying or publishing
  * any advisory text. This does not establish the truth of a hypothesis. */
 export async function readInvestigationReview(
-  tx: DocumentTransaction,
+  tx: DocumentTransaction | DocumentStore,
   uid: string,
   fence: z.infer<typeof DispatchFence>,
   clock: () => Date,

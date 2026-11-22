@@ -717,7 +717,12 @@ describe('sanitized Firestore request diagnostics', () => {
       );
       expect(response.status).toBe(503);
       expect(await response.json()).toMatchObject({
-        error: { code: 'storage_unavailable' },
+        error: {
+          code: 'storage_unavailable',
+          message: 'Storage is temporarily unavailable.',
+          retryable: true,
+          requestId: expect.any(String),
+        },
       });
       expect(logger).toHaveBeenCalledWith('siphon_firestore_failure', {
         requestId: expect.any(String),
@@ -732,6 +737,90 @@ describe('sanitized Firestore request diagnostics', () => {
       expect(JSON.stringify(logger.mock.calls)).not.toContain(auditId);
       expect(JSON.stringify(logger.mock.calls)).not.toContain(revisionId);
       expect(JSON.stringify(logger.mock.calls)).not.toContain('alice');
+    } finally {
+      logger.mockRestore();
+      workspace.mockRestore();
+    }
+  });
+
+  it('sanitizes and logs classified progress storage failures without leaking identifiers', async () => {
+    const f = setup();
+    const auditId = crypto.randomUUID();
+    const revisionId = crypto.randomUUID();
+    const progress = vi
+      .spyOn(ProgressRepository.prototype, 'get')
+      .mockRejectedValue(
+        new FirestoreFailure(503, false, 'http', 'other', 'UNAVAILABLE'),
+      );
+    const logger = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await f.app.request(
+        `/api/v1/audits/${auditId}/revisions/${revisionId}/progress`,
+        { headers: { Authorization: 'Bearer alice' } },
+      );
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({
+        error: {
+          code: 'storage_unavailable',
+          message: 'Storage is temporarily unavailable.',
+          retryable: true,
+          requestId: expect.any(String),
+        },
+      });
+      expect(logger).toHaveBeenCalledWith('siphon_firestore_failure', {
+        requestId: expect.any(String),
+        method: 'GET',
+        route: '/api/v1/audits/:auditId/revisions/:revisionId/progress',
+        firestoreStatus: 503,
+        source: 'http',
+        reason: 'other',
+        apiStatus: 'UNAVAILABLE',
+        ambiguousCommit: false,
+      });
+      expect(JSON.stringify(logger.mock.calls)).not.toContain(auditId);
+      expect(JSON.stringify(logger.mock.calls)).not.toContain(revisionId);
+      expect(JSON.stringify(logger.mock.calls)).not.toContain('alice');
+    } finally {
+      logger.mockRestore();
+      progress.mockRestore();
+    }
+  });
+
+  it('maps ambiguous commit failures to commit_unknown with non-retryable response', async () => {
+    const f = setup();
+    const auditId = crypto.randomUUID();
+    const revisionId = crypto.randomUUID();
+    const workspace = vi
+      .spyOn(WorkspaceRepository.prototype, 'get')
+      .mockRejectedValue(
+        new FirestoreFailure(503, true, 'http', 'other', 'UNAVAILABLE'),
+      );
+    const logger = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await f.app.request(
+        `/api/v1/audits/${auditId}/revisions/${revisionId}/workspace`,
+        { headers: { Authorization: 'Bearer alice' } },
+      );
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({
+        error: {
+          code: 'commit_unknown',
+          message:
+            'The operation outcome is not yet known. Retry only with the same Idempotency-Key.',
+          retryable: false,
+          requestId: expect.any(String),
+        },
+      });
+      expect(logger).toHaveBeenCalledWith('siphon_firestore_failure', {
+        requestId: expect.any(String),
+        method: 'GET',
+        route: '/api/v1/audits/:auditId/revisions/:revisionId/workspace',
+        firestoreStatus: 503,
+        source: 'http',
+        reason: 'other',
+        apiStatus: 'UNAVAILABLE',
+        ambiguousCommit: true,
+      });
     } finally {
       logger.mockRestore();
       workspace.mockRestore();

@@ -65,7 +65,7 @@ function authorizedAudit(
 }
 
 export async function authorize(
-  tx: DocumentTransaction,
+  tx: DocumentTransaction | DocumentStore,
   uid: string,
   auditId: string,
   allowDeleted: boolean,

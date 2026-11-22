@@ -38,10 +38,19 @@ function authoredPython(code: string, input?: string) {
   return JSON.parse(result.stdout) as unknown;
 }
 
-function fixture(faulty = false) {
+function fixture(
+  kind: 'heat' | 'central' | 'mutual' = 'heat',
+  faulty = false,
+) {
   // Every source/array is authored test data; this is never a local uploaded-code path.
+  const fn =
+    kind === 'heat'
+      ? 'heat_case'
+      : kind === 'central'
+        ? 'central_case'
+        : 'mutual_case';
   const raw = authoredPython(
-    `import json,base64; from test_scientific_checks import heat_case; request,payloads=heat_case(faulty=${faulty ? 'True' : 'False'}); print(json.dumps({'request':request,'payloads':{k:base64.b64encode(v).decode() for k,v in payloads.items()}}))`,
+    `import json,base64; from test_scientific_checks import ${fn}; request,payloads=${fn}(faulty=${faulty ? 'True' : 'False'}); print(json.dumps({'request':request,'payloads':{k:base64.b64encode(v).decode() for k,v in payloads.items()}}))`,
   ) as { request: unknown; payloads: Record<string, string> };
   const request = ConservationJobRequest.parse(raw.request);
   const payloads = Object.entries(raw.payloads).map(([filename, bytes]) => ({
@@ -85,17 +94,32 @@ describe(
   'conservation transport and actual authored scientific callable',
   { timeout: 30_000 },
   () => {
-  it.each([false, true])(
-    'measures real NPY heat evidence through Python (faulty=%s)',
-    async (faulty) => {
-      const f = fixture(faulty);
+  it.each([
+    ['heat', false],
+    ['heat', true],
+    ['central', false],
+    ['central', true],
+    ['mutual', false],
+    ['mutual', true],
+  ] as const)(
+    'measures real NPY %s evidence through Python (faulty=%s)',
+    async (kind, faulty) => {
+      const f = fixture(kind, faulty);
       const result = await f.runner.run(f.request, f.payloads);
       expect(validateConservationJobResult(result, f.request)).toEqual(result);
-      expect(result.evidence[0]?.status).toBe(
-        faulty ? 'flagged' : 'passed_within_tolerance',
-      );
+      if (faulty) {
+        expect(result.evidence.some((e) => e.status === 'flagged')).toBe(true);
+      } else {
+        expect(
+          result.evidence.every(
+            (e) => e.status === 'passed_within_tolerance',
+          ),
+        ).toBe(true);
+      }
       expect(f.gate.claim).toHaveBeenCalledOnce();
-      expect(f.session.writeObservation).toHaveBeenCalledTimes(3);
+      expect(f.session.writeObservation).toHaveBeenCalledTimes(
+        f.payloads.length,
+      );
     },
     30_000,
   );

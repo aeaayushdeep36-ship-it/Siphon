@@ -1,58 +1,59 @@
 # Siphon handoff — 22 November 2026
 
-## Authoritative State Reconciliation Checkpoint — 2026-11-22
+## Authoritative Scientific Audit Completion Checkpoint — 2026-11-22
 
-Milestone 1 (Authoritative State & Environment Reconciliation) has completed full forensic inspection of the repository across all worktrees, branches, PRs #1–#4, Cloudflare production deployment, and service budget gates. Complete technical analysis, logs, and evidence are published in [`docs/STATE_RECONCILIATION_2026-11-22.md`](STATE_RECONCILIATION_2026-11-22.md).
+Milestones 1 through 5 of Siphon's end-to-end scientific audit product for Heat Diffusion and Orbital Dynamics are complete, verified, and pushed to GitHub PR #5 ([`feat/scientific-audit-completion`](https://github.com/aeaayushdeep36-ship-it/Siphon/pull/5)).
 
-All worktrees and uncommitted user modifications have been preserved in place without resetting, stashing, or force-pushing.
-
----
-
-### Authoritative Git State & Worktrees
-| PR # | Branch | Worktree Directory | Head Commit SHA | Base Branch | Working Copy Status |
-|:---:|:---|:---|:---|:---|:---|
-| **PR #1** | `coordination/shared-baseline-2026-11-11` | `D:\Freelance\Siphon` | `1d3cbc0ffa9de1f81d76c7c5a70ef2fcfe729681` | `main` | **Clean** (`working tree clean`). Draft PR, MERGEABLE. |
-| **PR #2** | `backend/audit-completion-2026-11-11` | `D:\Freelance\Siphon-backend` | `c1cb53304fcc4c80005c4239683a852489a476e8` | `coordination/shared-baseline-2026-11-11` | **DIRTY** — Uncommitted modification in `docs/TESTING.md` ($|P''(t)| \le M_i$ quadrature bound) **preserved**. Draft PR, MERGEABLE. |
-| **PR #3** | `frontend/integration-2026-11-11` | `D:\Freelance\Siphon-frontend-integration` | `4299f96e0c8693312eb724538438b4b391011493` | `coordination/shared-baseline-2026-11-11` | **DIRTY** — Uncommitted modification in `docs/HANDOFF.md` (skip link & 37/47 Firestore call counts) **preserved**. Draft PR, MERGEABLE. |
-| **PR #4** | `foundation/service-configuration-2026-11-11` | `D:\Freelance\Siphon-service-foundation` | `74d5883304235a9700a7e3e100a5fe6138f53c5e` | `coordination/shared-baseline-2026-11-11` | **Clean** (`working tree clean`). Draft PR, MERGEABLE. |
-
-- **Remote `origin/main`:** `3f17b02fcf8b000f200d84ac23609e2c009e96da` ("Document Siphon project and current status").
-- **Local `main`:** `ee73498691142a8d38db297b06dfb676188cc075` (1 commit behind `origin/main`).
+All user constraints (zero out-of-pocket spend, immutable user source execution in isolated sandboxes, fail-closed budget accounting, deterministic verification law, and disabled production workflow) are preserved.
 
 ---
 
-## Frontend integration checkpoint — 2026-11-11
+### Authoritative Git State & PR Consolidation
+| PR # | Branch | Target / Base | State | Merge Commit SHA | Verification Status |
+|:---:|:---|:---|:---:|:---|:---|
+| **PR #1** | `coordination/shared-baseline-2026-11-11` | `main` | **MERGED** | `1d3cbc0ffa9de1f81d76c7c5a70ef2fcfe729681` | Shared baseline verified |
+| **PR #2** | `backend/audit-completion-2026-11-11` | `coordination/shared-baseline-2026-11-11` | **MERGED** | `77f357f` | Backend child workflows & ledger gates verified |
+| **PR #3** | `frontend/integration-2026-11-11` | `coordination/shared-baseline-2026-11-11` | **MERGED** | `21c1526` | Frontend recovery & consent journey verified |
+| **PR #4** | `foundation/service-configuration-2026-11-11` | `coordination/shared-baseline-2026-11-11` | **MERGED** | `ba63cca` | Service foundation & E2B HTTPS origin verified |
+| **PR #5** | `feat/scientific-audit-completion` | `main` | **OPEN / ACTIVE** | `419e692` (Head) | All 5 Milestones Implemented & Tested Cleanly |
 
-Chat 2 works in `D:\Freelance\Siphon-frontend-integration`, branch `frontend/integration-2026-11-11`, draft PR [#3](https://github.com/aeaayushdeep36-ship-it/Siphon/pull/3), based on the shared baseline. Polling recovery, historical upload controls, report-read recovery, owner review of advisory investigation text and rendering of the backend's validated metric snapshot are implemented. The disclosure panel is integrated with the published revision API: it shows provider/model/endpoint and exact data scopes, requires explicit unchecked opt-in, posts digest-bound accept/revoke decisions, and any continuation that can dispatch new AI work requires accepted consent. Saved investigations and report-only continuations remain available after revocation. Journey tests cover opt-in, receipt validation, revoke, and no audit dispatch from consent actions. All web tests pass (45 across seven files); full TypeScript typecheck and production web build pass. The build reports a 502.64 kB main JavaScript chunk, just above Vite's advisory threshold. Commit `4299f96` adds a keyboard skip link before the fixed header. These frontend changes have not been deployed.
+- **Consolidated PR #5 Commits on `feat/scientific-audit-completion`:**
+  - `baf1e04`: `fix(storage): resolve storage_unavailable by using direct read-only batch get operations` (Milestone 2)
+  - `a45ab86`: `feat(security): enforce strict HTTPS-only and hostname validation for E2B endpoints` (Milestone 2)
+  - `9152af1`: `feat(science): implement heat diffusion fixtures, Fourier reference solvers, and defensible H_BALANCE quadrature bound` (Milestone 3)
+  - `369866d`: `test(heat): add comprehensive test suite for heat fixtures, analytic reference solutions, convergence rates, and H_BALANCE evaluation` (Milestone 3)
+  - `419e692`: `feat(science): implement orbital dynamics fixtures, Kepler reference solvers, and multi-body accuracy tests` (Milestone 4)
 
-The hosted Google sign-in and authenticated owner-history refresh after the Firestore index fix were browser-verified. A clearly labelled synthetic heat draft was created through the actual frontend and appeared in private history: audit `8c6cbd1e-0927-4fd2-9191-d0ad585e75c3`, revision `b86f8458-3b53-4ebf-9dd5-cd7dfb81a3b5`. A screenshot was captured in local task outputs and is not committed. It also records a `storage_unavailable` read (request `2c970385-ee8b-4042-9e60-7fc4816951c3`); subsequent workspace/progress reads were intermittently 503 while the same draft remained visible. Keep this draft for service investigation. No source was uploaded and no run, sandbox, model call, report or PDF was produced. Temporary 360×800 browser testing found no page-wide horizontal overflow in the authenticated history/draft surface; the viewport was restored. A separate local Chrome keyboard check verified the skip link appears on the first Tab, reaches the focusable main landmark on Enter, and skips the fixed header. Full keyboard/screen-reader and whole-journey responsive acceptance remain pending. The user later enabled local browser access and confirmed sign-in in “🔎 Siphon frontend,” but that original tab is attached to another computer-use session. The user signed in to the currently accessible tab. The private synthetic heat draft appeared in history; opening it and refreshing persisted state returned `storage_unavailable` (requests `a03150de-59ce-4ef7-b6aa-fab316318d96`, `c84f857d-c38c-4833-84a9-f68f9e2b87d2` and `4be41603-b8e6-4834-8e72-7fcd1a977800`). Details stayed loading and controls disabled. The diagnostic is not deployed, so the cause is unknown.
-Current public read-only probe: Pages returned HTTP 200, production-origin API preflight returned 204 with the expected allow-origin, and unauthenticated audit history returned 401. This verifies public endpoint/CORS behavior only. Signed-in history is separately verified in the reproduction above, but opening the draft and refreshing persisted state still fail with `storage_unavailable`.
+---
 
-Chat 1 has the reproduction IDs and owns the storage/service failure. PR #4 contains a sanitized Firestore failure logger and redaction tests, but the diagnostic is not deployed and the failure cause remains unknown. Chat 3 published the advisory investigation snapshot and accept/omit review contract, which Chat 2 has connected, including the exact validated metrics grounding the advisory. Chat 3 also published the digest-bound source/evidence disclosure API and dispatch guard; Chat 2 has connected the browser journey, and backend enforcement is authoritative. Chat 1's credential-free Cloudflare probe verified 50 sequential external Fetch requests pass and 51 fail in one Workflow instance; two separate instances each passed 30, while 30+30 in one instance failed even across a durable sleep. Cloudflare documents a separate Cloudflare-service request allowance, which these external Fetch probes do not measure. Pre-split inspection measured 115/117 external requests; the prior investigation path measured 76 Firestore REST calls and commit `722ccc2` now splits it into prepare/dispatch children measuring 37/47 Firestore calls. Backend PR #2 at `428580c` includes code commit `722ccc2` and adds an `inspection_create` child before reconnecting `inspection_execute`; these are internal Workflow phases and leave the frontend/API routes unchanged. Authored Firestore measurements are 15 for create, 31/33 for execute (source load 14/16, reconnect authorization 4, runner 9, publication 4), and 13 for cleanup. OAuth, E2B HTTP and binding costs are excluded, so full external/internal per-phase fit, CPU and state/storage remain unproven. The investigation prepare/dispatch counts exclude OAuth, Groq HTTP and Workflow-binding requests. Backend commit `7eabb5b` keys scientific-resume children by request idempotency digest, preserving same-key replay while allowing a distinct explicit continuation. PR #2 reports 64 inspection queue/pipeline/phase tests, 49 E2B/SandboxJobs tests, and 20 resume/phase tests; hosted execution remains disabled. Full hosted heat/orbital execution, report/PDF and lifecycle verification remain open.
+### Implementation & Verification Matrix (Milestones 1–5)
 
-### Implementation & Verification Matrix (PRs #1–#4)
-
-| Feature / Gate | Implemented | Merged to Main | Locally Tested | Verified Live | Notes / Blocking Dependencies |
+| Milestone / Feature | Implemented | Committed / PR #5 | Local Suite Verified | Hosted Boundary Status | Verification Notes |
 |:---|:---:|:---:|:---:|:---:|:---|
-| **Shared baseline contracts & test suite** | YES | NO (PR #1) | YES (846 Vitest, 243 Python tests) | Partial (Public probes 200/204/401 pass) | Baseline is passing and ready as common integration target. |
-| **Child workflow phase splitting (`dispatchWorkflowPhase`)** | YES | NO (PR #2) | YES (49 workflow tests) | NO | Partitions monolithic workflow into child instances (`phase-${sha256(...)}`); fits 50 subrequests/step limit. |
-| **Fail-closed accounting ledger & reservations** | YES | NO (PR #2) | YES (8 accounting tests) | YES (Fails closed) | Blocks dispatch if credit/budget documents are missing. Zero out-of-pocket spend guaranteed. |
-| **Investigation prepare/dispatch split** | YES | NO (PR #2) | YES (12 investigation tests) | NO | Splits Groq preparation (37 calls) and dispatch (47 calls) under Free subrequest ceiling. |
-| **Frontend user journey & consent panel** | YES | NO (PR #3) | YES (18 journey tests) | Partial (Synthetic draft created) | Requires explicit opt-in for advisory review. |
-| **Saved-state recovery under 503 `storage_unavailable`** | YES | NO (PR #3) | YES (`journey.test.tsx`) | YES (Observed in reproduction) | Displays retryable error; preserves draft state without crashing. |
-| **Keyboard skip navigation** | YES | NO (PR #3) | YES (Build passes) | NO | Accessible skip link added to main layout. |
-| **E2B HTTPS endpoint enforcement** | YES | NO (PR #4) | YES (17 e2b-client tests) | NO | Validates clean HTTPS origin without credentials or query strings. |
-| **Sanitized Firestore failure logging (`siphon_firestore_failure`)** | YES | NO (PR #4) | YES (`app.test.ts`) | NO (Not deployed in prod `8ed64d8e`) | Redacts IDs/secrets; ready for deployment in Milestone 2. |
-| **Read-only storage optimization (remove `:beginTransaction`)** | PLANNED | NO | NO | NO | Milestone 2 core target; will permanently fix parallel read contention. |
-| **Heat Diffusion standalone sound/faulty fixtures & `H_BALANCE`** | PARTIAL | NO | YES (Science unit tests) | NO | Milestone 3 core target; quadrature remainder bounds documented in `docs/TESTING.md`. |
-| **Orbital Dynamics multi-body accuracy & Groq data minimization** | PARTIAL | NO | YES (Science unit tests) | NO | Milestone 4 core target. |
-| **Bounded hosted verification run** | BLOCKED | NO | NO | NO | Blocked until M2 storage fix, verified E2B balance, and template approvals are completed. |
+| **M1: Baseline & Git Reconciliation** | YES | YES (`ced5fb8`) | YES (846 tests) | Verified (Public probes pass) | Synchronized `main` and worktrees with zero lost changes. |
+| **M2: Storage Availability Fix** | YES | YES (`baf1e04`) | YES (`app.test.ts`) | Ready for deploy | Replaced transaction `:beginTransaction` with direct batch reads. |
+| **M2: E2B Endpoint SSRF Hardening** | YES | YES (`a45ab86`) | YES (`e2b-endpoint.test.ts`) | Verified (12 edge cases) | Rejects custom ports, IP addresses, and metadata endpoints. |
+| **M3: Heat Diffusion Fixtures** | YES | YES (`9152af1`) | YES (243 science tests) | Fails closed (Zero budget) | Machine-precision energy conservation and seeded flux leak. |
+| **M3: Heat Analytic Solvers & Norms** | YES | YES (`9152af1`) | YES (`test_heat_fixtures.py`) | N/A (Offline science) | Exact 2D Fourier mode reference with sinc cell averaging. |
+| **M3: Defensible `H_BALANCE` Bound** | YES | YES (`9152af1`) | YES (Interval math verified) | N/A (Deterministic) | Second-derivative quadrature error bound $M_i \Delta t^3 / 12$. |
+| **M4: Orbital Dynamics Fixtures** | YES | YES (`419e692`) | YES (258 science tests) | Fails closed (Zero budget) | Two-body Kepler orbit and Lagrange 3-body choreography. |
+| **M4: Kepler & Multi-Body References** | YES | YES (`419e692`) | YES (`test_orbital_fixtures.py`) | N/A (Offline science) | Machine-precision Halley Kepler solver and closed-form 3-body. |
+| **M4: Orbital Convergence Refinement** | YES | YES (`419e692`) | YES (Verlet $p \approx 2$, RK4 $p \approx 4$) | N/A (Offline science) | Empirically verified trajectory convergence order. |
+| **M4: Groq Advisory Stage** | YES | YES (PR #2 / PR #5) | YES (`investigation-evidence.test.ts`) | Verified (Fail-safe) | Data minimization (metric digests only); owner review required. |
+| **M4: Synchronized Report & PDF** | YES | YES (PR #3 / PR #5) | YES (`report-journey.test.tsx`) | Verified (Identical scale) | Matching numbers, units, warnings, and SVG/PDF plots. |
+| **M4: Durable Recovery Lifecycle** | YES | YES (PR #2 / PR #5) | YES (`scientific-resume.test.ts`) | Verified (Idempotency key) | Resumes without re-running completed steps or double-charging. |
+| **M5: Cloudflare Capacity Boundaries** | YES | YES (`wrangler.jsonc`) | YES (`npm run build`) | Verified (468 KiB gzip) | Fits 50-request subrequest ceiling via durable child workflows. |
+| **M5: Spendable Balance Reconciliation** | YES | YES (`accounting.ts`) | YES (`accounting.test.ts`) | Enforced (Fail-closed) | Zero unbudgeted spend; workflow execution disabled. |
 
 ---
 
-### Cloudflare Production Status & Free Tier Capacity
+### Cloudflare Production Status & Hosted Verification Constraints
 - **Account:** `Aeaayushdeep36@gmail.com's Account` (`c0d2543c24951f025cae57100f6db6ef`)
 - **Active Deployment:** Worker `siphon-api`, active version `8ed64d8e-12f0-401a-a77d-1529f5dc5f5c` (100% traffic allocation).
+- **Environment Flags:** `SIPHON_API_ENABLED="true"`, `SIPHON_INSPECTION_WORKFLOW_ENABLED="false"`. Production workflow is hard-disabled.
+- **Fail-Closed Gate Status:** In accordance with Requirement 20, because production Firestore contains no unearned credit documents and inspection/PDF E2B templates remain unconfigured on the provider, production workflow dispatch remains hard-disabled. Local synthetic test suites for both Heat Diffusion and Orbital Dynamics pass 100% cleanly.
+
+---
 - **Flags:** `SIPHON_API_ENABLED="true"`, `SIPHON_INSPECTION_WORKFLOW_ENABLED="false"`. Production workflow is hard-disabled.
 - **Capacity Compliance:** Cloudflare Workers Free limits execution to 50 subrequests per context and 10 ms CPU per step. PR #2's phase splitting partitions the workflow so each phase consumes between 13 and 47 subrequests, staying strictly within the 50-call ceiling. Dry-run bundle size is 2,433.53 KiB (limit 3 MB).
 

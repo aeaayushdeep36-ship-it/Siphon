@@ -16,7 +16,15 @@ function fixture(domain: 'heat_diffusion' | 'orbital_dynamics') {
       adapterDigest: 'c'.repeat(64),
       assertions: RequirementId.options.map((requirement) => ({
         requirement,
-        state: 'satisfied',
+        state:
+          domain === 'heat_diffusion' &&
+          [
+            'boundary_flux_observed',
+            'heat_sources_observed',
+            'time_quadrature_supported',
+          ].includes(requirement)
+            ? 'violated'
+            : 'satisfied',
         evidenceIds: [evidenceId],
       })),
     },

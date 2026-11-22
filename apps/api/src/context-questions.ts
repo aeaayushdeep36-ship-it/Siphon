@@ -138,6 +138,24 @@ function definitions(domain: Domain): Definition[] {
             ],
             checks: ['H_ENERGY', 'H_BALANCE'] as Definition['checks'],
           },
+          {
+            field: 'thermal_quadrature' as const,
+            prompt:
+              'What is the time variation of heat sources and outward boundary flux between reported sample times?',
+            reason:
+              'Trapezoidal time quadrature is mathematically exact when source and outward power are constant or piecewise-linear between sample times.',
+            options: [
+              [
+                'piecewise_linear_or_constant',
+                'Constant or piecewise-linear between sample times (zero quadrature remainder)',
+              ],
+              [
+                'general_or_unknown',
+                'Arbitrary or unknown nonlinear variation',
+              ],
+            ],
+            checks: ['H_BALANCE'] as Definition['checks'],
+          },
         ]
       : [
           {

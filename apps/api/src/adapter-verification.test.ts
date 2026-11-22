@@ -160,7 +160,13 @@ describe('conditional adapter verification', () => {
       ...initial.assessmentInput,
       assertions: RequirementId.options.map((requirement) => ({
         requirement,
-        state: 'satisfied' as const,
+        state: [
+          'boundary_flux_observed',
+          'heat_sources_observed',
+          'time_quadrature_supported',
+        ].includes(requirement)
+          ? ('violated' as const)
+          : ('satisfied' as const),
         evidenceIds: [
           requirement === 'resource_budget_available'
             ? operationId

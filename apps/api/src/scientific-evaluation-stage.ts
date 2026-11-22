@@ -200,7 +200,13 @@ export class ScientificEvaluationStage {
           parameters.parametersDigest !== (await sha256(canonicalJson(values)))
         )
           throw new Error('Thermal parameters changed');
-        profile = { kind: 'heat_energy_si', ...values };
+        const isBalance = plan.checks.some(
+          (item) => item.checkId === 'H_BALANCE' && item.selection === 'selected',
+        );
+        profile = {
+          kind: isBalance ? 'heat_balance_si' : 'heat_energy_si',
+          ...values,
+        };
       } else if (
         declared?.state === 'declared' &&
         declared.value === 'fixed_central'

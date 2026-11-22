@@ -170,9 +170,42 @@ export class ScientificPlanStage {
       const gravity = declarations.find(
         (item) => item.field === 'gravity_profile',
       );
+      const boundaryDecl = declarations.find(
+        (item) => item.field === 'thermal_boundary',
+      );
+      const sourcesDecl = declarations.find(
+        (item) => item.field === 'heat_sources',
+      );
+      const quadratureDecl = declarations.find(
+        (item) => item.field === 'thermal_quadrature',
+      );
+      const isOpenOrSourced =
+        sourcesDecl?.value === 'present' ||
+        (boundaryDecl?.value &&
+          !['insulated', 'periodic'].includes(boundaryDecl.value)) ||
+        quadratureDecl?.state === 'declared';
+      const hasBalance =
+        audit.domain === 'heat_diffusion' &&
+        Boolean(isOpenOrSourced) &&
+        input.assertions.some(
+          (a) =>
+            a.requirement === 'heat_sources_observed' && a.state === 'satisfied',
+        ) &&
+        input.assertions.some(
+          (a) =>
+            a.requirement === 'boundary_flux_observed' &&
+            a.state === 'satisfied',
+        ) &&
+        input.assertions.some(
+          (a) =>
+            a.requirement === 'time_quadrature_supported' &&
+            a.state === 'satisfied',
+        );
       const profile =
         audit.domain === 'heat_diffusion'
-          ? 'heat_energy_si'
+          ? hasBalance
+            ? 'heat_balance_si'
+            : 'heat_energy_si'
           : gravity?.state === 'declared' && gravity.value === 'fixed_central'
             ? 'central_orbit_si'
             : gravity?.state === 'declared' &&

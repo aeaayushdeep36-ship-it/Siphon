@@ -48,6 +48,19 @@ describe('connected private workspace and history reads', () => {
       repository.get('alice', f.audit.id, f.audit.currentRevisionId),
     ).rejects.toThrow();
   });
+  it('does not open a write transaction on read-only get', async () => {
+    const f = await fixture(),
+      repository = new WorkspaceRepository(f.docs);
+    const transactionSpy = vi.spyOn(f.docs, 'transaction');
+    const result = await repository.get(
+      'alice',
+      f.audit.id,
+      f.audit.currentRevisionId,
+    );
+    expect(result.stage).toBe('draft');
+    expect(transactionSpy).not.toHaveBeenCalled();
+    transactionSpy.mockRestore();
+  });
   it('keeps missing or changed artifacts from being displayed as a ready upload', async () => {
     const f = await fixture(),
       artifactId = crypto.randomUUID(),

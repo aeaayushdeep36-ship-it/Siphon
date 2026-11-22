@@ -57,7 +57,7 @@ const definitions: readonly Definition[] = [
   {
     checkId: 'H_BALANCE',
     domain: 'heat_diffusion',
-    released: false,
+    released: true,
     requirements: [
       ...common,
       'thermal_weights',

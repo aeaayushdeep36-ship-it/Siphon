@@ -189,45 +189,44 @@ export class ProgressRepository {
   ): Promise<ProgressSnapshot> {
     Id.parse(auditId);
     Id.parse(revisionId);
-    return this.store.transaction(async (tx) => {
-      const audit = await authorize(tx, uid, auditId, false);
-      const record = await tx.get(`audits/${auditId}/revisions/${revisionId}`);
-      if (!record || record.ownerUid !== uid)
-        throw new ApiError(404, 'not_found', 'Revision was not found.');
-      const state = stateFrom(record);
-      if (state.auditId !== auditId || state.revisionId !== revisionId)
-        throw new Error('Progress revision identity mismatch');
-      const policy = ResourcePolicy.parse(record.policy);
-      const summary =
-        record.progress == null ? null : ProgressSummary.parse(record.progress);
-      if (
-        summary &&
-        (summary.auditId !== auditId || summary.revisionId !== revisionId)
-      )
-        throw new Error('Stored progress identity mismatch');
-      // Cancellation can supersede a coalesced activity. Never show old running
-      // activity as the current state or manufacture completion percentages.
-      const currentSummary =
-        summary &&
-        summary.stage === state.stage &&
-        summary.status === state.status
-          ? summary
-          : null;
-      return ProgressSnapshot.parse({
-        schemaVersion: '1.0',
-        auditId,
-        revisionId,
-        isCurrentRevision: audit.currentRevisionId === revisionId,
-        generation: state.generation,
-        stage: state.stage,
-        status: state.status,
-        updatedAt: record.updatedAt,
-        progress: currentSummary,
-        pollAfterSeconds:
-          state.stage === 'finished' || audit.currentRevisionId !== revisionId
-            ? null
-            : policy.progressIntervalSeconds,
-      });
+    const audit = await authorize(this.store, uid, auditId, false);
+    const base = `audits/${auditId}/revisions/${revisionId}`;
+    const record = await this.store.get(base);
+    if (!record || record.ownerUid !== uid)
+      throw new ApiError(404, 'not_found', 'Revision was not found.');
+    const state = stateFrom(record);
+    if (state.auditId !== auditId || state.revisionId !== revisionId)
+      throw new Error('Progress revision identity mismatch');
+    const policy = ResourcePolicy.parse(record.policy);
+    const summary =
+      record.progress == null ? null : ProgressSummary.parse(record.progress);
+    if (
+      summary &&
+      (summary.auditId !== auditId || summary.revisionId !== revisionId)
+    )
+      throw new Error('Stored progress identity mismatch');
+    // Cancellation can supersede a coalesced activity. Never show old running
+    // activity as the current state or manufacture completion percentages.
+    const currentSummary =
+      summary &&
+      summary.stage === state.stage &&
+      summary.status === state.status
+        ? summary
+        : null;
+    return ProgressSnapshot.parse({
+      schemaVersion: '1.0',
+      auditId,
+      revisionId,
+      isCurrentRevision: audit.currentRevisionId === revisionId,
+      generation: state.generation,
+      stage: state.stage,
+      status: state.status,
+      updatedAt: record.updatedAt,
+      progress: currentSummary,
+      pollAfterSeconds:
+        state.stage === 'finished' || audit.currentRevisionId !== revisionId
+          ? null
+          : policy.progressIntervalSeconds,
     });
   }
   publish(uid: string, auditId: string, fence: Fence, update: ProgressUpdate) {

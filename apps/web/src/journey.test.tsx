@@ -137,6 +137,11 @@ function defaults(path: string): Response {
       audits: [audit],
       nextCursor: null,
     });
+  if (path === `/audits/${audit.id}`)
+    return Response.json({
+      schemaVersion: '1.0',
+      audit,
+    });
   if (path.includes('/revisions?'))
     return Response.json({
       schemaVersion: '1.0',
@@ -339,6 +344,51 @@ describe('authored frontend journey through real browser API contracts', () => {
     );
     expect(button('Start readiness and audit').disabled).toBe(true);
     expect(host.querySelector<HTMLInputElement>('#files')?.disabled).toBe(true);
+    expect(requests.every((item) => item.method === 'GET')).toBe(true);
+  });
+
+  it('displays a retryable recovery path during storage_unavailable and preserves user draft state', async () => {
+    let unavailable = true;
+    respond = (path) => {
+      if (
+        unavailable &&
+        (path === `${base}/workspace` || path === `${base}/progress`)
+      ) {
+        return Response.json(
+          {
+            error: {
+              code: 'storage_unavailable',
+              message: 'Storage is temporarily unavailable.',
+            },
+          },
+          { status: 503 },
+        );
+      }
+      return defaults(path);
+    };
+
+    await mount();
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('.history-item')!.click(),
+    );
+
+    expect(host.textContent).toContain('Saved state could not be refreshed');
+    expect(host.textContent).toContain('storage_unavailable');
+    expect(host.textContent).toContain('Use Refresh audit to check now');
+    expect(host.textContent).toContain(audit.title);
+    expect(host.textContent).toContain(`Revision ${audit.currentRevisionId}`);
+
+    const refreshButton = button('Refresh audit');
+    expect(refreshButton).not.toBeNull();
+    expect(refreshButton.disabled).toBe(false);
+
+    unavailable = false;
+    await act(async () => refreshButton.click());
+
+    expect(host.textContent).not.toContain(
+      'Saved state could not be refreshed',
+    );
+    expect(host.textContent).toContain('draft · idle');
     expect(requests.every((item) => item.method === 'GET')).toBe(true);
   });
 

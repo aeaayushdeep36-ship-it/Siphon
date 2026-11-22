@@ -145,3 +145,38 @@ def heat_balance_si(
             return HeatBalance(observed, integrated, residual)
     except (FloatingPointError, OverflowError):
         raise NumericInputError("unrepresentable_heat_result") from None
+
+
+def compute_trapezoid_quadrature_bound(
+    times_s: NDArray[np.float64],
+    second_derivative_bound_w_s2: float | NDArray[np.float64] = 0.0,
+) -> float:
+    """Compute composite trapezoid time-quadrature error remainder bound.
+
+    Based on the standard Euler-Maclaurin / Taylor remainder formula (NIST DLMF §3.5):
+        |E_panel| <= (Delta t_k^3 / 12) * max_{tau in [t_k, t_{k+1}]} |P''(tau)|
+    For the full interval [0, t_end]:
+        u_quad = sum_k (Delta t_k^3 / 12) * M_k
+    where M_k is an upper bound on |P''_net(t)| = |P''_source(t) - P''_outward(t)|.
+
+    For piecewise-linear or constant power profiles, P''(t) = 0 identically,
+    yielding u_quad = 0.0 J.
+    """
+    times = np.asarray(times_s, dtype=np.float64)
+    if times.size < 2:
+        return 0.0
+    dt = np.diff(times)
+    if np.any(dt <= 0.0):
+        raise ValueError("times must be strictly increasing")
+    m = np.asarray(second_derivative_bound_w_s2, dtype=np.float64)
+    if np.ndim(m) == 0:
+        if m < 0.0:
+            raise ValueError("second_derivative_bound must be nonnegative")
+        return float(np.sum((dt**3) / 12.0) * m)
+    if m.shape != dt.shape:
+        raise ValueError(
+            f"second_derivative_bound shape {m.shape} must match time intervals {dt.shape}"
+        )
+    if np.any(m < 0.0):
+        raise ValueError("second_derivative_bound must be nonnegative")
+    return float(np.sum((dt**3) / 12.0 * m))

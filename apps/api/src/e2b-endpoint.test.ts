@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Template } from 'e2b';
-import { e2bApiUrl } from './e2b-endpoint.js';
+import { E2bApiUrl, e2bApiUrl } from './e2b-endpoint.js';
 import { E2bClient, verifyE2bTemplate } from './e2b-client.js';
 import { auditConfiguredTemplates } from '../../../scripts/e2b-template-audit.js';
 
@@ -100,11 +100,11 @@ describe('E2B endpoint and read-only template audit', () => {
     },
   );
 
-  it.each([undefined, 'https://api.example.test:8443/'])(
+  it.each([undefined, 'https://api.example.test/'])(
     'uses the same validated origin for metadata and SDK tag requests (%s)',
     async (endpoint) => {
       const expectedOrigin = endpoint
-        ? 'https://api.example.test:8443'
+        ? 'https://api.example.test'
         : 'https://api.e2b.app';
       const transport = vi.fn<typeof fetch>(async () =>
         Response.json({
@@ -184,5 +184,51 @@ describe('E2B endpoint and read-only template audit', () => {
       ),
     ).rejects.toThrow('Missing or invalid pdf template configuration');
     expect(verify).not.toHaveBeenCalled();
+  });
+
+  describe('E2bApiUrl strict origin validation', () => {
+    it.each([
+      'https://api.e2b.dev:8080',
+      'https://api.e2b.dev:443',
+      'https://api.e2b.app:8443',
+    ])('rejects URLs with explicit or custom ports: %s', (url) => {
+      expect(E2bApiUrl.safeParse(url).success).toBe(false);
+      expect(() => e2bApiUrl(url)).toThrow(
+        'E2B API endpoint must be a clean HTTPS origin',
+      );
+    });
+
+    it.each([
+      'https://127.0.0.1',
+      'https://169.254.169.254',
+      'https://10.0.0.1',
+      'https://0.0.0.0',
+    ])('rejects URLs with raw IPv4 addresses: %s', (url) => {
+      expect(E2bApiUrl.safeParse(url).success).toBe(false);
+      expect(() => e2bApiUrl(url)).toThrow(
+        'E2B API endpoint must be a clean HTTPS origin',
+      );
+    });
+
+    it.each(['https://[::1]', 'https://[fe80::1]'])(
+      'rejects URLs with raw IPv6 addresses: %s',
+      (url) => {
+        expect(E2bApiUrl.safeParse(url).success).toBe(false);
+        expect(() => e2bApiUrl(url)).toThrow(
+          'E2B API endpoint must be a clean HTTPS origin',
+        );
+      },
+    );
+
+    it.each([
+      'https://localhost',
+      'https://localhost:3000',
+      'https://sub.localhost',
+    ])('rejects localhost and subdomain URLs: %s', (url) => {
+      expect(E2bApiUrl.safeParse(url).success).toBe(false);
+      expect(() => e2bApiUrl(url)).toThrow(
+        'E2B API endpoint must be a clean HTTPS origin',
+      );
+    });
   });
 });

@@ -12,6 +12,11 @@ export class TestDocuments implements DocumentStore {
   async get(path: string) {
     return structuredClone(this.documents.get(path) ?? null);
   }
+  async getMany(paths: readonly string[]) {
+    return paths.map((path) =>
+      structuredClone(this.documents.get(path) ?? null),
+    );
+  }
   async transaction<T>(
     callback: (tx: DocumentTransaction) => Promise<T>,
   ): Promise<T> {

@@ -326,6 +326,38 @@ export function buildScientificEligibility(value: unknown): EligibilityInput {
     } else if (input.geometryAnswers.length)
       throw new Error('Thermal geometry basis missing');
     add('thermal_weights', observed('thermal_weights') ? geometry : 'unknown');
+    const boundary = declared('thermal_boundary');
+    add(
+      'boundary_flux_observed',
+      boundary === null
+        ? 'unknown'
+        : ['insulated', 'periodic'].includes(boundary)
+          ? 'satisfied'
+          : ['flux', 'temperature', 'mixed'].includes(boundary) &&
+              Boolean(observed('outward_power'))
+            ? 'satisfied'
+            : 'violated',
+    );
+    const sources = declared('heat_sources');
+    add(
+      'heat_sources_observed',
+      sources === null
+        ? 'unknown'
+        : sources === 'none'
+          ? 'satisfied'
+          : sources === 'present' && Boolean(observed('source_power'))
+            ? 'satisfied'
+            : 'violated',
+    );
+    const quadrature = declared('thermal_quadrature');
+    add(
+      'time_quadrature_supported',
+      quadrature === null
+        ? 'unknown'
+        : quadrature === 'piecewise_linear_or_constant'
+          ? 'satisfied'
+          : 'violated',
+    );
   } else {
     const profile = declared('gravity_profile');
     const bodies = observed('positions')!.expectedShape[1]!;

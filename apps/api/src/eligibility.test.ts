@@ -74,6 +74,7 @@ describe('deterministic eligibility', () => {
         expect(decision.applicability).toBe('eligible');
         const released = [
           'H_ENERGY',
+          'H_BALANCE',
           'O_ENERGY',
           'O_ANGULAR',
           'O_MOMENTUM',

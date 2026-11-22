@@ -24,6 +24,7 @@ function fixture(domain: Domain = 'orbital_dynamics') {
     thermal_model: 'constant_cartesian',
     thermal_boundary: 'periodic',
     heat_sources: 'none',
+    thermal_quadrature: 'piecewise_linear_or_constant',
     gravity_profile: 'fixed_central',
     additional_forces: 'none',
     reference_frame: 'inertial',

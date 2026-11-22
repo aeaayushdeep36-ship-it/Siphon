@@ -221,6 +221,7 @@ describe('private hard-capped KV content storage', () => {
       { put: f.put, get: f.get },
       {
         get: (path) => f.docs.get(path),
+        getMany: (paths) => f.docs.getMany(paths),
         transaction: async (callback) => {
           transactions++;
           return f.docs.transaction(callback);

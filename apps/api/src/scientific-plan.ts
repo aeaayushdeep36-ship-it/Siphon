@@ -28,6 +28,7 @@ const methods = {
 
 const profiles = {
   heat_energy_si: ['H_ENERGY'],
+  heat_balance_si: ['H_BALANCE'],
   central_orbit_si: ['O_ENERGY', 'O_ANGULAR'],
   isolated_orbits_si: ['O_ENERGY', 'O_ANGULAR', 'O_MOMENTUM'],
 } as const;
@@ -42,7 +43,8 @@ const descriptions: Record<
     observations: ['times', 'temperature', 'thermal_weights'],
   },
   H_BALANCE: {
-    procedure: 'Thermal balance is not released.',
+    procedure:
+      'Measure the residual between observed thermal energy change and time-integrated net heat input (source power minus outward boundary flux) with certified quadrature and arithmetic bounds.',
     observations: [
       'times',
       'temperature',
@@ -93,7 +95,12 @@ const Input = z.strictObject({
   auditId: Id,
   revisionId: Id,
   eligibilityInput: EligibilityInput,
-  profile: z.enum(['heat_energy_si', 'central_orbit_si', 'isolated_orbits_si']),
+  profile: z.enum([
+    'heat_energy_si',
+    'heat_balance_si',
+    'central_orbit_si',
+    'isolated_orbits_si',
+  ]),
   sourceOperationId: Id,
   sourceOutputDigest: Digest,
   createdAt: Timestamp,
@@ -111,7 +118,10 @@ export function buildScientificPlan(value: unknown): AuditPlan {
   );
   if (!selected.length)
     throw new Error('No scientifically eligible checks are ready to plan');
-  if (selected.some((decision) => !allowed.includes(decision.checkId)))
+  if (
+    selected.some((decision) => !allowed.includes(decision.checkId)) ||
+    allowed.some((checkId) => !selected.some((d) => d.checkId === checkId))
+  )
     throw new Error(
       'Selected checks do not match the confirmed evaluation profile',
     );

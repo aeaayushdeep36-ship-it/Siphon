@@ -112,6 +112,9 @@ export interface DocumentTransaction {
 
 export interface DocumentStore {
   get(path: string): Promise<Record<string, unknown> | null>;
+  getMany(
+    paths: readonly string[],
+  ): Promise<Array<Record<string, unknown> | null>>;
   transaction<T>(callback: (tx: DocumentTransaction) => Promise<T>): Promise<T>;
 }
 

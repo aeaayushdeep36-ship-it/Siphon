@@ -346,42 +346,41 @@ export class WorkspaceRepository {
   async get(uid: string, auditId: string, revisionId: string) {
     Id.parse(auditId);
     Id.parse(revisionId);
-    return this.documents.transaction(async (tx) => {
-      const audit = await authorize(tx, uid, auditId, false);
-      const base = `audits/${auditId}/revisions/${revisionId}`;
-      const [
-        revision,
-        inspection,
-        context,
-        savedPlan,
-        savedAdapter,
-        savedQuestions,
-        savedReview,
-        scienceRecord,
-        parameterRecord,
-      ] = await tx.getMany([
-        base,
-        `${base}/inspection/current`,
-        `${base}/context/current`,
-        `${base}/plans/current`,
-        `${base}/adapterProposals/current`,
-        `${base}/adapterQuestions/current`,
-        `${base}/adapterReviews/current`,
-        `${base}/scientificQuestions/current`,
-        `${base}/scientificParameters/current`,
-      ]);
-      if (
-        !revision ||
-        revision.ownerUid !== uid ||
-        revision.auditId !== auditId ||
-        revision.revisionId !== revisionId
-      )
-        throw new ApiError(404, 'not_found', 'Revision was not found.');
-      const state = stateFrom(revision),
-        uploads = z.array(UploadEntry).max(10).parse(revision.sourceManifest);
-      const artifacts = await tx.getMany(
-        uploads.map((item) => `audits/${auditId}/artifacts/${item.artifactId}`),
-      );
+    const audit = await authorize(this.documents, uid, auditId, false);
+    const base = `audits/${auditId}/revisions/${revisionId}`;
+    const [
+      revision,
+      inspection,
+      context,
+      savedPlan,
+      savedAdapter,
+      savedQuestions,
+      savedReview,
+      scienceRecord,
+      parameterRecord,
+    ] = await this.documents.getMany([
+      base,
+      `${base}/inspection/current`,
+      `${base}/context/current`,
+      `${base}/plans/current`,
+      `${base}/adapterProposals/current`,
+      `${base}/adapterQuestions/current`,
+      `${base}/adapterReviews/current`,
+      `${base}/scientificQuestions/current`,
+      `${base}/scientificParameters/current`,
+    ]);
+    if (
+      !revision ||
+      revision.ownerUid !== uid ||
+      revision.auditId !== auditId ||
+      revision.revisionId !== revisionId
+    )
+      throw new ApiError(404, 'not_found', 'Revision was not found.');
+    const state = stateFrom(revision),
+      uploads = z.array(UploadEntry).max(10).parse(revision.sourceManifest);
+    const artifacts = await this.documents.getMany(
+      uploads.map((item) => `audits/${auditId}/artifacts/${item.artifactId}`),
+    );
       let readiness = null,
         proposal = null,
         plan = null;
@@ -540,7 +539,7 @@ export class WorkspaceRepository {
         scientificQuestions,
         heatParameters,
         investigation: await readInvestigationReview(
-          tx,
+          this.documents,
           uid,
           {
             auditId,
@@ -552,7 +551,7 @@ export class WorkspaceRepository {
           true,
         ),
         aiDisclosure: await readAiDisclosureSnapshot(
-          tx,
+          this.documents,
           uid,
           auditId,
           revisionId,
@@ -580,6 +579,5 @@ export class WorkspaceRepository {
           };
         }),
       });
-    });
   }
 }

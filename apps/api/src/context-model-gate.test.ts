@@ -285,7 +285,7 @@ describe('transactional context model dispatch', () => {
       f.fence.auditId,
       f.fence.revisionId,
     );
-    expect(questions.questionSet.questions).toHaveLength(6);
+    expect(questions.questionSet.questions).toHaveLength(7);
   });
   it.each(['unknown', 'malformed', 'cancelled'])(
     'preserves usage and blocks publication for %s model completion',

@@ -52,7 +52,7 @@ export async function aiDisclosureDigest(
 }
 
 export async function readAiDisclosureSnapshot(
-  tx: DocumentTransaction,
+  tx: DocumentTransaction | DocumentStore,
   uid: string,
   auditId: string,
   revisionId: string,

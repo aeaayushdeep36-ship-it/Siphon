@@ -32,6 +32,7 @@
     "test:groq-live": "tsx apps/api/src/groq-live-smoke.ts",
     "audit:e2b-templates": "tsx scripts/e2b-template-audit.ts",
     "build:e2b-template": "tsx scripts/build-e2b-template.ts",
+    "provision:firestore": "tsx scripts/provision-firestore.ts",
     "schemas": "tsx scripts/export-schemas.ts",
     "test:inspection-parity": "tsx scripts/check-inspection-parity.ts",
     "test:fidelity-parity": "tsx scripts/check-fidelity-parity.ts",

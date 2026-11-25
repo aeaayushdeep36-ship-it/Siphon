@@ -76,23 +76,64 @@ type DomainValue = z.infer<typeof Domain>;
 
 const domainDetails: Record<
   DomainValue,
-  { title: string; scope: string; detail: string; checks: string[] }
+  {
+    title: string;
+    scope: string;
+    headline: string;
+    detail: string;
+    checks: string[];
+  }
 > = {
   heat_diffusion: {
-    title: 'Heat',
+    title: 'Heat Diffusion',
     scope: 'Heat diffusion',
+    headline: 'Transient 1D/2D diffusion on a uniform Cartesian grid.',
     detail:
-      'Transient 1D/2D diffusion on a uniform Cartesian grid with constant material properties.',
-    checks: ['Energy balance', 'Geometry and units', 'Boundary assumptions'],
+      'Evaluates thermal energy balance, boundary flux accounting, and spatial/temporal convergence with constant material properties.',
+    checks: ['H_BALANCE', 'Geometry & units', 'Boundary assumptions'],
   },
   orbital_dynamics: {
-    title: 'Gravitation',
+    title: 'Orbital Dynamics',
     scope: 'Orbital dynamics',
+    headline: 'Newtonian point masses in isolated or central-field orbits.',
     detail:
-      'Newtonian point masses in an isolated system or a fixed central field.',
-    checks: ['Energy', 'Angular momentum', 'Coordinate frame'],
+      'Verifies total energy, angular momentum, and linear momentum conservation alongside Keplerian and multi-body reference trajectories.',
+    checks: ['O_ENERGY', 'O_ANGULAR', 'O_MOMENTUM'],
   },
 };
+
+const siphonPillars = [
+  {
+    title: 'Isolated Execution',
+    detail:
+      'Your Python simulation runs untouched inside a fresh, network-isolated E2B sandbox.',
+    dots: [1, 1, 1, 1, 2, 1, 1, 1, 1],
+  },
+  {
+    title: 'Deterministic Checks',
+    detail:
+      'Reviewed numerical evaluators select eligible checks and compute verdicts—never AI guesswork.',
+    dots: [2, 1, 1, 1, 1, 1, 1, 1, 3],
+  },
+  {
+    title: 'Conservation Laws',
+    detail:
+      'Energy balance, angular momentum, and linear momentum verified with interval bounds.',
+    dots: [1, 2, 3, 1, 2, 3, 1, 3, 1],
+  },
+  {
+    title: 'Explicit Assumptions',
+    detail:
+      'Units, geometry, coordinate frames, and exclusions stay transparent and user-confirmed.',
+    dots: [1, 2, 1, 2, 2, 2, 1, 2, 1],
+  },
+  {
+    title: 'Synchronized Reports',
+    detail:
+      'On-screen SVG plots and downloadable PDFs share the exact same validated evidence.',
+    dots: [1, 3, 3, 2, 2, 1, 3, 1, 1],
+  },
+];
 
 function errorText(error: unknown): string {
   if (error instanceof RequestFailure)
@@ -561,25 +602,75 @@ export function App() {
         </section>
 
         <section
+          className="pillars-section"
+          id="pillars"
+          aria-labelledby="pillars-heading"
+        >
+          <div className="pillars-orb-left" aria-hidden="true" />
+          <div className="pillars-orb-right" aria-hidden="true" />
+          <div className="content-width pillars-inner">
+            <p className="eyebrow eyebrow-amber">How Siphon works</p>
+            <h2 id="pillars-heading" className="pillars-statement">
+              We believe <span className="accent-amber">scientific rigor</span>{' '}
+              helps researchers trust their models and that{' '}
+              <span className="accent-blue">verifiable evidence</span> belongs
+              in every audit.
+            </h2>
+            <div className="pillars-grid-top">
+              {siphonPillars.slice(0, 2).map((pillar) => (
+                <article className="pillar-item" key={pillar.title}>
+                  <div className="dot-matrix" aria-hidden="true">
+                    {pillar.dots.map((tone, idx) => (
+                      <span
+                        key={idx}
+                        className={`dot-cell dot-tone-${tone}`}
+                      />
+                    ))}
+                  </div>
+                  <h3>{pillar.title}</h3>
+                  <p>{pillar.detail}</p>
+                </article>
+              ))}
+            </div>
+            <div className="pillars-grid-bottom">
+              {siphonPillars.slice(2).map((pillar) => (
+                <article className="pillar-item" key={pillar.title}>
+                  <div className="dot-matrix" aria-hidden="true">
+                    {pillar.dots.map((tone, idx) => (
+                      <span
+                        key={idx}
+                        className={`dot-cell dot-tone-${tone}`}
+                      />
+                    ))}
+                  </div>
+                  <h3>{pillar.title}</h3>
+                  <p>{pillar.detail}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section
           id="domains"
           className="domain-section"
           aria-labelledby="domain-heading"
         >
           <div className="content-width">
-            <div className="domain-heading">
-              <div>
-                <p className="eyebrow">01 // Simulation domain · required</p>
-                <h2 id="domain-heading">
-                  Choose the physics. Bring your code.
-                </h2>
-              </div>
+            <div className="domain-heading-centered">
+              <p className="eyebrow eyebrow-amber">01 // Physics domains</p>
+              <h2 id="domain-heading">
+                Choose the physics.
+                <br />
+                Bring your simulation.
+              </h2>
               <p>
                 Selection narrows which reviewed checks can be considered.
                 Assumptions and required observations must still be established.
               </p>
             </div>
             <div
-              className="domain-grid"
+              className="domain-rows"
               role="group"
               aria-label="Choose a simulation domain"
             >
@@ -590,23 +681,27 @@ export function App() {
                 ][]
               ).map(([key, item]) => (
                 <article
-                  className={`domain-card ${key === 'heat_diffusion' ? 'heat-card' : 'gravity-card'} ${selectedDomain === key ? 'is-selected' : ''}`}
+                  className={`domain-row ${selectedDomain === key ? 'is-selected' : ''}`}
                   key={key}
                 >
-                  <div className="domain-card-shade" aria-hidden="true" />
-                  <div className="domain-card-head">
-                    <span className="domain-chip">
-                      <i className="status-dot" /> DOMAIN: {key}
-                    </span>
-                    <span className="domain-code">
-                      {key === 'heat_diffusion'
-                        ? 'HEAT DIFFUSION'
-                        : 'ORBITAL DYNAMICS'}
-                    </span>
-                  </div>
-                  <div className="domain-card-body">
+                  <div className="domain-row-left">
+                    <span
+                      className={`domain-crescent ${key === 'heat_diffusion' ? 'is-heat' : 'is-orbit'}`}
+                      aria-hidden="true"
+                    />
                     <h3>{item.title}</h3>
-                    <p>{item.detail}</p>
+                    <span className="domain-row-tag">{key}</span>
+                  </div>
+                  <div className="domain-row-media">
+                    <div
+                      className={`domain-square ${key === 'heat_diffusion' ? 'heat-card' : 'gravity-card'}`}
+                    >
+                      <div className="domain-square-glow" aria-hidden="true" />
+                    </div>
+                  </div>
+                  <div className="domain-row-right">
+                    <p className="domain-row-headline">{item.headline}</p>
+                    <p className="domain-row-detail">{item.detail}</p>
                     <div
                       className="domain-checks"
                       aria-label="Relevant context"
@@ -615,11 +710,10 @@ export function App() {
                         <span key={check}>{check}</span>
                       ))}
                     </div>
-                    <div className="domain-card-footer">
-                      <span>{item.scope} · prerequisites apply</span>
+                    <div className="domain-row-cta">
                       <button
                         type="button"
-                        className="select-domain"
+                        className="select-domain domain-pill-btn"
                         aria-pressed={selectedDomain === key}
                         onClick={() => {
                           setSelectedDomain(key);
@@ -632,10 +726,16 @@ export function App() {
                           });
                         }}
                       >
-                        {selectedDomain === key
-                          ? 'Selected'
-                          : `Select ${item.title}`}{' '}
-                        <span aria-hidden="true">↗</span>
+                        <span>
+                          {selectedDomain === key
+                            ? 'Selected'
+                            : key === 'heat_diffusion'
+                              ? 'Select Heat'
+                              : 'Select Gravitation'}
+                        </span>
+                        <span className="domain-arrow-circle" aria-hidden="true">
+                          →
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -649,11 +749,11 @@ export function App() {
                     {domainDetails[selectedDomain].title} selected.
                   </strong>{' '}
                   {user
-                    ? 'Continue in the workspace to create a private audit.'
-                    : 'Sign in with an active invitation to create a private audit.'}
+                    ? 'Continue in the workspace below to create a private audit.'
+                    : 'Sign in with an approved account to create a private audit.'}
                 </>
               ) : (
-                'Choose Heat or Gravitation. You can change this selection before creating an audit.'
+                'Choose Heat Diffusion or Orbital Dynamics. You can change this selection before creating an audit.'
               )}
             </p>
           </div>

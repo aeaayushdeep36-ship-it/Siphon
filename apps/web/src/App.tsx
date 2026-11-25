@@ -1281,6 +1281,32 @@ function Console({
     );
     await refresh(audit);
   }
+const WORKFLOW_STEPS = [
+  { id: 'upload', label: '1. Upload & Consent' },
+  { id: 'inspect', label: '2. Inspect & Clarify' },
+  { id: 'evaluate', label: '3. Plan & Run Checks' },
+  { id: 'report', label: '4. Evidence & PDF' },
+] as const;
+
+function stepIndexForStage(stage?: string): number {
+  switch (stage) {
+    case 'inspecting':
+    case 'clarifying':
+    case 'adapting':
+      return 1;
+    case 'planning':
+    case 'executing':
+    case 'evaluating':
+    case 'investigating':
+      return 2;
+    case 'reporting':
+    case 'finished':
+      return 3;
+    default:
+      return 0;
+  }
+}
+
   const locked =
     !!busy ||
     !workspace ||
@@ -1294,8 +1320,297 @@ function Console({
     !audit ||
     workspace.stage !== 'draft' ||
     workspace.status !== 'idle';
+  const activeStep = stepIndexForStage(workspace?.stage ?? progress?.stage);
+  const isDraftStage = !workspace || workspace.stage === 'draft';
+
+  const uploadSection = audit ? (
+    <section
+      className={`panel upload-panel${isDraftStage && !workspace?.uploads.length ? ' step-card-active' : ''}`}
+    >
+      <div className="section-heading">
+        <div>
+          <p className="eyebrow">Step 1 · Simulation files</p>
+          <h2>Source and supporting data</h2>
+        </div>
+        {workspace?.uploads.length ? (
+          <span className="step-badge step-badge-done">
+            {workspace.uploads.length} file
+            {workspace.uploads.length === 1 ? '' : 's'} ready
+          </span>
+        ) : null}
+      </div>
+      <p>
+        Upload your existing <code>.py</code> simulation (plus optional{' '}
+        <code>.csv</code> or <code>.npy</code> numeric data). Max{' '}
+        {DEFAULT_POLICY.uploadFiles} files,{' '}
+        {DEFAULT_POLICY.uploadBytes / 1048576} MiB total.
+      </p>
+      {workspace?.uploads.length ? (
+        <ul className="upload-file-list">
+          {workspace.uploads.map((file) => {
+            const state = workspace.uploadStates.find(
+              (s) => s.artifactId === file.artifactId,
+            );
+            return (
+              <li key={file.artifactId} className="upload-file-item">
+                <div className="upload-file-row">
+                  <strong>{file.path}</strong>
+                  <span className="muted">
+                    {file.bytes} bytes · {state?.lifecycle ?? 'unknown'}
+                  </span>
+                </div>
+                <details className="compact-details">
+                  <summary>Checksums, retention &amp; reuse</summary>
+                  <small>
+                    Recorded expiry: {state?.expiresAt ?? 'unknown'}
+                  </small>
+                  <small className="identifier">SHA-256 {file.sha256}</small>
+                  {!isDraftStage && (
+                    <label className="option">
+                      <input
+                        type="checkbox"
+                        disabled={!!busy}
+                        checked={(
+                          reuseArtifacts ??
+                          workspace.uploads.map((upload) => upload.artifactId)
+                        ).includes(file.artifactId)}
+                        onChange={(event) =>
+                          setReuseArtifacts((previous) => {
+                            const current =
+                              previous ??
+                              workspace.uploads.map(
+                                (upload) => upload.artifactId,
+                              );
+                            return event.target.checked
+                              ? [...current, file.artifactId]
+                              : current.filter((id) => id !== file.artifactId);
+                          })
+                        }
+                      />
+                      Reuse in next successor draft
+                    </label>
+                  )}
+                </details>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="muted">No source uploads recorded yet.</p>
+      )}
+      <div
+        className={`upload-dropzone${locked ? ' is-disabled' : ''}`}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault();
+          if (locked) return;
+          const chosen = Array.from(event.dataTransfer.files);
+          setFiles(chosen);
+          setFilePaths(chosen.map((file) => file.name));
+        }}
+      >
+        <label htmlFor="files">
+          Drop simulation files here or choose files
+        </label>
+        <p>Python source and optional CSV or NPY data.</p>
+        <input
+          id="files"
+          ref={fileInputRef}
+          disabled={locked}
+          type="file"
+          accept=".py,.csv,.npy"
+          multiple
+          onChange={(event) => {
+            const chosen = Array.from(event.target.files ?? []);
+            setFiles(chosen);
+            setFilePaths(chosen.map((file) => file.name));
+          }}
+        />
+      </div>
+      {files.length > 0 && (
+        <ul className="upload-pending-list">
+          {files.map((file, index) => (
+            <li key={index}>
+              {file.name} · {file.size} bytes
+              <label htmlFor={`upload-path-${index}`}>
+                Relative path in simulation
+              </label>
+              <input
+                id={`upload-path-${index}`}
+                disabled={!!busy}
+                maxLength={240}
+                value={filePaths[index] ?? file.name}
+                onChange={(event) =>
+                  setFilePaths((previous) =>
+                    previous.map((itemPath, pathIndex) =>
+                      pathIndex === index ? event.target.value : itemPath,
+                    ),
+                  )
+                }
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="actions">
+        <button
+          className="primary-button"
+          disabled={locked || !files.length}
+          onClick={() => void act('Uploading source', upload)}
+        >
+          Upload selected files
+        </button>
+        {workspace &&
+          [
+            'idle',
+            'completed',
+            'partial',
+            'failed',
+            'cancelled',
+            'waiting_for_input',
+          ].includes(workspace.status) &&
+          !isDraftStage && (
+            <button
+              className="secondary"
+              disabled={!!busy || !progress?.isCurrentRevision}
+              onClick={() =>
+                void act('Creating successor', async () => {
+                  const receipt = await api.mutate(
+                    `/audits/${audit.id}/revisions`,
+                    'POST',
+                    {
+                      schemaVersion: '1.0',
+                      parentRevisionId: workspace.revisionId,
+                      expectedGeneration: workspace.generation,
+                      expectedInputDigest: workspace.inputDigest,
+                      reuseArtifactIds:
+                        reuseArtifacts ??
+                        workspace.uploads.map((item) => item.artifactId),
+                    },
+                    RevisionReceipt,
+                  );
+                  await open({
+                    ...audit,
+                    currentRevisionId: receipt.revisionId,
+                  });
+                  await loadHistory();
+                })
+              }
+            >
+              Create successor draft with selected inputs
+            </button>
+          )}
+      </div>
+      {workspace &&
+        (workspace.stage !== 'draft' || workspace.status !== 'idle') && (
+          <p className="muted">
+            Source is frozen for this revision. Create a successor draft to
+            change inputs.
+          </p>
+        )}
+    </section>
+  ) : null;
+
+  const consentAndStartSection =
+    audit ? (
+      <section
+        className={`panel consent-start-panel${isDraftStage && workspace?.uploads.length ? ' step-card-active' : ''}`}
+      >
+        <p className="eyebrow">Step 2 · AI permission &amp; launch</p>
+        {workspace && (
+          <AiDisclosurePanel
+            disclosure={workspace.aiDisclosure}
+            disabled={disclosureMutationDisabled}
+            onDecision={(decision) =>
+              void act(
+                decision === 'accept'
+                  ? 'Recording AI data sharing permission'
+                  : 'Revoking AI data sharing permission',
+                async () => {
+                  if (!workspace) return;
+                  const receipt = await api.mutate(
+                    `${path}/ai-disclosure`,
+                    'POST',
+                    {
+                      schemaVersion: '1.0',
+                      expectedGeneration: workspace.generation,
+                      expectedInputDigest: workspace.inputDigest,
+                      disclosureDigest: workspace.aiDisclosure!.disclosureDigest,
+                      decision,
+                    },
+                    AiDisclosureReceipt,
+                  );
+                  if (
+                    receipt.auditId !== audit?.id ||
+                    receipt.revisionId !== audit.currentRevisionId ||
+                    receipt.disclosureDigest !==
+                      workspace.aiDisclosure!.disclosureDigest ||
+                    receipt.decision !== decision
+                  )
+                    throw new Error(
+                      'The AI permission response did not match this audit revision.',
+                    );
+                  await refresh(audit);
+                  setNotice(
+                    decision === 'accept'
+                      ? 'AI data sharing permission is recorded for this revision.'
+                      : 'Permission revoked for future authorized AI dispatches. Data already sent cannot be recalled.',
+                  );
+                },
+              )
+            }
+          />
+        )}
+        <p className="muted" id="run-disclosure">
+          Uploads execute only in isolated E2B environments. Siphon recommends
+          investigations and does not apply repairs.
+        </p>
+        <div className="actions">
+          <button
+            className="primary-button"
+            aria-describedby="run-disclosure"
+            disabled={
+              locked ||
+              workspace?.aiDisclosure?.status !== 'accepted' ||
+              !workspace?.uploads.length ||
+              workspace?.uploadStates.some(
+                (item) => item.lifecycle !== 'ready',
+              ) ||
+              !progress?.isCurrentRevision
+            }
+            onClick={() =>
+              void act('Starting audit', async () => {
+                if (!workspace) return;
+                await api.mutate(
+                  `${path}/run`,
+                  'POST',
+                  {
+                    schemaVersion: '1.0',
+                    expectedGeneration: workspace.generation,
+                    expectedInputDigest: workspace.inputDigest,
+                  },
+                  QueuedAuditReceipt,
+                );
+                setNotice(
+                  'Run accepted. Progress below comes from persisted backend state.',
+                );
+                await refresh(audit);
+              })
+            }
+          >
+            Start readiness and audit
+          </button>
+        </div>
+      </section>
+    ) : null;
+
   return (
-    <div className="console-layout">
+    <div
+      className={
+        activeAuditId ? 'console-layout is-single-audit' : 'console-layout'
+      }
+    >
+      {!activeAuditId && (
       <aside className="panel history">
         <div className="section-heading">
           <h2>Private history</h2>
@@ -1337,6 +1652,7 @@ function Console({
           </button>
         )}
       </aside>
+      )}
       <div className="workspace">
         {error && (
           <div ref={errorRef} tabIndex={-1} className="error" role="alert">
@@ -1481,27 +1797,153 @@ function Console({
                   <p className="eyebrow">{label(audit.domain)}</p>
                   <h2>{audit.title}</h2>
                 </div>
-                <button
-                  className="secondary"
-                  disabled={!!busy}
-                  onClick={() =>
-                    void act('Refreshing', async () => {
-                      const value = await api.get(
-                        `/audits/${audit.id}`,
-                        AuditResponse,
-                      );
-                      setAudit(value.audit);
-                      await refresh(value.audit);
-                      setRefreshCount((count) => count + 1);
-                    })
-                  }
-                >
-                  Refresh audit
-                </button>
+                <div className="actions">
+                  <button
+                    className="secondary"
+                    disabled={!!busy}
+                    onClick={() =>
+                      void act('Refreshing', async () => {
+                        const value = await api.get(
+                          `/audits/${audit.id}`,
+                          AuditResponse,
+                        );
+                        setAudit(value.audit);
+                        await refresh(value.audit);
+                        setRefreshCount((count) => count + 1);
+                      })
+                    }
+                  >
+                    Refresh audit
+                  </button>
+                  <button
+                    className="secondary"
+                    disabled={
+                      !!busy ||
+                      !progress ||
+                      !progress.isCurrentRevision ||
+                      [
+                        'completed',
+                        'partial',
+                        'failed',
+                        'cancelled',
+                        'unsupported',
+                      ].includes(progress.status)
+                    }
+                    onClick={() =>
+                      void act('Requesting cancellation', async () => {
+                        const value = await api.mutate(
+                          `${path}/cancel`,
+                          'POST',
+                          undefined,
+                          CommandReceipt,
+                        );
+                        setNotice(
+                          `Cancellation recorded. Cleanup ${value.cleanup}; provider termination is confirmed only when cleanup is confirmed.`,
+                        );
+                        await refresh(audit);
+                      })
+                    }
+                  >
+                    Cancel work
+                  </button>
+                  <button
+                    className="danger"
+                    disabled={!!busy}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Delete “${audit.title}” and every revision? Access is revoked immediately; background cleanup may remain pending.`,
+                        )
+                      )
+                        void act('Requesting deletion', async () => {
+                          const value = await api.mutate(
+                            `/audits/${audit.id}`,
+                            'DELETE',
+                            undefined,
+                            CommandReceipt,
+                          );
+                          selection.current++;
+                          setAudit(null);
+                          setWorkspace(null);
+                          setProgress(null);
+                          setQuestions(null);
+                          setReport(null);
+                          setAnswers({});
+                          setNotice(
+                            `Deletion requested. Access revoked. Cleanup ${value.cleanup}.`,
+                          );
+                          await loadHistory();
+                          if (activeAuditId && onNavigate) {
+                            onNavigate({ kind: 'home' });
+                          }
+                        });
+                    }}
+                  >
+                    Delete audit
+                  </button>
+                </div>
               </div>
-              <p className="identifier">Revision {audit.currentRevisionId}</p>
-              <details>
-                <summary>Revision history</summary>
+
+              <ol className="audit-stepper" aria-label="Audit progress">
+                {WORKFLOW_STEPS.map((step, index) => {
+                  const stateClass =
+                    index < activeStep
+                      ? 'is-done'
+                      : index === activeStep
+                        ? 'is-active'
+                        : 'is-upcoming';
+                  return (
+                    <li key={step.id} className={`audit-step ${stateClass}`}>
+                      <span className="audit-step-dot" aria-hidden="true">
+                        {index < activeStep ? '✓' : index + 1}
+                      </span>
+                      <span className="audit-step-label">{step.label}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+
+              <div aria-live="polite" aria-atomic="true" className="progress">
+                <strong>
+                  {progress
+                    ? `${label(progress.stage)} · ${label(progress.status)}`
+                    : readIssue
+                      ? 'Saved progress unavailable'
+                      : 'Loading persisted state…'}
+                </strong>
+                <p>
+                  {progress?.progress?.message ??
+                    (readIssue && !progress
+                      ? 'Saved activity is temporarily unavailable.'
+                      : 'No activity message has been recorded.')}
+                </p>
+                {progress?.progress?.experiments && (
+                  <p>
+                    {progress.progress.experiments.completed} /{' '}
+                    {progress.progress.experiments.planned} experiments
+                    completed
+                  </p>
+                )}
+                {progress && (
+                  <small>
+                    Updated {new Date(progress.updatedAt).toLocaleString()}
+                    {progress.progress?.timelineCapped
+                      ? ' · activity history capped'
+                      : ''}
+                  </small>
+                )}
+              </div>
+              {progress && !progress.isCurrentRevision && (
+                <p className="warning">
+                  This revision is historical. Refresh the audit before starting
+                  new work.
+                </p>
+              )}
+              <details className="compact-details">
+                <summary>
+                  Revision history &amp; ID ({audit.currentRevisionId.slice(0, 8)}…)
+                </summary>
+                <p className="identifier">Revision {audit.currentRevisionId}</p>
                 {revisionError && <p className="warning">{revisionError}</p>}
                 <ul>
                   {revisions.map((revision) => (
@@ -1541,365 +1983,28 @@ function Console({
                   </button>
                 )}
               </details>
-              <div aria-live="polite" aria-atomic="true" className="progress">
-                <strong>
-                  {progress
-                    ? `${label(progress.stage)} · ${label(progress.status)}`
-                    : readIssue
-                      ? 'Saved progress unavailable'
-                      : 'Loading persisted state…'}
-                </strong>
-                <p>
-                  {progress?.progress?.message ??
-                    (readIssue && !progress
-                      ? 'Saved activity is temporarily unavailable.'
-                      : 'No activity message has been recorded.')}
-                </p>
-                {progress?.progress?.experiments && (
-                  <p>
-                    {progress.progress.experiments.completed} /{' '}
-                    {progress.progress.experiments.planned} experiments
-                    completed
-                  </p>
-                )}
-                {progress && (
-                  <small>
-                    Updated {new Date(progress.updatedAt).toLocaleString()}
-                    {progress.progress?.timelineCapped
-                      ? ' · activity history capped'
-                      : ''}
-                  </small>
-                )}
-              </div>
-              {progress && !progress.isCurrentRevision && (
-                <p className="warning">
-                  This revision is historical. Refresh the audit before starting
-                  new work.
-                </p>
-              )}
-              {workspace && (
-                <AiDisclosurePanel
-                  disclosure={workspace.aiDisclosure}
-                  disabled={disclosureMutationDisabled}
-                  onDecision={(decision) =>
-                    void act(
-                      decision === 'accept'
-                        ? 'Recording AI data sharing permission'
-                        : 'Revoking AI data sharing permission',
-                      async () => {
-                        if (!workspace) return;
-                        const receipt = await api.mutate(
-                          `${path}/ai-disclosure`,
-                          'POST',
-                          {
-                            schemaVersion: '1.0',
-                            expectedGeneration: workspace.generation,
-                            expectedInputDigest: workspace.inputDigest,
-                            disclosureDigest:
-                              workspace.aiDisclosure!.disclosureDigest,
-                            decision,
-                          },
-                          AiDisclosureReceipt,
-                        );
-                        if (
-                          receipt.auditId !== audit?.id ||
-                          receipt.revisionId !== audit.currentRevisionId ||
-                          receipt.disclosureDigest !==
-                            workspace.aiDisclosure!.disclosureDigest ||
-                          receipt.decision !== decision
-                        )
-                          throw new Error(
-                            'The AI permission response did not match this audit revision.',
-                          );
-                        await refresh(audit);
-                        setNotice(
-                          decision === 'accept'
-                            ? 'AI data sharing permission is recorded for this revision.'
-                            : 'Permission revoked for future authorized AI dispatches. Data already sent cannot be recalled.',
-                        );
-                      },
-                    )
-                  }
-                />
-              )}
-              <p className="muted" id="run-disclosure">
-                Starting a review sends reviewed Python source to the configured
-                Groq model for context and mappings. Validated numerical
-                evidence may also be sent for advisory investigation. Uploads
-                execute only in isolated E2B environments. Remove secrets and
-                private information before uploading; source scanning cannot
-                guarantee their absence. Siphon recommends investigations and
-                does not apply repairs.
-              </p>
-              <div className="actions">
-                <button
-                  aria-describedby="run-disclosure"
-                  disabled={
-                    locked ||
-                    workspace?.aiDisclosure?.status !== 'accepted' ||
-                    !workspace?.uploads.length ||
-                    workspace?.uploadStates.some(
-                      (upload) => upload.lifecycle !== 'ready',
-                    ) ||
-                    !progress?.isCurrentRevision
-                  }
-                  onClick={() =>
-                    void act('Starting audit', async () => {
-                      if (!workspace) return;
-                      await api.mutate(
-                        `${path}/run`,
-                        'POST',
-                        {
-                          schemaVersion: '1.0',
-                          expectedGeneration: workspace.generation,
-                          expectedInputDigest: workspace.inputDigest,
-                        },
-                        QueuedAuditReceipt,
-                      );
-                      setNotice(
-                        'Run accepted. Progress below comes from persisted backend state.',
-                      );
-                      await refresh(audit);
-                    })
-                  }
-                >
-                  Start readiness and audit
-                </button>
-                <button
-                  className="secondary"
-                  disabled={
-                    !!busy ||
-                    !progress ||
-                    !progress.isCurrentRevision ||
-                    [
-                      'completed',
-                      'partial',
-                      'failed',
-                      'cancelled',
-                      'unsupported',
-                    ].includes(progress.status)
-                  }
-                  onClick={() =>
-                    void act('Requesting cancellation', async () => {
-                      const value = await api.mutate(
-                        `${path}/cancel`,
-                        'POST',
-                        undefined,
-                        CommandReceipt,
-                      );
-                      setNotice(
-                        `Cancellation recorded. Cleanup ${value.cleanup}; provider termination is confirmed only when cleanup is confirmed.`,
-                      );
-                      await refresh(audit);
-                    })
-                  }
-                >
-                  Cancel work
-                </button>
-                <button
-                  className="danger"
-                  disabled={!!busy}
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        `Delete “${audit.title}” and every revision? Access is revoked immediately; background cleanup may remain pending.`,
-                      )
-                    )
-                      void act('Requesting deletion', async () => {
-                        const value = await api.mutate(
-                          `/audits/${audit.id}`,
-                          'DELETE',
-                          undefined,
-                          CommandReceipt,
-                        );
-                        selection.current++;
-                        setAudit(null);
-                        setWorkspace(null);
-                        setProgress(null);
-                        setQuestions(null);
-                        setReport(null);
-                        setAnswers({});
-                        setNotice(
-                          `Deletion requested. Access revoked. Cleanup ${value.cleanup}.`,
-                        );
-                        await loadHistory();
-                      });
-                  }}
-                >
-                  Delete audit
-                </button>
-              </div>
             </section>
-            <section className="panel upload-panel">
-              <h2>Source and supporting data</h2>
-              <p>
-                Existing .py scripts with optional .csv/.npy numeric input. No
-                required template. Maximum {DEFAULT_POLICY.uploadFiles} files,{' '}
-                {DEFAULT_POLICY.uploadBytes / 1048576} MiB total,{' '}
-                {DEFAULT_POLICY.sourceBytes / 1024} KiB Python. Object/pickled
-                arrays and unrestricted package installation are unsupported.
-              </p>
-              <p className="muted">
-                Raw uploads/evidence have limited retention (normally 7 days);
-                reports normally 30 days. Reuse does not extend original expiry.
-              </p>
-              {workspace?.uploads.length ? (
-                <ul>
-                  {workspace.uploads.map((file) => (
-                    <li key={file.artifactId}>
-                      {file.path} · {file.bytes} bytes ·{' '}
-                      {workspace.uploadStates.find(
-                        (state) => state.artifactId === file.artifactId,
-                      )?.lifecycle ?? 'unknown'}{' '}
-                      <small>
-                        Recorded expiry:{' '}
-                        {workspace.uploadStates.find(
-                          (state) => state.artifactId === file.artifactId,
-                        )?.expiresAt ?? 'unknown'}
-                      </small>
-                      <small className="identifier">
-                        SHA-256 {file.sha256}
-                      </small>
-                      <label className="option">
-                        <input
-                          type="checkbox"
-                          disabled={!!busy}
-                          checked={(
-                            reuseArtifacts ??
-                            workspace.uploads.map((upload) => upload.artifactId)
-                          ).includes(file.artifactId)}
-                          onChange={(event) =>
-                            setReuseArtifacts((previous) => {
-                              const current =
-                                previous ??
-                                workspace.uploads.map(
-                                  (upload) => upload.artifactId,
-                                );
-                              return event.target.checked
-                                ? [...current, file.artifactId]
-                                : current.filter(
-                                    (id) => id !== file.artifactId,
-                                  );
-                            })
-                          }
-                        />
-                        Reuse in next successor draft
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No source uploads recorded.</p>
-              )}
-              <div
-                className={`upload-dropzone${locked ? ' is-disabled' : ''}`}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  if (locked) return;
-                  const chosen = Array.from(event.dataTransfer.files);
-                  setFiles(chosen);
-                  setFilePaths(chosen.map((file) => file.name));
-                }}
-              >
-                <label htmlFor="files">
-                  Drop simulation files here or choose files
-                </label>
-                <p>Python source and optional CSV or NPY data.</p>
-                <input
-                  id="files"
-                  ref={fileInputRef}
-                  disabled={locked}
-                  type="file"
-                  accept=".py,.csv,.npy"
-                  multiple
-                  onChange={(event) => {
-                    const chosen = Array.from(event.target.files ?? []);
-                    setFiles(chosen);
-                    setFilePaths(chosen.map((file) => file.name));
-                  }}
-                />
-              </div>
-              {files.length > 0 && (
-                <ul>
-                  {files.map((file, index) => (
-                    <li key={index}>
-                      {file.name} · {file.size} bytes
-                      <label htmlFor={`upload-path-${index}`}>
-                        Relative path in simulation
-                      </label>
-                      <input
-                        id={`upload-path-${index}`}
-                        disabled={!!busy}
-                        maxLength={240}
-                        value={filePaths[index] ?? file.name}
-                        onChange={(event) =>
-                          setFilePaths((previous) =>
-                            previous.map((path, pathIndex) =>
-                              pathIndex === index ? event.target.value : path,
-                            ),
-                          )
-                        }
-                      />
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <button
-                disabled={locked || !files.length}
-                onClick={() => void act('Uploading source', upload)}
-              >
-                Upload selected files
-              </button>
-              {workspace &&
-                (workspace.stage !== 'draft' ||
-                  workspace.status !== 'idle') && (
-                  <p>
-                    Source is frozen for this revision. Create a successor draft
-                    to change inputs.
-                  </p>
-                )}
-              {workspace &&
-                [
-                  'idle',
-                  'completed',
-                  'partial',
-                  'failed',
-                  'cancelled',
-                  'waiting_for_input',
-                ].includes(workspace.status) && (
-                  <button
-                    className="secondary"
-                    disabled={!!busy || !progress?.isCurrentRevision}
-                    onClick={() =>
-                      void act('Creating successor', async () => {
-                        const receipt = await api.mutate(
-                          `/audits/${audit.id}/revisions`,
-                          'POST',
-                          {
-                            schemaVersion: '1.0',
-                            parentRevisionId: workspace.revisionId,
-                            expectedGeneration: workspace.generation,
-                            expectedInputDigest: workspace.inputDigest,
-                            reuseArtifactIds:
-                              reuseArtifacts ??
-                              workspace.uploads.map((item) => item.artifactId),
-                          },
-                          RevisionReceipt,
-                        );
-                        await open({
-                          ...audit,
-                          currentRevisionId: receipt.revisionId,
-                        });
-                        await loadHistory();
-                      })
-                    }
-                  >
-                    Create successor draft with selected inputs
-                  </button>
-                )}
-            </section>
-            <section className="panel context-panel">
+            {isDraftStage && (
+              <>
+                {uploadSection}
+                {consentAndStartSection}
+              </>
+            )}
+            {!isDraftStage && (
+              <details className="panel compact-panel-group">
+                <summary>
+                  Uploaded files &amp; AI consent ({workspace?.uploads.length ?? 0}{' '}
+                  file{workspace?.uploads.length === 1 ? '' : 's'})
+                </summary>
+                <div className="compact-panel-body">
+                  {uploadSection}
+                  {consentAndStartSection}
+                </div>
+              </details>
+            )}
+            <section
+              className={`panel context-panel${!workspace?.readiness && !workspace?.context && !workspace?.adapterProposal ? ' is-compact' : ''}`}
+            >
               <h2>Readiness and simulation context</h2>
               {workspace?.adapterProposal && (
                 <div>
@@ -2511,7 +2616,10 @@ function Console({
                 }
               />
             )}
-            <section className="panel plan-panel" id="testplan">
+            <section
+              className={`panel plan-panel${!workspace?.plan ? ' is-compact' : ''}`}
+              id="testplan"
+            >
               <h2>Deterministic test plan</h2>
               {workspace?.plan ? (
                 <>
@@ -2836,7 +2944,10 @@ function Console({
               </Suspense>
             </ReportBoundary>
           ) : (
-            <section className="panel report-empty" id="evidence">
+            <section
+              className="panel report-empty is-compact"
+              id="evidence"
+            >
               <h2>Evidence report</h2>
               <p>
                 {reportRead === 'loading'

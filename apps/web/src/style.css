@@ -1983,3 +1983,139 @@ th {
   max-width: 1280px;
   margin: 0 auto;
 }
+
+/* Guided 4-Step Audit Workflow */
+.console-layout.is-single-audit {
+  grid-template-columns: 1fr;
+  max-width: 920px;
+  margin: 0 auto;
+}
+.audit-stepper {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.audit-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #ffffff14;
+  background: #08090c;
+  font-size: 12px;
+  color: #71717a;
+}
+.audit-step.is-active {
+  border-color: rgba(123, 209, 250, 0.5);
+  background: rgba(123, 209, 250, 0.08);
+  color: #fff;
+  font-weight: 600;
+}
+.audit-step.is-done {
+  border-color: rgba(34, 197, 94, 0.35);
+  color: #bbf7d0;
+}
+.audit-step-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #18181b;
+  color: inherit;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.audit-step.is-active .audit-step-dot {
+  background: #7bd1fa;
+  color: #090909;
+}
+.audit-step.is-done .audit-step-dot {
+  background: #22c55e;
+  color: #052e16;
+}
+.step-card-active {
+  border-color: rgba(123, 209, 250, 0.42);
+  box-shadow: 0 0 28px rgba(123, 209, 250, 0.06);
+}
+.step-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.step-badge-done {
+  background: #052e16;
+  color: #86efac;
+  border: 1px solid #22c55e55;
+}
+.compact-details {
+  margin-top: 10px;
+  border-top: 1px solid #ffffff12;
+  padding: 8px 0 0;
+  font-size: 12px;
+  color: #a1a1aa;
+}
+.compact-details summary {
+  cursor: pointer;
+  color: #a1a1aa;
+  font-weight: 500;
+}
+.compact-panel-group summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #d4d4d8;
+}
+.compact-panel-body {
+  margin-top: 16px;
+}
+.panel.is-compact {
+  padding: 18px 24px;
+  opacity: 0.78;
+}
+.panel.is-compact h2 {
+  font-size: 17px;
+  margin: 0 0 4px;
+}
+.panel.is-compact p {
+  margin: 0;
+  font-size: 13px;
+}
+.upload-file-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  display: grid;
+  gap: 10px;
+}
+.upload-file-item {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #ffffff16;
+  background: #07080a;
+}
+.upload-file-row {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.upload-dropzone {
+  margin: 14px 0;
+  padding: 20px;
+  border: 1px dashed #ffffff30;
+  border-radius: 12px;
+  background: #07080a;
+  text-align: center;
+}
+@media (max-width: 760px) {
+  .audit-stepper {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

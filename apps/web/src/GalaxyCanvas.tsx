@@ -23,11 +23,14 @@ interface BgStar {
   twinkleSpeed: number;
 }
 
-function createGlowSprite(
-  coreColor: string,
-  midColor: string,
-  outerColor: string,
-  size = 64,
+/**
+ * Builds a crisp, pinpoint-core radial glow sprite with steep exponential falloff
+ * so individual stars remain distinct rather than blurring into a cloud.
+ */
+function createStarSprite(
+  tintRgb: string,
+  withFlare = false,
+  size = 96,
 ): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -35,13 +38,42 @@ function createGlowSprite(
   const ctx = canvas.getContext('2d');
   if (!ctx) return canvas;
   const half = size / 2;
+
+  // Steep exponential-like radial falloff for crisp starlight
   const grad = ctx.createRadialGradient(half, half, 0, half, half, half);
-  grad.addColorStop(0, coreColor);
-  grad.addColorStop(0.18, midColor);
-  grad.addColorStop(0.5, outerColor);
+  grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  grad.addColorStop(0.08, 'rgba(255, 255, 255, 0.98)');
+  grad.addColorStop(0.18, `rgba(${tintRgb}, 0.55)`);
+  grad.addColorStop(0.36, `rgba(${tintRgb}, 0.14)`);
+  grad.addColorStop(0.65, `rgba(${tintRgb}, 0.025)`);
   grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, size, size);
+
+  if (withFlare) {
+    ctx.save();
+    ctx.translate(half, half);
+    const spikeLen = half * 0.88;
+    const spikeGradH = ctx.createLinearGradient(-spikeLen, 0, spikeLen, 0);
+    spikeGradH.addColorStop(0, 'rgba(255,255,255,0)');
+    spikeGradH.addColorStop(0.45, `rgba(${tintRgb}, 0.32)`);
+    spikeGradH.addColorStop(0.5, 'rgba(255,255,255,0.85)');
+    spikeGradH.addColorStop(0.55, `rgba(${tintRgb}, 0.32)`);
+    spikeGradH.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = spikeGradH;
+    ctx.fillRect(-spikeLen, -0.75, spikeLen * 2, 1.5);
+
+    const spikeGradV = ctx.createLinearGradient(0, -spikeLen, 0, spikeLen);
+    spikeGradV.addColorStop(0, 'rgba(255,255,255,0)');
+    spikeGradV.addColorStop(0.45, `rgba(${tintRgb}, 0.32)`);
+    spikeGradV.addColorStop(0.5, 'rgba(255,255,255,0.85)');
+    spikeGradV.addColorStop(0.55, `rgba(${tintRgb}, 0.32)`);
+    spikeGradV.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = spikeGradV;
+    ctx.fillRect(-0.75, -spikeLen, 1.5, spikeLen * 2);
+    ctx.restore();
+  }
+
   return canvas;
 }
 
@@ -59,82 +91,58 @@ export function GalaxyCanvas() {
     ).matches;
 
     const sprites = [
-      // 0: Pure brilliant white
-      createGlowSprite(
-        'rgba(255, 255, 255, 1)',
-        'rgba(245, 250, 255, 0.9)',
-        'rgba(195, 225, 255, 0.28)',
-      ),
-      // 1: Stellar cool blue
-      createGlowSprite(
-        'rgba(255, 255, 255, 1)',
-        'rgba(165, 220, 255, 0.88)',
-        'rgba(95, 180, 255, 0.28)',
-      ),
-      // 2: Warm galactic core gold
-      createGlowSprite(
-        'rgba(255, 254, 245, 1)',
-        'rgba(255, 228, 175, 0.9)',
-        'rgba(255, 188, 110, 0.28)',
-      ),
-      // 3: Warm amber outer star
-      createGlowSprite(
-        'rgba(255, 248, 238, 1)',
-        'rgba(255, 185, 125, 0.84)',
-        'rgba(225, 130, 75, 0.24)',
-      ),
+      // 0: Crisp pure white
+      createStarSprite('235, 245, 255', false),
+      // 1: Crisp ice-blue
+      createStarSprite('155, 210, 255', false),
+      // 2: Crisp warm amber/gold
+      createStarSprite('255, 195, 130', false),
+      // 3: Bright beacon white-blue with subtle diffraction flare
+      createStarSprite('200, 228, 255', true),
+      // 4: Bright beacon warm gold with subtle diffraction flare
+      createStarSprite('255, 205, 145', true),
     ];
 
-    const starCount = 4200;
+    const starCount = 1750;
     const stars: Star[] = [];
     const arms = 2;
-    const spiralTwist = 4.6;
+    const spiralTwist = 7.4;
 
     for (let i = 0; i < starCount; i++) {
-      // Bias density toward the galactic core with long sweeping outer tails
       const u = Math.random();
-      const isCore = u < 0.2;
+      const isCore = u < 0.085;
       const r = isCore
-        ? Math.pow(Math.random(), 1.8) * 0.15
-        : 0.05 + Math.pow(Math.random(), 1.32) * 0.98;
+        ? Math.pow(Math.random(), 1.9) * 0.065
+        : 0.045 + Math.pow(Math.random(), 1.18) * 0.94;
 
       const armIndex = i % arms;
       const armBase = (armIndex / arms) * Math.PI * 2;
-      // Tighter scatter near core, wider organic dispersion in outer arms
-      const scatterScale = isCore ? 2.4 : 0.16 + r * 0.44;
-      // Gaussian-like scatter using sum of two randoms
-      const gauss = (Math.random() + Math.random() - 1) * scatterScale;
-      const angle =
-        armBase +
-        r * spiralTwist +
-        gauss +
-        (Math.random() < 0.14 ? (Math.random() - 0.5) * 2.2 : 0);
 
-      // Thin disk with slight bulge at center
-      const thickness = isCore ? 0.08 : 0.025 + (1 - r) * 0.02;
-      const z = (Math.random() + Math.random() - 1) * thickness;
+      // Tight, well-defined spiral lanes with clear dark space between arms
+      const armSpread = isCore ? 2.6 : 0.075 + r * 0.14;
+      const gauss = (Math.random() + Math.random() - 1) * armSpread;
+      const stray = Math.random() < 0.06 ? (Math.random() - 0.5) * 1.4 : 0;
+      const angle = armBase + r * spiralTwist + gauss + stray;
 
-      // Differential Keplerian-inspired angular velocity
-      const speed = 0.055 + 0.14 / (0.18 + r * 1.4);
+      const z = (Math.random() + Math.random() - 1) * (isCore ? 0.035 : 0.015);
+      const speed = 0.045 + 0.11 / (0.2 + r * 1.5);
 
-      // Sprite selection by radial temperature
+      const isBrightBeacon = !isCore && Math.random() < 0.075;
       let sprite: number;
-      if (r < 0.16) {
-        sprite = Math.random() < 0.72 ? 2 : 0;
-      } else if (Math.random() < 0.26) {
-        sprite = 3;
-      } else if (Math.random() < 0.52) {
-        sprite = 1;
-      } else {
+      if (isCore) {
         sprite = 0;
+      } else if (isBrightBeacon) {
+        sprite = Math.random() < 0.72 ? 3 : 4;
+      } else {
+        const roll = Math.random();
+        sprite = roll < 0.48 ? 0 : roll < 0.78 ? 1 : 2;
       }
 
-      const isBrightBeacon = Math.random() < 0.085;
       const size = isBrightBeacon
-        ? 11 + Math.random() * 13
+        ? 14 + Math.random() * 14
         : isCore
-          ? 4.0 + Math.random() * 6.0
-          : 2.8 + Math.random() * 5.6;
+          ? 4.5 + Math.random() * 6.5
+          : 3.2 + Math.random() * 6.0;
 
       stars.push({
         r,
@@ -145,19 +153,21 @@ export function GalaxyCanvas() {
         sprite,
         alpha: isBrightBeacon
           ? 0.95 + Math.random() * 0.05
-          : 0.55 + Math.random() * 0.45,
-        twinkleSpeed: 0.8 + Math.random() * 2.2,
+          : isCore
+            ? 0.78 + Math.random() * 0.22
+            : 0.62 + Math.random() * 0.38,
+        twinkleSpeed: 0.8 + Math.random() * 2.0,
         twinklePhase: Math.random() * Math.PI * 2,
         dx: 0,
         dy: 0,
       });
     }
 
-    const bgStars: BgStar[] = Array.from({ length: 380 }, () => ({
+    const bgStars: BgStar[] = Array.from({ length: 240 }, () => ({
       nx: Math.random(),
       ny: Math.random(),
-      size: Math.random() < 0.08 ? 1.8 + Math.random() * 1.6 : 0.8 + Math.random() * 1.5,
-      alpha: 0.3 + Math.random() * 0.65,
+      size: Math.random() < 0.06 ? 2.0 : 0.9 + Math.random() * 1.1,
+      alpha: 0.28 + Math.random() * 0.65,
       twinklePhase: Math.random() * Math.PI * 2,
       twinkleSpeed: 0.4 + Math.random() * 1.4,
     }));
@@ -182,10 +192,11 @@ export function GalaxyCanvas() {
     let pointerActive = false;
     let rawMouseX = -9999;
     let rawMouseY = -9999;
-    let tiltX = 0.72; // Default 3D inclination (~41 deg like Astra)
-    let tiltY = -0.14;
-    let targetTiltX = 0.72;
-    let targetTiltY = -0.14;
+    // Nearly face-on inclination (~16 deg) so spiral arms open cleanly like Astra
+    let tiltX = 0.28;
+    let tiltY = -0.06;
+    let targetTiltX = 0.28;
+    let targetTiltY = -0.06;
     let pulseWave = 0;
 
     const onPointerMove = (e: PointerEvent) => {
@@ -195,14 +206,14 @@ export function GalaxyCanvas() {
       pointerX = (rawMouseX / Math.max(1, width)) * 2 - 1;
       pointerY = (rawMouseY / Math.max(1, height)) * 2 - 1;
       pointerActive = true;
-      targetTiltX = 0.72 + pointerY * 0.24;
-      targetTiltY = -0.14 + pointerX * 0.24;
+      targetTiltX = 0.28 + pointerY * 0.22;
+      targetTiltY = -0.06 + pointerX * 0.22;
     };
 
     const onPointerLeave = () => {
       pointerActive = false;
-      targetTiltX = 0.72;
-      targetTiltY = -0.14;
+      targetTiltX = 0.28;
+      targetTiltY = -0.06;
     };
 
     const onPointerDown = () => {
@@ -233,21 +244,23 @@ export function GalaxyCanvas() {
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, width, height);
 
-      // Ambient deep-space background stars
+      // Crisp deep-space background stars
       for (const bg of bgStars) {
         const twinkle =
-          0.65 + 0.35 * Math.sin(elapsed * bg.twinkleSpeed + bg.twinklePhase);
-        ctx.fillStyle = `rgba(215, 232, 255, ${(bg.alpha * twinkle).toFixed(3)})`;
+          0.68 + 0.32 * Math.sin(elapsed * bg.twinkleSpeed + bg.twinklePhase);
+        ctx.fillStyle = `rgba(225, 238, 255, ${(bg.alpha * twinkle).toFixed(3)})`;
         ctx.fillRect(bg.nx * width, bg.ny * height, bg.size, bg.size);
       }
 
-      // Position galaxy center slightly right on wide screens so left-aligned hero text stays crisp
       const isNarrow = width < 860;
-      const cx = isNarrow ? width * 0.5 : width * 0.62;
-      const cy = isNarrow ? height * 0.42 : height * 0.5;
-      const radiusScale = Math.min(width * (isNarrow ? 0.48 : 0.42), height * 0.48);
+      const cx = isNarrow ? width * 0.54 : width * 0.63;
+      const cy = isNarrow ? height * 0.44 : height * 0.5;
+      const radiusScale = Math.min(
+        width * (isNarrow ? 0.44 : 0.36),
+        height * 0.46,
+      );
 
-      // Subtle core nebula bloom
+      // Tight, pure-white core brilliance (no muddy yellow haze)
       ctx.globalCompositeOperation = 'lighter';
       const coreGlow = ctx.createRadialGradient(
         cx,
@@ -255,36 +268,34 @@ export function GalaxyCanvas() {
         0,
         cx,
         cy,
-        radiusScale * 0.55,
+        radiusScale * 0.24,
       );
-      coreGlow.addColorStop(0, 'rgba(255, 246, 225, 0.42)');
-      coreGlow.addColorStop(0.22, 'rgba(155, 210, 255, 0.18)');
-      coreGlow.addColorStop(0.6, 'rgba(40, 80, 145, 0.05)');
+      coreGlow.addColorStop(0, 'rgba(255, 255, 255, 0.72)');
+      coreGlow.addColorStop(0.22, 'rgba(220, 238, 255, 0.28)');
+      coreGlow.addColorStop(0.55, 'rgba(130, 185, 255, 0.05)');
       coreGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = coreGlow;
       ctx.fillRect(
-        cx - radiusScale,
-        cy - radiusScale,
-        radiusScale * 2,
-        radiusScale * 2,
+        cx - radiusScale * 0.3,
+        cy - radiusScale * 0.3,
+        radiusScale * 0.6,
+        radiusScale * 0.6,
       );
 
       const cosX = Math.cos(tiltX);
       const sinX = Math.sin(tiltX);
       const cosY = Math.cos(tiltY);
       const sinY = Math.sin(tiltY);
-      const fov = 2.6;
+      const fov = 2.8;
 
       for (let i = 0; i < stars.length; i++) {
         const star = stars[i]!;
         const theta = star.angle - elapsed * star.speed;
 
-        // 3D disk coordinates
         const x0 = Math.cos(theta) * star.r;
         const y0 = Math.sin(theta) * star.r;
         const z0 = star.z;
 
-        // Rotate around X (inclination) then Y (yaw)
         const y1 = y0 * cosX - z0 * sinX;
         const z1 = y0 * sinX + z0 * cosX;
         const x2 = x0 * cosY + z1 * sinY;
@@ -295,7 +306,6 @@ export function GalaxyCanvas() {
         let sx = cx + x2 * radiusScale * depth * pulseScale;
         let sy = cy + y1 * radiusScale * depth * pulseScale;
 
-        // Interactive cursor swirl/repulsion
         if (pointerActive && !reducedMotion) {
           const mx = sx - rawMouseX;
           const my = sy - rawMouseY;
@@ -319,9 +329,9 @@ export function GalaxyCanvas() {
         sy += star.dy;
 
         const twinkle =
-          0.74 +
-          0.26 * Math.sin(elapsed * star.twinkleSpeed + star.twinklePhase);
-        const drawAlpha = Math.min(1, star.alpha * twinkle * (0.7 + 0.3 * depth));
+          0.76 +
+          0.24 * Math.sin(elapsed * star.twinkleSpeed + star.twinklePhase);
+        const drawAlpha = Math.min(1, star.alpha * twinkle * (0.75 + 0.25 * depth));
         const drawSize = star.size * depth;
 
         ctx.globalAlpha = drawAlpha;

@@ -17,6 +17,19 @@ export class TestDocuments implements DocumentStore {
       structuredClone(this.documents.get(path) ?? null),
     );
   }
+  async listCollection(collection: string) {
+    const prefix = `${collection}/`;
+    const rows: Array<{ id: string; data: Record<string, unknown> }> = [];
+    for (const [path, data] of this.documents.entries()) {
+      if (path.startsWith(prefix) && !path.slice(prefix.length).includes('/')) {
+        rows.push({
+          id: path.slice(prefix.length),
+          data: structuredClone(data),
+        });
+      }
+    }
+    return rows;
+  }
   async transaction<T>(
     callback: (tx: DocumentTransaction) => Promise<T>,
   ): Promise<T> {

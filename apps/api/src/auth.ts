@@ -16,7 +16,13 @@ export class IdentityError extends Error {
     super(code);
   }
 }
-export type Identity = { uid: string; authTime: number };
+export type Identity = {
+  uid: string;
+  authTime: number;
+  email?: string;
+  emailVerified?: boolean;
+  signInProvider?: 'google.com' | 'password';
+};
 
 /** Cache is only for public signing certificates, never for invitations or authorization. */
 export function firebaseCertificateResolver(
@@ -138,7 +144,11 @@ const claimsSchema = z.object({
   iat: z.number().int().nonnegative(),
   exp: z.number().int().positive(),
   auth_time: z.number().int().nonnegative(),
-  firebase: z.object({ sign_in_provider: z.literal('google.com') }),
+  email: z.string().email().max(320).optional(),
+  email_verified: z.boolean().optional(),
+  firebase: z.object({
+    sign_in_provider: z.enum(['google.com', 'password']),
+  }),
 });
 
 export async function verifyFirebaseIdentity(
@@ -172,7 +182,15 @@ export async function verifyFirebaseIdentity(
       claims.exp <= claims.iat
     )
       throw new IdentityError('invalid_credentials');
-    return { uid: claims.sub, authTime: claims.auth_time };
+    return {
+      uid: claims.sub,
+      authTime: claims.auth_time,
+      ...(claims.email !== undefined ? { email: claims.email } : {}),
+      ...(claims.email_verified !== undefined
+        ? { emailVerified: claims.email_verified }
+        : {}),
+      signInProvider: claims.firebase.sign_in_provider,
+    };
   } catch (error) {
     if (error instanceof IdentityError) throw error;
     throw new IdentityError('invalid_credentials');

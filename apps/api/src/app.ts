@@ -32,6 +32,10 @@ import {
 import { type HistoryRepository } from './history.js';
 import { type RunService, type ResumeService } from './runs.js';
 import { SubmitHeatParameters } from './scientific-parameters.js';
+import {
+  SubmitVerificationRequest,
+  type VerificationRequestRepository,
+} from './verification-requests.js';
 
 export interface ApiDependencies {
   runs: Pick<RunService, 'start'>;
@@ -65,6 +69,10 @@ export interface ApiDependencies {
   uploadContent: Pick<UploadContentService, 'put'>;
   downloads: Pick<ArtifactDownloadService, 'get'>;
   userRateGate: UserRateGate;
+  verificationRequests?: Pick<
+    VerificationRequestRepository,
+    'submit' | 'getStatus' | 'listAll' | 'review'
+  >;
   // Hosting must supply an edge gate before token verification/Firestore work.
   edgeRateGate(request: Request): Promise<boolean>;
   allowedOrigins: readonly string[];
@@ -96,6 +104,9 @@ export function createApp(deps: ApiDependencies) {
     c.set('requestId', crypto.randomUUID());
     c.header('Cache-Control', 'no-store');
     c.header('X-Content-Type-Options', 'nosniff');
+    c.header('X-Frame-Options', 'DENY');
+    c.header('Referrer-Policy', 'no-referrer');
+    c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     c.header('X-Request-Id', c.get('requestId'));
     if (!(await deps.edgeRateGate(c.req.raw)))
       throw new ApiError(429, 'rate_limited', 'Request limit reached.', true);
@@ -138,12 +149,28 @@ export function createApp(deps: ApiDependencies) {
         !['GET', 'HEAD', 'OPTIONS'].includes(c.req.method),
       );
       phase = 'invitation_check';
-      if (!(await deps.repository.isInvited(identity.uid)))
-        throw new ApiError(
-          403,
-          'invitation_required',
-          'An active invitation is required.',
-        );
+      const path = c.req.path;
+      const isAuthOrAdminRoute =
+        path === '/api/v1/auth/verification-status' ||
+        path === '/api/v1/auth/verification-request' ||
+        path.startsWith('/api/v1/admin/');
+      if (!isAuthOrAdminRoute) {
+        if (
+          identity.signInProvider === 'password' &&
+          identity.emailVerified !== true
+        )
+          throw new ApiError(
+            403,
+            'email_verification_required',
+            'Please verify your email address before signing in.',
+          );
+        if (!(await deps.repository.isInvited(identity.uid)))
+          throw new ApiError(
+            403,
+            'invitation_required',
+            'An active invitation is required.',
+          );
+      }
     } catch (error) {
       if (
         !(error instanceof ApiError) &&
@@ -721,6 +748,50 @@ export function createApp(deps: ApiDependencies) {
       return c.json(result.receipt, result.replayed ? 200 : 201);
     },
   );
+  app.get('/api/v1/auth/verification-status', async (c) => {
+    if (!deps.verificationRequests)
+      throw new ApiError(503, 'service_unavailable', 'Verification service is unavailable.', true);
+    const status = await deps.verificationRequests.getStatus(c.get('identity'));
+    return c.json({ schemaVersion: '1.0', ...status }, 200);
+  });
+  app.post('/api/v1/auth/verification-request', async (c) => {
+    if (!deps.verificationRequests)
+      throw new ApiError(503, 'service_unavailable', 'Verification service is unavailable.', true);
+    const body = await parseRequestJson(c.req.raw, SubmitVerificationRequest);
+    const record = await deps.verificationRequests.submit(
+      c.get('identity'),
+      body,
+    );
+    return c.json({ schemaVersion: '1.0', request: record }, 201);
+  });
+  app.get('/api/v1/admin/verification-requests', async (c) => {
+    if (!deps.verificationRequests)
+      throw new ApiError(503, 'service_unavailable', 'Verification service is unavailable.', true);
+    const requests = await deps.verificationRequests.listAll(
+      c.get('identity'),
+    );
+    return c.json({ schemaVersion: '1.0', requests }, 200);
+  });
+  app.post('/api/v1/admin/verification-requests/:uid/approve', async (c) => {
+    if (!deps.verificationRequests)
+      throw new ApiError(503, 'service_unavailable', 'Verification service is unavailable.', true);
+    const record = await deps.verificationRequests.review(
+      c.get('identity'),
+      c.req.param('uid'),
+      'approved',
+    );
+    return c.json({ schemaVersion: '1.0', request: record }, 200);
+  });
+  app.post('/api/v1/admin/verification-requests/:uid/reject', async (c) => {
+    if (!deps.verificationRequests)
+      throw new ApiError(503, 'service_unavailable', 'Verification service is unavailable.', true);
+    const record = await deps.verificationRequests.review(
+      c.get('identity'),
+      c.req.param('uid'),
+      'rejected',
+    );
+    return c.json({ schemaVersion: '1.0', request: record }, 200);
+  });
   app.notFound(() => {
     throw new ApiError(404, 'not_found', 'Resource was not found.');
   });

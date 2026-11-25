@@ -29,6 +29,7 @@ import { StartAudit } from '@siphon/contracts';
 import { RedisRateFilter } from './redis-rate-filter.js';
 import { parseAiConfiguration, type AiEnvironment } from './ai-config.js';
 import { aiDisclosureOptions } from './ai-disclosure.js';
+import { VerificationRequestRepository } from './verification-requests.js';
 
 export interface WorkerEnvironment extends AiEnvironment {
   SIPHON_API_ENABLED: string;
@@ -143,6 +144,7 @@ export function createWorkerRuntime(
     ),
     downloads,
     progress: new ProgressRepository(store),
+    verificationRequests: new VerificationRequestRepository(store, store),
     userRateGate:
       environment.SIPHON_REDIS_RATE_FILTER_ENABLED === 'true'
         ? new RedisRateFilter(

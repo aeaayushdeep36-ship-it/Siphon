@@ -4,7 +4,10 @@ service cloud.firestore {
     function invitedGoogleUser() {
       return request.auth != null
         && request.auth.uid.matches('[a-zA-Z0-9_-]{1,128}')
-        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && (
+          request.auth.token.firebase.sign_in_provider == 'google.com'
+          || (request.auth.token.firebase.sign_in_provider == 'password' && request.auth.token.email_verified == true)
+        )
         && get(/databases/$(database)/documents/testers/$(request.auth.uid)).data.active == true;
     }
     function ownsAudit(auditId) {

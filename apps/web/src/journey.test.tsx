@@ -222,6 +222,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   host.remove();
+  window.history.replaceState(null, '', '/');
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
@@ -539,6 +540,9 @@ describe('authored frontend journey through real browser API contracts', () => {
     let finish!: (response: Response) => void;
     respond = () => new Promise((resolve) => (finish = resolve));
     await mount();
+    await act(async () => {
+      (host.querySelector('.profile-trigger') as HTMLButtonElement).click();
+    });
     await click('Sign out');
     await act(async () =>
       finish(

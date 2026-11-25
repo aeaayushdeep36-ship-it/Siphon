@@ -26,7 +26,7 @@ async function token(overrides: Record<string, unknown> = {}) {
 }
 
 describe('Firebase ID verification', () => {
-  it('accepts a genuinely signed Google identity for the configured project', async () => {
+  it('accepts a genuinely signed Google or password identity for the configured project', async () => {
     expect(
       await verifyFirebaseIdentity(
         await token(),
@@ -34,7 +34,29 @@ describe('Firebase ID verification', () => {
         async () => keys.publicKey,
         date,
       ),
-    ).toEqual({ uid: 'alice', authTime: epoch - 60 });
+    ).toEqual({
+      uid: 'alice',
+      authTime: epoch - 60,
+      signInProvider: 'google.com',
+    });
+    expect(
+      await verifyFirebaseIdentity(
+        await token({
+          email: 'user@example.com',
+          email_verified: true,
+          firebase: { sign_in_provider: 'password' },
+        }),
+        'siphon-test',
+        async () => keys.publicKey,
+        date,
+      ),
+    ).toEqual({
+      uid: 'alice',
+      authTime: epoch - 60,
+      email: 'user@example.com',
+      emailVerified: true,
+      signInProvider: 'password',
+    });
   });
   it.each([
     { aud: 'another-project' },
@@ -43,7 +65,7 @@ describe('Firebase ID verification', () => {
     { exp: epoch - 1 },
     { iat: epoch + 1 },
     { auth_time: epoch + 1 },
-    { firebase: { sign_in_provider: 'password' } },
+    { firebase: { sign_in_provider: 'anonymous' } },
     { auth_time: epoch - 10 },
   ])('rejects invalid signed claims %j', async (overrides) => {
     await expect(

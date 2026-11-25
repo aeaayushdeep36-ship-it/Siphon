@@ -376,6 +376,42 @@ export class FirestoreClient {
     }
   }
 
+  async listCollection(
+    collection: string,
+    pageSize = 100,
+  ): Promise<Array<{ id: string; data: Record<string, unknown> }>> {
+    if (!/^[a-zA-Z0-9_-]{1,100}$/.test(collection))
+      throw new Error('Invalid Firestore collection name');
+    const clampedSize = Math.max(1, Math.min(300, Math.floor(pageSize)));
+    const result = z
+      .object({
+        documents: z
+          .array(
+            z.object({
+              name: z.string(),
+              fields: z.record(z.string(), valueSchema).optional(),
+            }),
+          )
+          .optional(),
+      })
+      .parse(
+        await this.request(
+          `/${collection}?pageSize=${clampedSize}`,
+          'GET',
+        ),
+      );
+    return (result.documents ?? []).map((doc) => {
+      const id = doc.name.split('/').pop() ?? '';
+      const data = Object.fromEntries(
+        Object.entries(doc.fields ?? {}).map(([key, value]) => [
+          key,
+          decodeValidated(value),
+        ]),
+      );
+      return { id, data };
+    });
+  }
+
   /** Owner-constrained paginated UI history, never a caller-supplied query. */
   async history(
     uid: string,

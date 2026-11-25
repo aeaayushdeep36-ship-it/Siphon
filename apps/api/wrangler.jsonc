@@ -9,7 +9,7 @@
   "observability": { "enabled": false },
   "vars": {
     "SIPHON_API_ENABLED": "true",
-    "SIPHON_INSPECTION_WORKFLOW_ENABLED": "false",
+    "SIPHON_INSPECTION_WORKFLOW_ENABLED": "true",
   },
   "workflows": [
     {

@@ -30,7 +30,8 @@ import {
   RevisionHistoryResponse,
 } from '@siphon/contracts';
 import { AuditApi, digestBytes, RequestFailure } from './api.js';
-import { auth, signIn, signInErrorMessage } from './auth.js';
+import { auth } from './auth.js';
+import { GalaxyCanvas } from './GalaxyCanvas.js';
 import { label } from './labels.js';
 import { ReportBoundary } from './ReportBoundary.js';
 import { startReadPolling } from './read-polling.js';
@@ -39,6 +40,15 @@ import { AiDisclosurePanel } from './AiDisclosurePanel.js';
 
 const Report = lazy(() =>
   import('./Report.js').then((module) => ({ default: module.Report })),
+);
+const SignInPage = lazy(() =>
+  import('./SignInPage.js').then((module) => ({ default: module.SignInPage })),
+);
+const AdminPage = lazy(() =>
+  import('./AdminPage.js').then((module) => ({ default: module.AdminPage })),
+);
+const ProfilePage = lazy(() =>
+  import('./ProfilePage.js').then((module) => ({ default: module.ProfilePage })),
 );
 
 export function resumeNeedsAiDisclosure(
@@ -100,13 +110,96 @@ function errorText(error: unknown): string {
     : 'The request could not be completed. Check the connection and retry. Your simulation has not been changed.';
 }
 
+type AppRoute =
+  | { kind: 'home' }
+  | { kind: 'signin' }
+  | { kind: 'create-account' }
+  | { kind: 'admin' }
+  | { kind: 'profile' }
+  | { kind: 'audit'; auditId: string };
+
+function routeFromLocation(): AppRoute {
+  if (typeof window === 'undefined') return { kind: 'home' };
+  const { pathname, hash } = window.location;
+  const auditMatch = /^\/audit\/([a-zA-Z0-9-]+)$/.exec(pathname);
+  if (auditMatch?.[1]) return { kind: 'audit', auditId: auditMatch[1] };
+  if (pathname === '/admin' || hash === '#admin') return { kind: 'admin' };
+  if (pathname === '/profile' || hash === '#profile') return { kind: 'profile' };
+  if (pathname === '/create-account' || hash === '#create-account')
+    return { kind: 'create-account' };
+  if (pathname === '/signin' || hash === '#signin') return { kind: 'signin' };
+  return { kind: 'home' };
+}
+
+function routePath(route: AppRoute): string {
+  switch (route.kind) {
+    case 'home':
+      return '/';
+    case 'audit':
+      return `/audit/${route.auditId}`;
+    default:
+      return `/${route.kind}`;
+  }
+}
+
+function firstNameOf(user: User): string {
+  const display = user.displayName?.trim();
+  if (display) return display.split(/\s+/)[0]!;
+  const emailPrefix = user.email?.split('@')[0]?.trim();
+  return emailPrefix || 'Account';
+}
+
 export function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(!auth);
-  const [signInPending, setSignInPending] = useState(false);
-  const signInInProgress = useRef(false);
+  const [route, setRoute] = useState<AppRoute>(routeFromLocation);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
   const [error, setError] = useState('');
   const [selectedDomain, setSelectedDomain] = useState<DomainValue | ''>('');
+  const navigate = useCallback((next: AppRoute | 'home' | 'signin' | 'create-account' | 'admin' | 'profile') => {
+    const resolved: AppRoute = typeof next === 'string' ? { kind: next } : next;
+    setProfileMenuOpen(false);
+    setRoute(resolved);
+    if (typeof window !== 'undefined') {
+      const targetPath = routePath(resolved);
+      if (window.location.pathname !== targetPath || window.location.hash) {
+        window.history.pushState(null, '', targetPath);
+      }
+      window.scrollTo({ top: 0 });
+    }
+  }, []);
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(event.target as Node)
+      ) {
+        setProfileMenuOpen(false);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setProfileMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [profileMenuOpen]);
+  useEffect(() => {
+    const onPopState = () => {
+      setRoute(routeFromLocation());
+    };
+    window.addEventListener('popstate', onPopState);
+    window.addEventListener('hashchange', onPopState);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('hashchange', onPopState);
+    };
+  }, []);
   useEffect(() => {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
     let scroller: Lenis | undefined;
@@ -156,18 +249,165 @@ export function App() {
         : undefined,
     [],
   );
-  const continueWithGoogle = () => {
-    if (signInInProgress.current) return;
-    signInInProgress.current = true;
-    setSignInPending(true);
-    setError('');
-    void signIn()
-      .catch((reason: unknown) => setError(signInErrorMessage(reason)))
-      .finally(() => {
-        signInInProgress.current = false;
-        setSignInPending(false);
-      });
-  };
+
+  if (route.kind === 'signin' || route.kind === 'create-account') {
+    return (
+      <Suspense fallback={<p className="workspace-gate" role="status">Loading…</p>}>
+        <SignInPage
+          initialMode={route.kind}
+          onNavigate={navigate}
+          onAuthenticated={() => navigate('home')}
+        />
+      </Suspense>
+    );
+  }
+
+  if (route.kind === 'admin') {
+    return (
+      <Suspense fallback={<p className="workspace-gate" role="status">Loading…</p>}>
+        <AdminPage user={user} onNavigate={navigate} />
+      </Suspense>
+    );
+  }
+
+  if (route.kind === 'profile' && user && user.emailVerified !== false) {
+    return (
+      <Suspense fallback={<p className="workspace-gate" role="status">Loading…</p>}>
+        <ProfilePage
+          user={user}
+          onNavigate={navigate}
+          onOpenAudit={(auditId) => navigate({ kind: 'audit', auditId })}
+        />
+      </Suspense>
+    );
+  }
+
+  if (route.kind === 'audit') {
+    return (
+      <div className="audit-page-shell">
+        <header className="profile-topbar">
+          <a
+            href="/"
+            className="split-auth-back"
+            onClick={(event) => {
+              event.preventDefault();
+              navigate('home');
+            }}
+          >
+            ← Back to Siphon
+          </a>
+          <a
+            href="/"
+            className="brand"
+            aria-label="Siphon home"
+            onClick={(event) => {
+              event.preventDefault();
+              navigate('home');
+            }}
+          >
+            <span className="brand-mark" aria-hidden="true">
+              S
+            </span>
+            <span className="brand-name">Siphon</span>
+          </a>
+          {user && user.emailVerified !== false ? (
+            <div className="profile-menu-wrap" ref={profileMenuRef}>
+              <button
+                type="button"
+                className="profile-trigger"
+                aria-expanded={profileMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setProfileMenuOpen((open) => !open)}
+              >
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt=""
+                    className="profile-avatar"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="profile-avatar-fallback" aria-hidden="true">
+                    {firstNameOf(user).charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span className="profile-first-name">{firstNameOf(user)}</span>
+                <span className="profile-chevron" aria-hidden="true">
+                  ▾
+                </span>
+              </button>
+              {profileMenuOpen && (
+                <div className="profile-dropdown" role="menu">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="profile-dropdown-item"
+                    onClick={() => navigate('profile')}
+                  >
+                    View profile
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="profile-dropdown-item profile-dropdown-signout"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      if (auth)
+                        void signOut(auth).catch(() =>
+                          setError('Sign-out failed. Please retry.'),
+                        );
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              className="header-button primary-button"
+              onClick={() => navigate('signin')}
+            >
+              Sign in <span aria-hidden="true">↗</span>
+            </button>
+          )}
+        </header>
+        <main id="main" className="audit-page-main" tabIndex={-1}>
+          {!authReady ? (
+            <p className="workspace-gate" role="status">
+              Checking sign-in…
+            </p>
+          ) : user && user.emailVerified !== false ? (
+            <Console
+              key={`${user.uid}:${route.auditId}`}
+              user={user}
+              selectedDomain={selectedDomain}
+              onSelectDomain={setSelectedDomain}
+              activeAuditId={route.auditId}
+              onNavigate={navigate}
+            />
+          ) : (
+            <section className="workspace-gate" id="workspace-access">
+              <div>
+                <p className="eyebrow">Sign in required</p>
+                <h3>Sign in to open or start a private audit.</h3>
+                <p>
+                  Only signed-in users with a verified email and administrator
+                  approval can access private audits.
+                </p>
+              </div>
+              <button
+                className="primary-button"
+                onClick={() => navigate('signin')}
+              >
+                Sign in <span aria-hidden="true">↗</span>
+              </button>
+            </section>
+          )}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -175,12 +415,16 @@ export function App() {
         Skip to main content
       </a>
       <header className="site-header">
-        <a href="#hero" className="brand" aria-label="Siphon home">
+        <a
+          href="#hero"
+          className="brand"
+          aria-label="Siphon home"
+          onClick={() => navigate('home')}
+        >
           <span className="brand-mark" aria-hidden="true">
             S
           </span>
           <span className="brand-name">Siphon</span>
-          <span className="brand-caption">Simulation audit console</span>
         </a>
         <nav className="top-nav" aria-label="Main navigation">
           <a href="#hero">Overview</a>
@@ -206,31 +450,65 @@ export function App() {
               <a href="#evidence">Evidence</a>
             </nav>
           </details>
-          {user ? (
-            <>
-              <span className="signed-in-label">
-                {user.displayName ?? 'Signed in'}
-              </span>
+          {user && user.emailVerified !== false ? (
+            <div className="profile-menu-wrap" ref={profileMenuRef}>
               <button
-                className="header-button"
-                onClick={() => {
-                  if (auth)
-                    void signOut(auth).catch(() =>
-                      setError('Sign-out failed. Please retry.'),
-                    );
-                }}
+                type="button"
+                className="profile-trigger"
+                aria-expanded={profileMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setProfileMenuOpen((open) => !open)}
               >
-                Sign out
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt=""
+                    className="profile-avatar"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="profile-avatar-fallback" aria-hidden="true">
+                    {firstNameOf(user).charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span className="profile-first-name">{firstNameOf(user)}</span>
+                <span className="profile-chevron" aria-hidden="true">
+                  ▾
+                </span>
               </button>
-            </>
+              {profileMenuOpen && (
+                <div className="profile-dropdown" role="menu">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="profile-dropdown-item"
+                    onClick={() => navigate('profile')}
+                  >
+                    View profile
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="profile-dropdown-item profile-dropdown-signout"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      if (auth)
+                        void signOut(auth).catch(() =>
+                          setError('Sign-out failed. Please retry.'),
+                        );
+                    }}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <button
               className="header-button primary-button"
-              disabled={!auth || signInPending}
-              onClick={continueWithGoogle}
+              onClick={() => navigate('signin')}
             >
-              {signInPending ? 'Opening sign-in…' : 'Continue with Google'}{' '}
-              <span aria-hidden="true">↗</span>
+              Sign in <span aria-hidden="true">↗</span>
             </button>
           )}
         </div>
@@ -242,12 +520,12 @@ export function App() {
           </div>
         )}
         <section className="hero" id="hero" aria-labelledby="hero-title">
-          <div className="hero-art" aria-hidden="true" />
+          <GalaxyCanvas />
           <div className="hero-vignette" aria-hidden="true" />
-          <div className="hero-center" aria-hidden="true">
-            SIPHON
-          </div>
           <div className="hero-copy">
+            <p className="hero-brand-display" aria-hidden="true">
+              SIPHON
+            </p>
             <p className="eyebrow hero-kicker">
               <span className="status-dot" /> Inspect · Measure · Understand
             </p>
@@ -258,8 +536,8 @@ export function App() {
               evidence, and the assumptions and limits behind each result.
             </p>
             <p className="hero-access">
-              Google sign-in and an active invitation are required for private
-              audit history.
+              Verified email sign-in and administrator approval are required for
+              private audit history.
             </p>
             <div className="hero-actions">
               <a className="primary-button" href="#domains">
@@ -388,21 +666,22 @@ export function App() {
         >
           <div className="content-width">
             <div className="workspace-intro">
-              <p className="eyebrow">02 // Active audit workbench</p>
+              <p className="eyebrow">02 // Audit workspace</p>
               <h2 id="workspace-heading">
-                Console execution &amp; adapter review
+                Create and review your simulation audits
               </h2>
             </div>
             {!authReady ? (
               <p className="workspace-gate" role="status">
                 Checking sign-in…
               </p>
-            ) : user ? (
+            ) : user && user.emailVerified !== false ? (
               <Console
                 key={user.uid}
                 user={user}
                 selectedDomain={selectedDomain}
                 onSelectDomain={setSelectedDomain}
+                onNavigate={navigate}
               />
             ) : (
               <section className="workspace-gate" id="workspace-access">
@@ -410,22 +689,20 @@ export function App() {
                   <p className="eyebrow">Private workspace</p>
                   <h3>Sign in to view audit history or start a review.</h3>
                   <p>
-                    Access requires Google sign-in and an active invitation.
+                    Access requires a verified email and administrator approval.
                     This preview does not create demo audits or show sample
                     results as real data.
                   </p>
                 </div>
                 <button
                   className="primary-button"
-                  disabled={!auth || signInPending}
-                  onClick={continueWithGoogle}
+                  onClick={() => navigate('signin')}
                 >
-                  {signInPending ? 'Opening sign-in…' : 'Continue with Google'}{' '}
-                  <span aria-hidden="true">↗</span>
+                  Sign in <span aria-hidden="true">↗</span>
                 </button>
               </section>
             )}
-            {!user && (
+            {(!user || user.emailVerified === false) && (
               <div className="workspace-placeholders">
                 <section className="panel" id="testplan">
                   <p className="eyebrow">Deterministic test plan</p>
@@ -486,10 +763,14 @@ function Console({
   user,
   selectedDomain,
   onSelectDomain,
+  activeAuditId,
+  onNavigate,
 }: {
   user: User;
   selectedDomain: DomainValue | '';
   onSelectDomain: (domain: DomainValue) => void;
+  activeAuditId?: string;
+  onNavigate?: (route: AppRoute) => void;
 }) {
   const api = useMemo(() => new AuditApi(user), [user]);
   const [history, setHistory] = useState<Audit[]>([]);
@@ -762,6 +1043,23 @@ function Console({
       }
     }
   }
+  const openAuditOnRoute = useCallback(
+    async (selected: Audit) => {
+      if (!activeAuditId && onNavigate) {
+        onNavigate({ kind: 'audit', auditId: selected.id });
+        return;
+      }
+      await open(selected);
+    },
+    [activeAuditId, onNavigate],
+  );
+  useEffect(() => {
+    if (!activeAuditId || audit?.id === activeAuditId) return;
+    const match = history.find((item) => item.id === activeAuditId);
+    if (match) {
+      void open(match);
+    }
+  }, [activeAuditId, audit?.id, history]);
   async function create() {
     if (!domain || !title.trim()) {
       setError('Enter an audit title and choose a domain.');
@@ -773,9 +1071,9 @@ function Console({
       { schemaVersion: '1.0', title: title.trim(), domain },
       AuditResponse,
     );
-    await open(value.audit);
     setTitle('');
     await loadHistory();
+    await openAuditOnRoute(value.audit);
   }
   async function upload() {
     if (!workspace || !audit) return;
@@ -920,7 +1218,7 @@ function Console({
                     : 'history-item'
                 }
                 disabled={!!busy}
-                onClick={() => void open(item)}
+                onClick={() => void openAuditOnRoute(item)}
               >
                 <strong>{item.title}</strong>
                 <span>{label(item.domain)}</span>
@@ -950,6 +1248,7 @@ function Console({
             {notice}
           </p>
         )}
+        {!activeAuditId && (
         <section className="panel new-audit-panel">
           <p className="eyebrow">New audit</p>
           <h1>Choose the physics. Bring your code.</h1>
@@ -1006,7 +1305,8 @@ function Console({
             Create private audit
           </button>
         </section>
-        {!audit && (
+        )}
+        {!activeAuditId && !audit && (
           <div className="workspace-placeholders">
             <section className="panel" id="testplan">
               <h2>Deterministic test plan</h2>
@@ -1017,6 +1317,11 @@ function Console({
               <p>Select an audit to see its report when available.</p>
             </section>
           </div>
+        )}
+        {activeAuditId && !audit && (
+          <p className="panel" role="status">
+            Loading audit workspace…
+          </p>
         )}
         {audit && (
           <>

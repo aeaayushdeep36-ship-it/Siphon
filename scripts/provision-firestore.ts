@@ -78,6 +78,19 @@ const r2ClassBCounter = BudgetCounter.parse({
   halted: false,
 });
 
+const r2StorageBytes = BudgetCounter.parse({
+  schemaVersion: '1.0',
+  limit: 2 * 1024 ** 3, // 2 GiB matching DEFAULT_POLICY.storageBytes
+  reserved: 0,
+  spent: 0,
+  halted: false,
+});
+
+const kvStorageBytes = {
+  schemaVersion: '1.0' as const,
+  allocated: 0,
+};
+
 // 4. Role Templates
 const roles = ['inspection', 'source', 'evaluation', 'pdf'] as const;
 
@@ -141,6 +154,8 @@ async function main() {
     { path: 'budgets/r2_a_current', data: r2ClassACounter },
     { path: 'configuration/r2_class_b_period', data: r2ClassBPeriod },
     { path: 'budgets/r2_b_current', data: r2ClassBCounter },
+    { path: 'budgets/r2_storage_bytes', data: r2StorageBytes },
+    { path: 'budgets/kv_storage_bytes', data: kvStorageBytes },
   ];
 
   for (const role of roles) {

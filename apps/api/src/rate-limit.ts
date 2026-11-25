@@ -26,36 +26,54 @@ export class FirestoreUserRateGate implements UserRateGate {
       const key = await sha256(uid);
       const now = this.clock();
       phase = 'rate_window_transaction';
-      await this.client.transaction(async (tx) => {
-        phase = 'read_rate_window';
-        const stored = await tx.get(`rateWindows/${key}`);
-        phase = 'validate_rate_window';
-        const entries = stored
-          ? windowSchema
-              .parse(stored)
-              .entries.filter((item) => item.at > now - 60_000)
-          : [];
-        if (
-          entries.length >= this.policy.requestsPerMinute ||
-          (mutation &&
-            entries.filter((item) => item.mutation).length >=
-              this.policy.mutationsPerMinute)
-        )
-          throw new ApiError(
-            429,
-            'rate_limited',
-            'Request limit reached. Try again shortly.',
-            true,
-          );
-        entries.push({ at: now, mutation });
-        phase = 'write_rate_window';
-        tx.set(`rateWindows/${key}`, {
-          schemaVersion: '1.0',
-          entries,
-          updatedAt: new Date(now),
-        });
-        phase = 'commit_rate_window';
-      });
+      for (let attempt = 0; ; attempt++) {
+        try {
+          await this.client.transaction(async (tx) => {
+            phase = 'read_rate_window';
+            const stored = await tx.get(`rateWindows/${key}`);
+            phase = 'validate_rate_window';
+            const entries = stored
+              ? windowSchema
+                  .parse(stored)
+                  .entries.filter((item) => item.at > now - 60_000)
+              : [];
+            if (
+              entries.length >= this.policy.requestsPerMinute ||
+              (mutation &&
+                entries.filter((item) => item.mutation).length >=
+                  this.policy.mutationsPerMinute)
+            )
+              throw new ApiError(
+                429,
+                'rate_limited',
+                'Request limit reached. Try again shortly.',
+                true,
+              );
+            entries.push({ at: now, mutation });
+            phase = 'write_rate_window';
+            tx.set(`rateWindows/${key}`, {
+              schemaVersion: '1.0',
+              entries,
+              updatedAt: new Date(now),
+            });
+            phase = 'commit_rate_window';
+          });
+          break;
+        } catch (error) {
+          if (
+            error instanceof FirestoreFailure &&
+            error.status === 409 &&
+            !error.ambiguousCommit &&
+            attempt < 3
+          ) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, 20 + Math.floor(Math.random() * 50)),
+            );
+            continue;
+          }
+          throw error;
+        }
+      }
     } catch (error) {
       if (!(error instanceof ApiError))
         console.error('siphon_user_rate_gate_error', {
